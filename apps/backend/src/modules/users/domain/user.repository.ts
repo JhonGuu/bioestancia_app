@@ -1,0 +1,43 @@
+import { UserWithCredentials } from "@/modules/users/domain/user";
+import { Roles } from "@/modules/users/domain/roles";
+
+/**
+ * Interface del repositorio de Users. Forma parte del DOMINIO.
+ *
+ * Los use-cases dependen de esta interface, no de la implementación concreta.
+ * La implementación concreta vive en `infra/repository/user.repository.ts`
+ * y se conecta a esta interface vía DI.
+ *
+ * Si mañana cambiás de Drizzle a Prisma, solo tocás la implementación.
+ * Esta interface queda igual y los use-cases ni se enteran.
+ */
+export interface UserRepository {
+  /** Busca un user por id. Devuelve null si no existe. */
+  getById(id: string): Promise<UserWithCredentials | null>;
+
+  /** Busca un user por email (case-insensitive). Devuelve null si no existe. */
+  getByEmail(email: string): Promise<UserWithCredentials | null>;
+
+  /** Busca por email O username (cualquiera de los dos). Útil para validar duplicados al signup. */
+  findByEmailOrUsername(email: string, username: string): Promise<UserWithCredentials | null>;
+
+  /** Crea un user nuevo. Recibe el hash ya calculado (el use-case lo hashea). */
+  create(input: CreateUserInput): Promise<UserWithCredentials>;
+
+  /** Actualiza el campo `last_login_at` con `now()`. Lo llama el use-case de SignIn. */
+  updateLastLogin(userId: string): Promise<void>;
+}
+
+/**
+ * Input para crear un user. Notá que recibe `passwordHash` ya calculado,
+ * no la password en plano. La responsabilidad del repo es persistir, no hashear.
+ */
+export interface CreateUserInput {
+  email: string;
+  username: string;
+  passwordHash: string;
+  firstName: string;
+  lastName: string;
+  phoneNumber: string | null;
+  role: Roles;
+}

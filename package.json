@@ -1,0 +1,20 @@
+{
+  "name": "bioestancia-app-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Monorepo de Bioestancia — administración de empresa del rubro porcino (backend + frontend)",
+  "scripts": {
+    "dev:backend": "pnpm --filter backend dev",
+    "dev:frontend": "pnpm --filter frontend dev",
+    "dev": "pnpm --parallel --filter=\"./apps/*\" dev",
+    "build": "pnpm --recursive --filter=\"./apps/*\" build",
+    "typecheck": "pnpm --recursive --filter=\"./apps/*\" typecheck",
+    "lint": "pnpm --recursive --filter=\"./apps/*\" lint",
+    "test": "pnpm --recursive --filter=\"./apps/*\" test"
+  },
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9"
+  },
+  "packageManager": "pnpm@10.33.4"
+}
