@@ -4,8 +4,11 @@ import { DI_TYPES } from "@/shared/infra/di/types";
 import { UserController } from "@/modules/users/infra/http/user.controller";
 import { UserValidation } from "@/modules/users/infra/http/validation";
 import { UserRepositoryDrizzle } from "@/modules/users/infra/repository/user.repository";
+import { UsuarioEmpresaRepositoryDrizzle } from "@/modules/users/infra/repository/usuario-empresa.repository";
 import { UsersAuthProvider } from "@/modules/users/infra/users-auth-provider";
 import { GetMyAccount } from "@/modules/users/use-cases/get-my-account.use-case";
+import { GetMyEmpresas } from "@/modules/users/use-cases/get-my-empresas.use-case";
+import { GrantEmpresaAccess } from "@/modules/users/use-cases/grant-empresa-access.use-case";
 import { SignIn } from "@/modules/users/use-cases/sign-in.use-case";
 import { SignUp } from "@/modules/users/use-cases/sign-up.use-case";
 
@@ -27,6 +30,7 @@ export function registerUsersModule(container: Container): void {
 
   // Repositories
   container.bind(DI_TYPES.UserRepository).to(UserRepositoryDrizzle);
+  container.bind(DI_TYPES.UsuarioEmpresaRepository).to(UsuarioEmpresaRepositoryDrizzle);
 
   // AuthProvider (lo expone shared/infra/http/http-server.ts vía DI_TYPES.AuthProvider)
   container.bind(DI_TYPES.AuthProvider).to(UsersAuthProvider);
@@ -35,6 +39,8 @@ export function registerUsersModule(container: Container): void {
   container.bind(DI_TYPES.SignUp).to(SignUp);
   container.bind(DI_TYPES.SignIn).to(SignIn);
   container.bind(DI_TYPES.GetMyAccount).to(GetMyAccount);
+  container.bind(DI_TYPES.GetMyEmpresas).to(GetMyEmpresas);
+  container.bind(DI_TYPES.GrantEmpresaAccess).to(GrantEmpresaAccess);
 
   // Controller (instanciado eagerly para que registre rutas en el HttpServer)
   container.bind(DI_TYPES.UserController).to(UserController);

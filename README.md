@@ -45,3 +45,4 @@ pnpm dev:backend
 ## Documentación por app
 
 - [Backend](./apps/backend/README.md) — arquitectura hexagonal, módulos, migraciones, auth/roles.
+- [Flujo de trabajo para agregar módulos](./WORKFLOW.md) — receta paso a paso para sumar el próximo módulo de dominio.

@@ -9,7 +9,6 @@ import {
   UserRepository,
 } from "@/modules/users/domain/user.repository";
 import { UserWithCredentials } from "@/modules/users/domain/user";
-import { Roles } from "@/modules/users/domain/roles";
 import { users } from "@/modules/users/infra/database/schema";
 
 /**
@@ -66,7 +65,6 @@ export class UserRepositoryDrizzle implements UserRepository {
         firstName: input.firstName,
         lastName: input.lastName,
         phoneNumber: input.phoneNumber,
-        role: input.role,
       })
       .returning();
     if (!row) {
@@ -95,7 +93,6 @@ export class UserRepositoryDrizzle implements UserRepository {
       firstName: row.firstName,
       lastName: row.lastName,
       phoneNumber: row.phoneNumber,
-      role: row.role as Roles,
       isActive: row.isActive,
       createdAt: row.createdAt,
     };

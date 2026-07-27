@@ -3,16 +3,18 @@ import {
   pgEnum,
   pgTable,
   timestamp,
+  unique,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
 
 import { Roles } from "@/modules/users/domain/roles";
+import { empresas } from "@/modules/empresas/infra/database/schema";
 
 /**
- * Enum de Postgres para el campo role.
- * Lo derivamos del enum TS para que estén siempre sincronizados.
- * Object.values(Roles) porque puede ir creciendo (admin, veterinario, operario, etc).
+ * Enum de Postgres para el rol. Lo derivamos del enum TS para que estén siempre
+ * sincronizados. Vive acá (no en la tabla `users`) porque el rol es una propiedad
+ * de `usuario_empresas`, no del usuario.
  */
 export const rolesEnum = pgEnum("user_role", Object.values(Roles) as [string, ...string[]]);
 
@@ -22,6 +24,9 @@ export const rolesEnum = pgEnum("user_role", Object.values(Roles) as [string, ..
  *   - Soft delete: `deletedAt` nullable. Si no es null, el user está "borrado".
  *   - Auditoría: `createdAt` y `updatedAt`.
  *   - Email y username son únicos.
+ *
+ * Notá que NO tiene columna `role`: el rol es relativo a una empresa y vive en
+ * `usuario_empresas` de abajo.
  */
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -31,10 +36,32 @@ export const users = pgTable("users", {
   firstName: varchar("first_name", { length: 100 }).notNull(),
   lastName: varchar("last_name", { length: 100 }).notNull(),
   phoneNumber: varchar("phone_number", { length: 20 }),
-  role: rolesEnum("role").notNull().default(Roles.ADMIN),
   isActive: boolean("is_active").notNull().default(true),
   lastLoginAt: timestamp("last_login_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
   deletedAt: timestamp("deleted_at"),
 });
+
+/**
+ * Tabla puente usuario_empresas: qué usuarios pueden operar qué empresas, y con
+ * qué rol en cada una. Un usuario puede tener 0, 1 o varias filas acá.
+ *
+ * `unique(usuarioId, empresaId)`: un usuario no puede tener dos roles distintos
+ * en la misma empresa al mismo tiempo — si cambia de rol, se actualiza la fila.
+ */
+export const usuarioEmpresas = pgTable(
+  "usuario_empresas",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    usuarioId: uuid("usuario_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    empresaId: uuid("empresa_id")
+      .notNull()
+      .references(() => empresas.id, { onDelete: "cascade" }),
+    rol: rolesEnum("rol").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [unique("usuario_empresas_usuario_empresa_unique").on(table.usuarioId, table.empresaId)],
+);

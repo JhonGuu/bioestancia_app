@@ -8,6 +8,62 @@
       "when": 1783620577764,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1784037585527,
+      "tag": "0001_add_empresas_and_multiempresa",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784652290548,
+      "tag": "0002_add_clientes_and_listas_precios",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1784677200000,
+      "tag": "0003_add_proveedores",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1784718000000,
+      "tag": "0004_add_tropas_and_ventas",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1784721600000,
+      "tag": "0005_extend_proveedores_and_tropas_compras",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1785283200000,
+      "tag": "0006_rename_tropas_to_compras_and_boletas",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1785297600000,
+      "tag": "0007_compra_categorias_faena_liquidacion",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1785312000000,
+      "tag": "0008_planificacion_cabezas",
+      "breakpoints": true
     }
   ]
 }

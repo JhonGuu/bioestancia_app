@@ -6,9 +6,14 @@ import { ApiError, Code } from "@/shared/infra/http/api.responses";
 import { Env } from "@/shared/infra/env/env";
 import { Logger } from "@/shared/infra/logger/logger";
 import { UserRepository } from "@/modules/users/domain/user.repository";
-import { Roles } from "@/modules/users/domain/roles";
 import { toPublicUser, User } from "@/modules/users/domain/user";
 
+/**
+ * Crea un usuario "pelado", sin acceso a ninguna empresa todavía.
+ * El acceso (rol por empresa) se otorga aparte, vía `GrantEmpresaAccess`
+ * — normalmente en el mismo request que da de alta al usuario, desde
+ * `POST /account/users` (ver user.controller.ts).
+ */
 export interface SignUpInput {
   email: string;
   username: string;
@@ -16,7 +21,6 @@ export interface SignUpInput {
   firstName: string;
   lastName: string;
   phoneNumber?: string;
-  role?: Roles;
 }
 
 @injectable()
@@ -44,7 +48,7 @@ export class SignUp {
     // 2. Hashear el password (NUNCA guardar en plano)
     const passwordHash = await hash(input.password, Env.bcryptSalt);
 
-    // 3. Crear el user
+    // 3. Crear el user (sin rol/empresa — eso se otorga aparte)
     const created = await this.userRepository.create({
       email,
       username: input.username,
@@ -52,7 +56,6 @@ export class SignUp {
       firstName: input.firstName,
       lastName: input.lastName,
       phoneNumber: input.phoneNumber ?? null,
-      role: input.role ?? Roles.ADMIN,
     });
 
     this.logger.info({ userId: created.id }, "User signed up");

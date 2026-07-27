@@ -8,6 +8,7 @@ import { Env } from "@/shared/infra/env/env";
 import { DrizzleAdapter } from "@/shared/infra/database/db-connection";
 import { ExpressAdapter } from "@/shared/infra/http/http-server";
 import { Logger } from "@/shared/infra/logger/logger";
+import { generateOpenApiDocument } from "@/shared/infra/openapi/generate-document";
 
 async function bootstrap(): Promise<void> {
   const container = DI.getInstance().container;
@@ -20,10 +21,15 @@ async function bootstrap(): Promise<void> {
   await db.init();
   logger.info({ env: Env.environment }, "Database connection ready");
 
-  // 2. Levantar server
-  await httpServer.listen(Env.port);
+  // 2. Documentación OpenAPI/Swagger (/api/docs) — se arma a partir de los
+  //    schemas Zod que ya usa cada módulo para validar requests.
+  httpServer.mountOpenApiDocs("/api/docs", generateOpenApiDocument());
 
-  // 3. Hooks de shutdown limpio
+  // 3. Levantar server
+  await httpServer.listen(Env.port);
+  logger.info(`Docs disponibles en http://localhost:${Env.port}/api/docs`);
+
+  // 4. Hooks de shutdown limpio
   const shutdown = async (signal: string) => {
     logger.info({ signal }, "Received shutdown signal, closing connections...");
     try {

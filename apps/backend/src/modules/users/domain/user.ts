@@ -1,8 +1,9 @@
-import { Roles } from "@/modules/users/domain/roles";
-
 /**
  * Representación del User en el dominio (sin datos sensibles ni de infraestructura).
  * Esto es lo que devuelven los use-cases al exterior.
+ *
+ * Notá que NO tiene `role`: el rol es siempre relativo a una empresa y vive en
+ * `usuario_empresas` (ver domain/usuario-empresa.ts), no en el usuario.
  */
 export interface User {
   id: string;
@@ -11,7 +12,6 @@ export interface User {
   firstName: string;
   lastName: string;
   phoneNumber: string | null;
-  role: Roles;
   isActive: boolean;
   createdAt: Date;
 }

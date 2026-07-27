@@ -1,5 +1,4 @@
 import { UserWithCredentials } from "@/modules/users/domain/user";
-import { Roles } from "@/modules/users/domain/roles";
 
 /**
  * Interface del repositorio de Users. Forma parte del DOMINIO.
@@ -21,7 +20,7 @@ export interface UserRepository {
   /** Busca por email O username (cualquiera de los dos). Útil para validar duplicados al signup. */
   findByEmailOrUsername(email: string, username: string): Promise<UserWithCredentials | null>;
 
-  /** Crea un user nuevo. Recibe el hash ya calculado (el use-case lo hashea). */
+  /** Crea un user nuevo. Recibe el hash ya calculado (el use-case lo hashea). No tiene rol: el rol se otorga aparte, por empresa (ver UsuarioEmpresaRepository). */
   create(input: CreateUserInput): Promise<UserWithCredentials>;
 
   /** Actualiza el campo `last_login_at` con `now()`. Lo llama el use-case de SignIn. */
@@ -39,5 +38,4 @@ export interface CreateUserInput {
   firstName: string;
   lastName: string;
   phoneNumber: string | null;
-  role: Roles;
 }

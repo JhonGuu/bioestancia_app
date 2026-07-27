@@ -5,7 +5,17 @@ import { DrizzleAdapter } from "@/shared/infra/database/db-connection";
 import { ExpressAdapter } from "@/shared/infra/http/http-server";
 import { JsonWebTokenProvider } from "@/shared/infra/jwt/jwt-provider";
 import { PinoLogger } from "@/shared/infra/logger/logger";
+import { registerEmpresasModule } from "@/modules/empresas/empresas.module";
 import { registerUsersModule } from "@/modules/users/users.module";
+import { registerListasPreciosModule } from "@/modules/listas-precios/listas-precios.module";
+import { registerClientesModule } from "@/modules/clientes/clientes.module";
+import { registerProveedoresModule } from "@/modules/proveedores/proveedores.module";
+import { registerBoletasModule } from "@/modules/boletas/boletas.module";
+import { registerVentasModule } from "@/modules/ventas/ventas.module";
+import { registerComprasModule } from "@/modules/compras/compras.module";
+import { registerResultadoFaenaModule } from "@/modules/resultado-faena/resultado-faena.module";
+import { registerLiquidacionCompraModule } from "@/modules/liquidacion-compra/liquidacion-compra.module";
+import { registerPlanificacionCabezasModule } from "@/modules/planificacion-cabezas/planificacion-cabezas.module";
 
 /**
  * Contenedor central de inyección de dependencias.
@@ -36,9 +46,38 @@ export class DI {
   private init(): void {
     this.registerSharedInfra();
 
-    // Módulos de dominio
+    // Módulos de dominio. ORDEN IMPORTANTE: `users` antes que `empresas`.
+    // Cada `register<Modulo>Module()` hace `container.get(<Modulo>Controller)`
+    // al final para instanciar el controller de forma eager (así registra sus
+    // rutas ya). Ese controller inyecta `HttpServer` (ExpressAdapter), que a su
+    // vez inyecta `AuthProvider` — y `AuthProvider` lo bindea `registerUsersModule`.
+    // Si `empresas` se registrara primero, su `.get()` dispararía la construcción
+    // de `HttpServer` ANTES de que `AuthProvider` esté bindeado → InversifyCoreError.
+    //
+    // (Esto es independiente de que `usuario_empresas`, dentro de `users`,
+    // referencie la tabla `empresas` en su schema de Drizzle — eso es un import
+    // de TS a nivel de módulo, no depende del orden de registro en el container).
     registerUsersModule(this.container);
-    // Cuando agregues un módulo nuevo (ej. granjas, lotes, sanidad):
+    registerEmpresasModule(this.container);
+    registerListasPreciosModule(this.container);
+    registerClientesModule(this.container);
+    registerProveedoresModule(this.container);
+    registerBoletasModule(this.container);
+    // `ventas` antes que `compras`: `CerrarCompra` (dentro de compras) inyecta
+    // `VentaRepository` para reconciliar cabezas al cerrar una compra. Si
+    // `compras` se registrara primero, su `.get()` eager fallaría con
+    // "No bindings found for service VentaRepository".
+    registerVentasModule(this.container);
+    registerComprasModule(this.container);
+    // `resultado-faena` y `liquidacion-compra` inyectan CompraRepository +
+    // CompraCategoriaRepository (bindeados en `compras`) — van después.
+    registerResultadoFaenaModule(this.container);
+    registerLiquidacionCompraModule(this.container);
+    // `planificacion-cabezas` inyecta ClienteRepository (bindeado en
+    // `clientes`) y VentaRepository (bindeado en `ventas`) — va después de
+    // ambos.
+    registerPlanificacionCabezasModule(this.container);
+    // Cuando agregues un módulo nuevo (ej. granjas, sanidad, planificación):
     // registerNuevoModulo(this.container);
   }
 

@@ -7,6 +7,7 @@ import express, {
 import cors from "cors";
 import { inject, injectable } from "inversify";
 import { ZodError, ZodSchema } from "zod";
+import swaggerUi from "swagger-ui-express";
 
 import { AuthProvider } from "@/shared/infra/auth/auth-provider";
 import { DI_TYPES } from "@/shared/infra/di/types";
@@ -19,8 +20,25 @@ import {
   FileResponse,
 } from "@/shared/infra/http/api.responses";
 
-/** Auth de un endpoint: público o requiere JWT. */
-export type AuthType = "public" | "jwt";
+/**
+ * Auth de un endpoint:
+ *   - "public": sin autenticación.
+ *   - "jwt": requiere JWT válido, sin contexto de empresa (ej. /account/me,
+ *     /account/empresas — endpoints que no operan datos de una empresa puntual).
+ *   - "jwt-empresa": requiere JWT válido + header `X-Empresa-Id` con una empresa
+ *     a la que el usuario tenga acceso. Resuelve el rol EN ESA empresa. Es lo que
+ *     usan todos los endpoints de negocio (ventas, gastos, faena, etc).
+ */
+export type AuthType = "public" | "jwt" | "jwt-empresa";
+
+/** Contexto de autenticación disponible en el handler, según el AuthType de la ruta. */
+export interface AuthContext {
+  userId: string;
+  /** Solo presente si auth === "jwt-empresa". */
+  empresaId?: string;
+  /** Solo presente si auth === "jwt-empresa". */
+  rol?: string;
+}
 
 export interface HandlerInput {
   body: unknown;
@@ -28,7 +46,7 @@ export interface HandlerInput {
   query: Record<string, unknown>;
   headers: Record<string, string | string[] | undefined>;
   /** Si el endpoint requiere JWT, acá viene el usuario autenticado. */
-  auth?: { userId: string; role: string };
+  auth?: AuthContext;
 }
 
 export interface ValidationSchemas {
@@ -43,9 +61,10 @@ export interface RegisterRouteParams {
   validation?: ValidationSchemas;
   auth?: AuthType;
   /**
-   * Lista de roles permitidos. Solo se considera si auth === "jwt".
-   * - Vacío o undefined: cualquier usuario autenticado.
-   * - Con valores: el rol del usuario tiene que estar en la lista, sino 403.
+   * Lista de roles permitidos. Solo tiene efecto si auth === "jwt-empresa"
+   * (el rol se resuelve sobre la empresa activa).
+   * - Vacío o undefined: cualquier usuario con acceso a la empresa activa.
+   * - Con valores: el rol del usuario en esa empresa tiene que estar en la lista, sino 403.
    */
   roles?: string[];
   handler: (input: HandlerInput) => Promise<ApiResponse | unknown>;
@@ -82,7 +101,7 @@ export class ExpressAdapter {
           params: req.params as Record<string, string>,
           query: req.query as Record<string, unknown>,
           headers: req.headers,
-          auth: (req as Request & { auth?: { userId: string; role: string } }).auth,
+          auth: (req as Request & { auth?: AuthContext }).auth,
         });
 
         if (result instanceof ApiResponse) {
@@ -110,6 +129,22 @@ export class ExpressAdapter {
       authMiddleware,
       routeHandler,
     );
+  }
+
+  /**
+   * Monta Swagger UI sirviendo un documento OpenAPI ya generado (ver
+   * `shared/infra/openapi/generate-document.ts`). Es la única ruta que no pasa
+   * por `register()` — swagger-ui-express necesita acceso directo al `Express`
+   * subyacente para sus propios middlewares de servir HTML/assets.
+   *
+   * También expone el JSON crudo en `${path}.json` (útil para importar en
+   * Postman/Insomnia con "Import from URL").
+   */
+  mountOpenApiDocs(path: string, document: object): void {
+    this.app.use(path, swaggerUi.serve, swaggerUi.setup(document));
+    this.app.get(`${path}.json`, (_req, res) => {
+      res.json(document);
+    });
   }
 
   async listen(port: number): Promise<void> {
@@ -162,13 +197,17 @@ export class ExpressAdapter {
   /**
    * Middleware de auth.
    *
-   * Flujo cuando auth === "jwt":
-   *   1. Lee header `Authorization`.
-   *   2. Decodifica JWT → obtiene userId.
-   *   3. Llama a AuthProvider para obtener role + isActive desde la DB.
-   *   4. Si el usuario no existe o está desactivado → 401.
-   *   5. Si se pidieron roles específicos y el del usuario no está → 403.
-   *   6. Si todo OK, mete `{ userId, role }` en req.auth y sigue.
+   * Flujo cuando auth === "jwt" o "jwt-empresa":
+   *   1. Lee header `Authorization`, decodifica el JWT → obtiene userId.
+   *   2. Llama a AuthProvider.getIdentity() → si no existe o está desactivado, 401.
+   *   3. Si auth === "jwt", listo: mete `{ userId }` en req.auth y sigue (no hay
+   *      contexto de empresa, así que `roles` no se evalúa).
+   *   4. Si auth === "jwt-empresa": lee el header `X-Empresa-Id` (400 si falta),
+   *      y llama a AuthProvider.getAccessForEmpresa(userId, empresaId).
+   *      Esto es lo que VALIDA que el usuario realmente tenga acceso a esa
+   *      empresa — el header nunca se confía a ciegas. Si no hay acceso, 403.
+   *   5. Si se pidieron roles específicos y el rol resuelto no está, 403.
+   *   6. Si todo OK, mete `{ userId, empresaId, rol }` en req.auth y sigue.
    */
   private buildAuthMiddleware(auth: AuthType, allowedRoles?: string[]) {
     return async (
@@ -180,7 +219,7 @@ export class ExpressAdapter {
         next();
         return;
       }
-      // auth === "jwt"
+
       const header = req.headers.authorization;
       if (!header) {
         next(new ApiError("Unauthorized", Code.UNAUTHORIZED));
@@ -196,13 +235,33 @@ export class ExpressAdapter {
         return;
       }
 
-      const user = await this.authProvider.getAuthenticatedUser(payload.id);
-      if (!user || !user.isActive) {
+      const identity = await this.authProvider.getIdentity(payload.id);
+      if (!identity || !identity.isActive) {
         next(new ApiError("Unauthorized", Code.UNAUTHORIZED));
         return;
       }
 
-      if (allowedRoles && allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
+      if (auth === "jwt") {
+        (req as Request & { auth?: AuthContext }).auth = { userId: identity.id };
+        next();
+        return;
+      }
+
+      // auth === "jwt-empresa"
+      const empresaIdHeader = req.headers["x-empresa-id"];
+      const empresaId = Array.isArray(empresaIdHeader) ? empresaIdHeader[0] : empresaIdHeader;
+      if (!empresaId) {
+        next(new ApiError("Falta el header X-Empresa-Id", Code.BAD_REQUEST));
+        return;
+      }
+
+      const access = await this.authProvider.getAccessForEmpresa(identity.id, empresaId);
+      if (!access) {
+        next(new ApiError("No tenés acceso a esta empresa", Code.FORBIDDEN));
+        return;
+      }
+
+      if (allowedRoles && allowedRoles.length > 0 && !allowedRoles.includes(access.rol)) {
         next(
           new ApiError(
             `Forbidden: requiere uno de los roles [${allowedRoles.join(", ")}]`,
@@ -212,9 +271,10 @@ export class ExpressAdapter {
         return;
       }
 
-      (req as Request & { auth?: { userId: string; role: string } }).auth = {
-        userId: user.id,
-        role: user.role,
+      (req as Request & { auth?: AuthContext }).auth = {
+        userId: identity.id,
+        empresaId,
+        rol: access.rol,
       };
       next();
     };

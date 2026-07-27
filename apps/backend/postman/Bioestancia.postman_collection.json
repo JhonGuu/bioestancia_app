@@ -1,0 +1,212 @@
+{
+  "info": {
+    "name": "Bioestancia API",
+    "description": "Colección de endpoints del backend de Bioestancia (auth multi-empresa + empresas). Usar junto con el environment 'Bioestancia - Local'.\n\nFlujo sugerido:\n1. Correr `pnpm db:seed` en el backend con SEED_ADMIN_EMAIL/SEED_ADMIN_PASSWORD (ver README).\n2. Setear esas mismas credenciales en las variables `adminEmail` / `adminPassword` del environment.\n3. Correr 'Auth > Sign In' — guarda el JWT y la primera empresa automáticamente.\n4. A partir de ahí, cualquier request que necesite empresa activa ya tiene el header X-Empresa-Id resuelto.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{jwt}}", "type": "string" }
+    ]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000/api", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Sign Up (crear usuario, sin empresa)",
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/account/signup", "host": ["{{baseUrl}}"], "path": ["account", "signup"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{newUserEmail}}\",\n  \"username\": \"{{newUserUsername}}\",\n  \"password\": \"{{newUserPassword}}\",\n  \"firstName\": \"Nombre\",\n  \"lastName\": \"Apellido\",\n  \"phoneNumber\": \"1122334455\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Crea un usuario SIN acceso a ninguna empresa todavía. El acceso se otorga aparte (admin usa 'Usuarios > Otorgar acceso a usuario existente')."
+          },
+          "response": []
+        },
+        {
+          "name": "Sign In",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test(\"Status 200\", function () { pm.response.to.have.status(200); });",
+                  "if (json.data && json.data.token) {",
+                  "    pm.environment.set(\"jwt\", json.data.token);",
+                  "    console.log(\"JWT guardado en {{jwt}}\");",
+                  "}",
+                  "if (json.data && Array.isArray(json.data.empresas) && json.data.empresas.length > 0) {",
+                  "    pm.environment.set(\"empresaId\", json.data.empresas[0].empresaId);",
+                  "    console.log(\"Empresas del usuario:\", json.data.empresas);",
+                  "    console.log(\"empresaId activo seteado a la primera:\", json.data.empresas[0]);",
+                  "} else {",
+                  "    console.log(\"Este usuario todavia no tiene acceso a ninguna empresa\");",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/account/signin", "host": ["{{baseUrl}}"], "path": ["account", "signin"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Login. Guarda automáticamente el JWT en {{jwt}} y, si el usuario tiene acceso a alguna empresa, setea {{empresaId}} con la primera de la lista."
+          },
+          "response": []
+        },
+        {
+          "name": "Get My Account",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/account/me", "host": ["{{baseUrl}}"], "path": ["account", "me"] },
+            "description": "Perfil del usuario autenticado. No necesita empresa activa (auth: \"jwt\")."
+          },
+          "response": []
+        },
+        {
+          "name": "Get My Empresas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test(\"Status 200\", function () { pm.response.to.have.status(200); });",
+                  "if (json.data && json.data.length > 0) {",
+                  "    pm.environment.set(\"empresaId\", json.data[0].empresaId);",
+                  "    console.log(\"Empresas a las que tengo acceso:\", json.data);",
+                  "} else {",
+                  "    console.log(\"Sin acceso a ninguna empresa todavia\");",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/account/empresas", "host": ["{{baseUrl}}"], "path": ["account", "empresas"] },
+            "description": "Empresas a las que el usuario autenticado tiene acceso + su rol en cada una. Usar para armar el selector de empresa. No necesita empresa activa (auth: \"jwt\")."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Empresas (admin)",
+      "item": [
+        {
+          "name": "Crear Empresa",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test(\"Status 201\", function () { pm.response.to.have.status(201); });",
+                  "if (json.data && json.data.id) {",
+                  "    pm.environment.set(\"empresaId\", json.data.id);",
+                  "    console.log(\"Empresa creada, empresaId seteado a:\", json.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Empresa-Id", "value": "{{empresaId}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/empresas", "host": ["{{baseUrl}}"], "path": ["empresas"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"razonSocial\": \"Nombre de la empresa\",\n  \"cuit\": \"20-12345678-9\",\n  \"rubro\": \"frigorifico\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "SOLO ADMIN de la empresa activa (header X-Empresa-Id). `rubro` acepta \"frigorifico\" o \"revendedora\". Uso administrativo/bootstrap — con el seed ya tenés Bioestancia y El Meridiano creadas."
+          },
+          "response": []
+        },
+        {
+          "name": "Listar Empresas",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Empresa-Id", "value": "{{empresaId}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/empresas", "host": ["{{baseUrl}}"], "path": ["empresas"] },
+            "description": "Lista TODAS las empresas del sistema (no solo a las que tenés acceso). SOLO ADMIN de la empresa activa."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Usuarios y accesos (admin)",
+      "item": [
+        {
+          "name": "Crear usuario + otorgar acceso a empresa activa",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Empresa-Id", "value": "{{empresaId}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/account/users", "host": ["{{baseUrl}}"], "path": ["account", "users"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"veterinaria@bioestancia.com\",\n  \"username\": \"veterinaria\",\n  \"password\": \"password-segura\",\n  \"firstName\": \"Nombre\",\n  \"lastName\": \"Apellido\",\n  \"phoneNumber\": \"1122334455\",\n  \"rol\": \"veterinario\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "SOLO ADMIN de la empresa activa. Crea un usuario NUEVO y le otorga acceso a esa misma empresa (X-Empresa-Id) con el rol indicado. `rol` acepta: admin, contable, veterinario."
+          },
+          "response": []
+        },
+        {
+          "name": "Otorgar acceso a usuario existente",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Empresa-Id", "value": "{{empresaId}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/account/access", "host": ["{{baseUrl}}"], "path": ["account", "access"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"contador@bioestancia.com\",\n  \"rol\": \"contable\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "SOLO ADMIN de la empresa activa. Otorga acceso a la empresa activa (X-Empresa-Id) a un usuario que YA EXISTE, buscado por email. Ej: el contador ya tiene cuenta en Bioestancia, ahora sumale acceso a El Meridiano (cambiando el X-Empresa-Id de esta request)."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
