@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="es" translate="no">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      La app ya está en español y no la traducimos nosotros. Le pedimos a
+      Chrome/Edge que no la traduzcan tampoco: la traducción automática
+      reescribe el DOM por fuera de React y rompe los portales de Radix
+      (Select, Dialog, etc.) con "Failed to execute 'removeChild' on 'Node'"
+      — bug conocido de Radix, no nuestro (radix-ui/primitives#2578).
+    -->
+    <meta name="google" content="notranslate" />
+    <title>Bioestancia</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
