@@ -1,17 +1,25 @@
 {
   "info": {
     "name": "Bioestancia API",
-    "description": "Colección de endpoints del backend de Bioestancia (auth multi-empresa + empresas). Usar junto con el environment 'Bioestancia - Local'.\n\nFlujo sugerido:\n1. Correr `pnpm db:seed` en el backend con SEED_ADMIN_EMAIL/SEED_ADMIN_PASSWORD (ver README).\n2. Setear esas mismas credenciales en las variables `adminEmail` / `adminPassword` del environment.\n3. Correr 'Auth > Sign In' — guarda el JWT y la primera empresa automáticamente.\n4. A partir de ahí, cualquier request que necesite empresa activa ya tiene el header X-Empresa-Id resuelto.",
+    "description": "Colección de endpoints del backend de Bioestancia (auth multi-empresa + módulos de negocio: empresas, clientes, proveedores, listas de precios, boletas, ventas, compras, resultado de faena, liquidación de compra y planificación de cabezas). Usar junto con el environment 'Bioestancia - Local'.\n\nFlujo sugerido:\n1. Correr `pnpm db:seed` en el backend con SEED_ADMIN_EMAIL/SEED_ADMIN_PASSWORD (ver README).\n2. Setear esas mismas credenciales en las variables `adminEmail` / `adminPassword` del environment.\n3. Correr 'Auth > Sign In' — guarda el JWT y la primera empresa automáticamente.\n4. A partir de ahí, cualquier request que necesite empresa activa ya tiene el header X-Empresa-Id resuelto.\n5. Para probar el circuito de negocio de punta a punta: Listas de precios > Crear, Clientes > Crear, Proveedores > Crear, Compras > Crear (guarda compraId y compraCategoriaId), Boletas > Crear, Ventas > Crear, Compras > Cerrar compra, Resultado de faena > Cargar, Liquidación de compra > Emitir, Planificación de cabezas > Guardar.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
     "type": "bearer",
     "bearer": [
-      { "key": "token", "value": "{{jwt}}", "type": "string" }
+      {
+        "key": "token",
+        "value": "{{jwt}}",
+        "type": "string"
+      }
     ]
   },
   "variable": [
-    { "key": "baseUrl", "value": "http://localhost:3000/api", "type": "string" }
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api",
+      "type": "string"
+    }
   ],
   "item": [
     {
@@ -21,15 +29,33 @@
           "name": "Sign Up (crear usuario, sin empresa)",
           "request": {
             "method": "POST",
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
-            "url": { "raw": "{{baseUrl}}/account/signup", "host": ["{{baseUrl}}"], "path": ["account", "signup"] },
+            "url": {
+              "raw": "{{baseUrl}}/account/signup",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "account",
+                "signup"
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"{{newUserEmail}}\",\n  \"username\": \"{{newUserUsername}}\",\n  \"password\": \"{{newUserPassword}}\",\n  \"firstName\": \"Nombre\",\n  \"lastName\": \"Apellido\",\n  \"phoneNumber\": \"1122334455\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "description": "Crea un usuario SIN acceso a ninguna empresa todavía. El acceso se otorga aparte (admin usa 'Usuarios > Otorgar acceso a usuario existente')."
           },
@@ -62,15 +88,33 @@
           ],
           "request": {
             "method": "POST",
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
-            "url": { "raw": "{{baseUrl}}/account/signin", "host": ["{{baseUrl}}"], "path": ["account", "signin"] },
+            "url": {
+              "raw": "{{baseUrl}}/account/signin",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "account",
+                "signin"
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "description": "Login. Guarda automáticamente el JWT en {{jwt}} y, si el usuario tiene acceso a alguna empresa, setea {{empresaId}} con la primera de la lista."
           },
@@ -81,7 +125,16 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": { "raw": "{{baseUrl}}/account/me", "host": ["{{baseUrl}}"], "path": ["account", "me"] },
+            "url": {
+              "raw": "{{baseUrl}}/account/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "account",
+                "me"
+              ]
+            },
             "description": "Perfil del usuario autenticado. No necesita empresa activa (auth: \"jwt\")."
           },
           "response": []
@@ -109,7 +162,16 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": { "raw": "{{baseUrl}}/account/empresas", "host": ["{{baseUrl}}"], "path": ["account", "empresas"] },
+            "url": {
+              "raw": "{{baseUrl}}/account/empresas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "account",
+                "empresas"
+              ]
+            },
             "description": "Empresas a las que el usuario autenticado tiene acceso + su rol en cada una. Usar para armar el selector de empresa. No necesita empresa activa (auth: \"jwt\")."
           },
           "response": []
@@ -140,14 +202,32 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "X-Empresa-Id", "value": "{{empresaId}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Empresa-Id",
+                "value": "{{empresaId}}"
+              }
             ],
-            "url": { "raw": "{{baseUrl}}/empresas", "host": ["{{baseUrl}}"], "path": ["empresas"] },
+            "url": {
+              "raw": "{{baseUrl}}/empresas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "empresas"
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"razonSocial\": \"Nombre de la empresa\",\n  \"cuit\": \"20-12345678-9\",\n  \"rubro\": \"frigorifico\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "description": "SOLO ADMIN de la empresa activa (header X-Empresa-Id). `rubro` acepta \"frigorifico\" o \"revendedora\". Uso administrativo/bootstrap — con el seed ya tenés Bioestancia y El Meridiano creadas."
           },
@@ -158,9 +238,20 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "X-Empresa-Id", "value": "{{empresaId}}" }
+              {
+                "key": "X-Empresa-Id",
+                "value": "{{empresaId}}"
+              }
             ],
-            "url": { "raw": "{{baseUrl}}/empresas", "host": ["{{baseUrl}}"], "path": ["empresas"] },
+            "url": {
+              "raw": "{{baseUrl}}/empresas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "empresas"
+              ]
+            },
             "description": "Lista TODAS las empresas del sistema (no solo a las que tenés acceso). SOLO ADMIN de la empresa activa."
           },
           "response": []
@@ -175,14 +266,33 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "X-Empresa-Id", "value": "{{empresaId}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Empresa-Id",
+                "value": "{{empresaId}}"
+              }
             ],
-            "url": { "raw": "{{baseUrl}}/account/users", "host": ["{{baseUrl}}"], "path": ["account", "users"] },
+            "url": {
+              "raw": "{{baseUrl}}/account/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "account",
+                "users"
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"veterinaria@bioestancia.com\",\n  \"username\": \"veterinaria\",\n  \"password\": \"password-segura\",\n  \"firstName\": \"Nombre\",\n  \"lastName\": \"Apellido\",\n  \"phoneNumber\": \"1122334455\",\n  \"rol\": \"veterinario\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "description": "SOLO ADMIN de la empresa activa. Crea un usuario NUEVO y le otorga acceso a esa misma empresa (X-Empresa-Id) con el rol indicado. `rol` acepta: admin, contable, veterinario."
           },
@@ -193,16 +303,959 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "X-Empresa-Id", "value": "{{empresaId}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Empresa-Id",
+                "value": "{{empresaId}}"
+              }
             ],
-            "url": { "raw": "{{baseUrl}}/account/access", "host": ["{{baseUrl}}"], "path": ["account", "access"] },
+            "url": {
+              "raw": "{{baseUrl}}/account/access",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "account",
+                "access"
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"contador@bioestancia.com\",\n  \"rol\": \"contable\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "description": "SOLO ADMIN de la empresa activa. Otorga acceso a la empresa activa (X-Empresa-Id) a un usuario que YA EXISTE, buscado por email. Ej: el contador ya tiene cuenta en Bioestancia, ahora sumale acceso a El Meridiano (cambiando el X-Empresa-Id de esta request)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Listas de precios",
+      "item": [
+        {
+          "name": "Crear lista de precios",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Empresa-Id",
+                "value": "{{empresaId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/listas-precios",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "listas-precios"
+              ]
+            },
+            "description": "Crea una lista de precios para la empresa activa. Admin o contable.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Lista mayorista\",\n  \"descripcion\": \"Precios para clientes mayoristas\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test(\"Status 201\", function () { pm.response.to.have.status(201); });",
+                  "if (json.data.id) {",
+                  "    pm.environment.set(\"listaDePreciosId\", json.data.id);",
+                  "    console.log(\"listaDePreciosId seteado a:\", json.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar listas de precios",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Empresa-Id",
+                "value": "{{empresaId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/listas-precios",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "listas-precios"
+              ]
+            },
+            "description": "Lista las listas de precios activas de la empresa activa."
+          },
+          "response": []
+        },
+        {
+          "name": "Obtener lista de precios",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Empresa-Id",
+                "value": "{{empresaId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/listas-precios/{{listaDePreciosId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "listas-precios",
+                "{{listaDePreciosId}}"
+              ]
+            },
+            "description": "Obtiene una lista de precios de la empresa activa por id."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Clientes",
+      "item": [
+        {
+          "name": "Crear cliente (persona física)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Empresa-Id",
+                "value": "{{empresaId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/clientes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "clientes"
+              ]
+            },
+            "description": "Crea un cliente para la empresa activa. Persona física (nombre+apellido) o jurídica (razonSocial) — nunca ambas. Necesita cuit o dni. `listaDePreciosId` es opcional.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Carlos\",\n  \"apellido\": \"Gómez\",\n  \"dni\": \"30111222\",\n  \"condicionFiscal\": \"consumidor_final\",\n  \"domicilio\": \"Av. San Martín 450\",\n  \"provincia\": \"Buenos Aires\",\n  \"pais\": \"Argentina\",\n  \"email\": \"carlos.gomez@ejemplo.com\",\n  \"listaDePreciosId\": \"{{listaDePreciosId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test(\"Status 201\", function () { pm.response.to.have.status(201); });",
+                  "if (json.data.id) {",
+                  "    pm.environment.set(\"clienteId\", json.data.id);",
+                  "    console.log(\"clienteId seteado a:\", json.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar clientes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Empresa-Id",
+                "value": "{{empresaId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/clientes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "clientes"
+              ]
+            },
+            "description": "Lista los clientes de la empresa activa."
+          },
+          "response": []
+        },
+        {
+          "name": "Obtener cliente",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Empresa-Id",
+                "value": "{{empresaId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/clientes/{{clienteId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "clientes",
+                "{{clienteId}}"
+              ]
+            },
+            "description": "Obtiene un cliente de la empresa activa por id."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Proveedores",
+      "item": [
+        {
+          "name": "Crear proveedor (persona jurídica)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Empresa-Id",
+                "value": "{{empresaId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/proveedores",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "proveedores"
+              ]
+            },
+            "description": "Crea un proveedor para la empresa activa. Persona física (nombre+apellido) o jurídica (razonSocial) — nunca ambas. Necesita cuit o dni. `porcentajeDesbaste` es el default que se usa en compras si no se manda uno puntual.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"razonSocial\": \"Establecimiento Rural La Esperanza S.A.\",\n  \"cuit\": \"30-71234567-8\",\n  \"condicionFiscal\": \"responsable_inscripto\",\n  \"domicilio\": \"Ruta 5 Km 120\",\n  \"provincia\": \"Buenos Aires\",\n  \"pais\": \"Argentina\",\n  \"email\": \"compras@laesperanza.com.ar\",\n  \"datosBancarios\": \"0000003100000001234567\",\n  \"porcentajeDesbaste\": 2.5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test(\"Status 201\", function () { pm.response.to.have.status(201); });",
+                  "if (json.data.id) {",
+                  "    pm.environment.set(\"proveedorId\", json.data.id);",
+                  "    console.log(\"proveedorId seteado a:\", json.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar proveedores",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Empresa-Id",
+                "value": "{{empresaId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/proveedores",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "proveedores"
+              ]
+            },
+            "description": "Lista los proveedores de la empresa activa."
+          },
+          "response": []
+        },
+        {
+          "name": "Obtener proveedor",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Empresa-Id",
+                "value": "{{empresaId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/proveedores/{{proveedorId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "proveedores",
+                "{{proveedorId}}"
+              ]
+            },
+            "description": "Obtiene un proveedor de la empresa activa por id."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Boletas",
+      "item": [
+        {
+          "name": "Crear boleta",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Empresa-Id",
+                "value": "{{empresaId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/boletas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "boletas"
+              ]
+            },
+            "description": "Crea una boleta (comprobante de un cliente para un día) para la empresa activa.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{clienteId}}\",\n  \"fecha\": \"2026-07-15\",\n  \"numero\": \"B-0001\",\n  \"comentarios\": \"Boleta de prueba\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test(\"Status 201\", function () { pm.response.to.have.status(201); });",
+                  "if (json.data.id) {",
+                  "    pm.environment.set(\"boletaId\", json.data.id);",
+                  "    console.log(\"boletaId seteado a:\", json.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar boletas",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Empresa-Id",
+                "value": "{{empresaId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/boletas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "boletas"
+              ]
+            },
+            "description": "Lista las boletas de la empresa activa."
+          },
+          "response": []
+        },
+        {
+          "name": "Obtener boleta",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Empresa-Id",
+                "value": "{{empresaId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/boletas/{{boletaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "boletas",
+                "{{boletaId}}"
+              ]
+            },
+            "description": "Obtiene una boleta de la empresa activa por id."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Ventas",
+      "item": [
+        {
+          "name": "Crear venta",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Empresa-Id",
+                "value": "{{empresaId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ventas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ventas"
+              ]
+            },
+            "description": "Crea una venta (una cabeza, o un ajuste de compensación de kg). Toda venta de un animal físico necesita compraId + garrón, salvo formaVenta = compensacion_kg.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{clienteId}}\",\n  \"compraId\": \"{{compraId}}\",\n  \"garron\": 12,\n  \"formaVenta\": \"cabeza_capon\",\n  \"kg\": 85.5,\n  \"precioKg\": 1350,\n  \"fecha\": \"2026-07-15\",\n  \"clienteFinalReferencia\": \"\",\n  \"comentarios\": \"Venta de prueba\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test(\"Status 201\", function () { pm.response.to.have.status(201); });",
+                  "if (json.data.id) {",
+                  "    pm.environment.set(\"ventaId\", json.data.id);",
+                  "    console.log(\"ventaId seteado a:\", json.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar ventas",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Empresa-Id",
+                "value": "{{empresaId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ventas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ventas"
+              ]
+            },
+            "description": "Lista las ventas de la empresa activa."
+          },
+          "response": []
+        },
+        {
+          "name": "Obtener venta",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Empresa-Id",
+                "value": "{{empresaId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ventas/{{ventaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ventas",
+                "{{ventaId}}"
+              ]
+            },
+            "description": "Obtiene una venta de la empresa activa por id."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Compras",
+      "item": [
+        {
+          "name": "Crear compra",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Empresa-Id",
+                "value": "{{empresaId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/compras",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "compras"
+              ]
+            },
+            "description": "Crea una compra (lote de animales a un proveedor) con sus líneas de categoría/raza. `categorias` necesita al menos una línea. Guarda automáticamente compraId y compraCategoriaId (de la primera línea) para usar en Resultado de faena / Liquidación.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"proveedorId\": \"{{proveedorId}}\",\n  \"numero\": \"C-0001\",\n  \"especie\": \"porcino\",\n  \"letra\": \"A\",\n  \"fecha\": \"2026-07-10\",\n  \"dte\": \"DTE-0001\",\n  \"remito\": \"R-0001\",\n  \"porcentajeDesbaste\": 2.5,\n  \"comentarios\": \"Compra de prueba\",\n  \"categorias\": [\n    {\n      \"categoria\": \"Capón\",\n      \"raza\": \"Landrace\",\n      \"cabezas\": 40,\n      \"pesoBruto\": 3800\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test(\"Status 201\", function () { pm.response.to.have.status(201); });",
+                  "if (json.data && json.data.id) {",
+                  "    pm.environment.set(\"compraId\", json.data.id);",
+                  "    console.log(\"compraId seteado a:\", json.data.id);",
+                  "}",
+                  "if (json.data && Array.isArray(json.data.categorias) && json.data.categorias.length > 0) {",
+                  "    pm.environment.set(\"compraCategoriaId\", json.data.categorias[0].id);",
+                  "    console.log(\"compraCategoriaId (primera línea) seteado a:\", json.data.categorias[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar compras",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Empresa-Id",
+                "value": "{{empresaId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/compras",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "compras"
+              ]
+            },
+            "description": "Lista las compras de la empresa activa (sin el detalle de categorías)."
+          },
+          "response": []
+        },
+        {
+          "name": "Obtener compra",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Empresa-Id",
+                "value": "{{empresaId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/compras/{{compraId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "compras",
+                "{{compraId}}"
+              ]
+            },
+            "description": "Obtiene una compra de la empresa activa por id, con sus líneas de categoría."
+          },
+          "response": []
+        },
+        {
+          "name": "Cerrar compra",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Empresa-Id",
+                "value": "{{empresaId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/compras/{{compraId}}/cerrar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "compras",
+                "{{compraId}}",
+                "cerrar"
+              ]
+            },
+            "description": "Cierra una compra: reconcilia cabezas vendidas (garrones distintos en ventas) contra la suma de cabezas de sus categorías, y si coinciden calcula pesoFinalVenta y rinde. Admin o contable."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test(\"Status 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Resultado de faena",
+      "item": [
+        {
+          "name": "Cargar resultado de faena",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Empresa-Id",
+                "value": "{{empresaId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/compras/{{compraId}}/resultado-faena",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "compras",
+                "{{compraId}}",
+                "resultado-faena"
+              ]
+            },
+            "description": "Carga el resultado de faena (documento SENASA del frigorífico) de una compra. `compraCategoriaId` tiene que ser el id de una línea de la compra (se setea solo al crear la compra, en {{compraCategoriaId}}).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fechaFaena\": \"2026-07-11\",\n  \"numero\": \"RF-0001\",\n  \"numeroAutorizacion\": \"SENASA-000001\",\n  \"comisosKg\": 0,\n  \"comisosCabezas\": 0,\n  \"comentarios\": \"Resultado de faena de prueba\",\n  \"categorias\": [\n    {\n      \"compraCategoriaId\": \"{{compraCategoriaId}}\",\n      \"kgVivoFaena\": 3800,\n      \"kgCarne\": 2850,\n      \"porcentajeMagro\": 58,\n      \"destinoComercial\": \"EXPO\",\n      \"cuartosDelantero\": 40,\n      \"cuartosTrasero\": 40\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test(\"Status 201\", function () { pm.response.to.have.status(201); });",
+                  "if (json.data.id) {",
+                  "    pm.environment.set(\"resultadoFaenaId\", json.data.id);",
+                  "    console.log(\"resultadoFaenaId seteado a:\", json.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Obtener resultado de faena",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Empresa-Id",
+                "value": "{{empresaId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/compras/{{compraId}}/resultado-faena",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "compras",
+                "{{compraId}}",
+                "resultado-faena"
+              ]
+            },
+            "description": "Obtiene el resultado de faena de una compra, con sus categorías."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Liquidación de compra",
+      "item": [
+        {
+          "name": "Emitir liquidación de compra",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Empresa-Id",
+                "value": "{{empresaId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/compras/{{compraId}}/liquidacion",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "compras",
+                "{{compraId}}",
+                "liquidacion"
+              ]
+            },
+            "description": "Emite la liquidación de compra (comprobante AFIP que se le manda al proveedor). `compraCategoriaId` tiene que ser el id de una línea de la compra (se setea solo al crear la compra, en {{compraCategoriaId}}).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"numeroComprobante\": \"LIQ-0001\",\n  \"fecha\": \"2026-07-12\",\n  \"fechaOperacion\": \"2026-07-11\",\n  \"cae\": \"75239481923847\",\n  \"fechaVencimientoCae\": \"2026-07-22\",\n  \"totalGastos\": 15000,\n  \"ivaSobreGastos\": 3150,\n  \"totalTributos\": 8000,\n  \"comentarios\": \"Liquidación de prueba\",\n  \"categorias\": [\n    {\n      \"compraCategoriaId\": \"{{compraCategoriaId}}\",\n      \"precioKg\": 1350,\n      \"porcentajeIva\": 10.5\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test(\"Status 201\", function () { pm.response.to.have.status(201); });",
+                  "if (json.data.id) {",
+                  "    pm.environment.set(\"liquidacionCompraId\", json.data.id);",
+                  "    console.log(\"liquidacionCompraId seteado a:\", json.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Obtener liquidación de compra",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Empresa-Id",
+                "value": "{{empresaId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/compras/{{compraId}}/liquidacion",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "compras",
+                "{{compraId}}",
+                "liquidacion"
+              ]
+            },
+            "description": "Obtiene la liquidación de una compra, con sus categorías."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Planificación de cabezas",
+      "item": [
+        {
+          "name": "Guardar planificación de cabezas",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Empresa-Id",
+                "value": "{{empresaId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/planificacion-cabezas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "planificacion-cabezas"
+              ]
+            },
+            "description": "Guarda o revisa el plan de cabezas de un cliente para uno o varios días (upsert por cliente+fecha). Admin o contable.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{clienteId}}\",\n  \"dias\": [\n    {\n      \"fecha\": \"2026-07-20\",\n      \"cabezasPlanificadas\": 15,\n      \"comentarios\": \"Planificación de prueba\"\n    },\n    {\n      \"fecha\": \"2026-07-21\",\n      \"cabezasPlanificadas\": 10\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.test(\"Status 201\", function () { pm.response.to.have.status(201); });",
+                  "console.log(\"Días guardados:\", json.data);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar planificación de cabezas",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Empresa-Id",
+                "value": "{{empresaId}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/planificacion-cabezas?desde=2026-07-01&hasta=2026-07-31&clienteId={{clienteId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "planificacion-cabezas"
+              ],
+              "query": [
+                {
+                  "key": "desde",
+                  "value": "2026-07-01"
+                },
+                {
+                  "key": "hasta",
+                  "value": "2026-07-31"
+                },
+                {
+                  "key": "clienteId",
+                  "value": "{{clienteId}}"
+                }
+              ]
+            },
+            "description": "Lista el plan de cabezas en un rango de fechas (un cliente puntual si se manda clienteId, o todos), cruzado contra lo efectivamente vendido."
           },
           "response": []
         }

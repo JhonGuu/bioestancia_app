@@ -1,4 +1,4 @@
-import { boolean, integer, pgTable, timestamp, unique, uuid, varchar } from "drizzle-orm/pg-core";
+import { boolean, index, integer, pgTable, timestamp, unique, uuid, varchar } from "drizzle-orm/pg-core";
 
 import { empresas } from "@/modules/empresas/infra/database/schema";
 import { clientes } from "@/modules/clientes/infra/database/schema";
@@ -28,5 +28,11 @@ export const planificacionCabezas = pgTable(
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
     deletedAt: timestamp("deleted_at"),
   },
-  (table) => [unique("planificacion_cabezas_cliente_fecha_unique").on(table.clienteId, table.fecha)],
+  (table) => [
+    unique("planificacion_cabezas_cliente_fecha_unique").on(table.clienteId, table.fecha),
+    // Soporta `listByRango`/`listByEmpresaYRango`: siempre se filtra primero
+    // por empresa y después por rango de fechas (semana/día/mes actual y
+    // anterior, en cada carga de la página de planificación).
+    index("planificacion_cabezas_empresa_fecha_idx").on(table.empresaId, table.fecha),
+  ],
 );

@@ -1,5 +1,6 @@
 import { Proveedor } from "@/modules/proveedores/domain/proveedor";
 import { CondicionFiscal } from "@/modules/clientes/domain/condicion-fiscal";
+import { CodigoAfipPorcino } from "@/modules/proveedores/domain/codigo-afip-porcino";
 
 /**
  * Interface del repositorio de Proveedores. Forma parte del DOMINIO.
@@ -31,4 +32,6 @@ export interface CreateProveedorInput {
   condicionFiscal: CondicionFiscal;
   datosBancarios?: string;
   porcentajeDesbaste?: number;
+  renspa?: string;
+  codigoAfip?: CodigoAfipPorcino;
 }

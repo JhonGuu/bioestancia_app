@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { useAuth } from "@/modules/auth/context/auth-context";
 import { signInSchema, type SignInFormValues } from "@/modules/auth/domain/auth.schemas";
 import { ApiError } from "@/shared/api/api-response";
+import { ThemeToggle } from "@/shared/theme/theme-toggle";
+import { BrandLogo } from "@/components/brand-logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -54,11 +56,19 @@ function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-svh items-center justify-center bg-muted/30 p-4">
+    <div className="relative flex min-h-svh items-center justify-center bg-muted/30 p-4">
+      <ThemeToggle className="absolute top-4 right-4" />
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle className="text-xl">Bioestancia</CardTitle>
-          <CardDescription>Ingresá con tu cuenta para continuar</CardDescription>
+          <div className="mb-2 flex items-center justify-center gap-6">
+            <BrandLogo company="bioestancia" className="h-12" />
+            <div className="bg-border h-8 w-px" aria-hidden />
+            <BrandLogo company="el-meridiano" className="h-12" />
+          </div>
+          <CardTitle className="text-center text-xl">Iniciar sesión</CardTitle>
+          <CardDescription className="text-center">
+            Ingresá con tu cuenta para continuar
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>

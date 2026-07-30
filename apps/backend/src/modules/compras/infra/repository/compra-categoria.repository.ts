@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, inArray } from "drizzle-orm";
 import { inject, injectable } from "inversify";
 
 import { DI_TYPES } from "@/shared/infra/di/types";
@@ -9,8 +9,11 @@ import {
   ActualizarLiquidacionCompraCategoriaData,
   CompraCategoriaRepository,
   CreateCompraCategoriaInput,
+  SyncCompraCategoriaLine,
 } from "@/modules/compras/domain/compra-categoria.repository";
 import { CompraCategoria } from "@/modules/compras/domain/compra-categoria";
+import { CategoriaPorcino } from "@/modules/compras/domain/categoria-porcino";
+import { RazaPorcino } from "@/modules/compras/domain/raza-porcino";
 import { compraCategorias } from "@/modules/compras/infra/database/schema";
 
 @injectable()
@@ -40,12 +43,50 @@ export class CompraCategoriaRepositoryDrizzle implements CompraCategoriaReposito
           categoria: line.categoria,
           raza: line.raza ?? null,
           cabezas: line.cabezas,
-          pesoBruto: String(line.pesoBruto),
-          pesoNeto: String(line.pesoNeto),
         })),
       )
       .returning();
     return rows.map((row) => this.toDomain(row));
+  }
+
+  async syncForCompra(compraId: string, lines: SyncCompraCategoriaLine[]): Promise<CompraCategoria[]> {
+    const existentes = await this.listByCompra(compraId);
+    const existentesIds = new Set(existentes.map((e) => e.id));
+    const idsAConservar = new Set(lines.filter((l) => l.id).map((l) => l.id as string));
+    const idsABorrar = existentes.filter((e) => !idsAConservar.has(e.id)).map((e) => e.id);
+
+    if (idsABorrar.length > 0) {
+      await this.orm.db.delete(compraCategorias).where(inArray(compraCategorias.id, idsABorrar));
+    }
+
+    const resultado: CompraCategoria[] = [];
+    for (const linea of lines) {
+      if (linea.id && existentesIds.has(linea.id)) {
+        const [row] = await this.orm.db
+          .update(compraCategorias)
+          .set({
+            categoria: linea.categoria,
+            raza: linea.raza ?? null,
+            cabezas: linea.cabezas,
+            updatedAt: new Date(),
+          })
+          .where(eq(compraCategorias.id, linea.id))
+          .returning();
+        if (row) resultado.push(this.toDomain(row));
+      } else {
+        const [row] = await this.orm.db
+          .insert(compraCategorias)
+          .values({
+            compraId,
+            categoria: linea.categoria,
+            raza: linea.raza ?? null,
+            cabezas: linea.cabezas,
+          })
+          .returning();
+        if (row) resultado.push(this.toDomain(row));
+      }
+    }
+    return resultado;
   }
 
   async actualizarFaena(
@@ -96,11 +137,11 @@ export class CompraCategoriaRepositoryDrizzle implements CompraCategoriaReposito
     return {
       id: row.id,
       compraId: row.compraId,
-      categoria: row.categoria,
-      raza: row.raza,
+      categoria: row.categoria as CategoriaPorcino,
+      raza: row.raza as RazaPorcino | null,
       cabezas: row.cabezas,
-      pesoBruto: Number(row.pesoBruto),
-      pesoNeto: Number(row.pesoNeto),
+      pesoBruto: row.pesoBruto !== null ? Number(row.pesoBruto) : null,
+      pesoNeto: row.pesoNeto !== null ? Number(row.pesoNeto) : null,
       kgVivoFaena: row.kgVivoFaena !== null ? Number(row.kgVivoFaena) : null,
       kgCarne: row.kgCarne !== null ? Number(row.kgCarne) : null,
       porcentajeMagro: row.porcentajeMagro !== null ? Number(row.porcentajeMagro) : null,

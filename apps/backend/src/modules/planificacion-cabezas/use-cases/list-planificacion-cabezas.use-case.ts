@@ -13,7 +13,21 @@ export interface ListPlanificacionCabezasInput {
   clienteId?: string;
 }
 
-export interface PlanificacionCabezasConVentas extends PlanificacionCabezas {
+/**
+ * Fila del reporte: o bien un plan real (`id` != null, viene de
+ * `planificacion_cabezas`), o bien una fila "virtual" (`id` == null) para un
+ * cliente+día que tuvo ventas pero NUNCA se planificó. Esto último es
+ * necesario para que una entrega real nunca quede invisible en el reporte
+ * solo porque nadie cargó un plan ese día — ver el comentario de `execute()`.
+ *
+ * `id: null` no es un problema para editar: `POST /planificacion-cabezas`
+ * hace upsert por `(clienteId, fecha)`, no necesita el id existente.
+ */
+export interface PlanificacionCabezasConVentas
+  extends Omit<PlanificacionCabezas, "id" | "createdAt" | "updatedAt"> {
+  id: string | null;
+  createdAt: Date | null;
+  updatedAt: Date | null;
   /**
    * Garrones distintos vendidos a este cliente en este día (no filas — mismo
    * criterio que la reconciliación de `cerrar-compra`: no cuenta filas de
@@ -28,9 +42,11 @@ export interface PlanificacionCabezasConVentas extends PlanificacionCabezas {
  * Lista el plan de cabezas en un rango de fechas (un cliente puntual, o
  * todos si no se pasa `clienteId`) cruzado contra lo efectivamente vendido.
  *
- * El cruce se hace solo para los clientes que tienen al menos un día
- * planificado en el rango — esto es una lista de planificación, no un
- * reporte general de ventas por cliente.
+ * El cruce parte de TODA la empresa (no solo de los clientes que ya tienen
+ * un día planificado en el rango): si un cliente tuvo una entrega real sin
+ * plan cargado, igual aparece acá con `cabezasPlanificadas: 0` e `id: null`.
+ * Antes esto no pasaba — la lista solo mostraba clientes con al menos un día
+ * planificado, así que una entrega sin plan quedaba invisible.
  */
 @injectable()
 export class ListPlanificacionCabezas {
@@ -51,48 +67,80 @@ export class ListPlanificacionCabezas {
       clienteId: input.clienteId,
     });
 
-    const clienteIds = [...new Set(planes.map((p) => p.clienteId))];
-    const cabezasVendidasPorClienteYDia = new Map<string, number>();
+    // Ventas de TODA la empresa en el rango (no solo de los clientes con
+    // plan) — así ninguna entrega real queda afuera del cruce.
+    const todasLasVentas = await this.ventaRepository.listByEmpresaYRango(input.empresaId, desde, hasta);
+    const ventasEnRango = input.clienteId
+      ? todasLasVentas.filter((v) => v.clienteId === input.clienteId)
+      : todasLasVentas;
 
-    for (const clienteId of clienteIds) {
-      const ventasDelCliente = await this.ventaRepository.listByClienteYRango(
-        clienteId,
-        input.empresaId,
-        desde,
-        hasta,
-      );
-      const garronesPorDia = new Map<string, Set<number>>();
-      for (const venta of ventasDelCliente) {
-        if (venta.formaVenta === FormaVenta.COMPENSACION_KG || venta.garron === null) {
-          continue;
-        }
-        const clave = `${clienteId}|${this.aClaveDeDia(venta.fecha)}`;
-        if (!garronesPorDia.has(clave)) {
-          garronesPorDia.set(clave, new Set());
-        }
-        garronesPorDia.get(clave)?.add(venta.garron);
+    const garronesPorClienteYDia = new Map<string, Set<number>>();
+    for (const venta of ventasEnRango) {
+      if (venta.formaVenta === FormaVenta.COMPENSACION_KG || venta.garron === null) {
+        continue;
       }
-      for (const [clave, garrones] of garronesPorDia) {
-        cabezasVendidasPorClienteYDia.set(clave, garrones.size);
+      const clave = `${venta.clienteId}|${this.aClaveDeDia(venta.fecha)}`;
+      if (!garronesPorClienteYDia.has(clave)) {
+        garronesPorClienteYDia.set(clave, new Set());
       }
+      garronesPorClienteYDia.get(clave)?.add(venta.garron);
+    }
+    const cabezasVendidasPorClienteYDia = new Map<string, number>();
+    for (const [clave, garrones] of garronesPorClienteYDia) {
+      cabezasVendidasPorClienteYDia.set(clave, garrones.size);
     }
 
-    return planes.map((plan) => ({
-      ...plan,
-      cabezasVendidas:
-        cabezasVendidasPorClienteYDia.get(`${plan.clienteId}|${this.aClaveDeDia(plan.fecha)}`) ?? 0,
-    }));
+    const filas = new Map<string, PlanificacionCabezasConVentas>();
+
+    // 1. Todos los planes reales del rango.
+    for (const plan of planes) {
+      const clave = `${plan.clienteId}|${this.aClaveDeDia(plan.fecha)}`;
+      filas.set(clave, {
+        ...plan,
+        cabezasVendidas: cabezasVendidasPorClienteYDia.get(clave) ?? 0,
+      });
+    }
+
+    // 2. Cliente+día con ventas pero SIN plan → fila virtual (id null).
+    for (const [clave, garrones] of garronesPorClienteYDia) {
+      if (filas.has(clave)) continue;
+      const [clienteId, diaIso] = clave.split("|");
+      filas.set(clave, {
+        id: null,
+        empresaId: input.empresaId,
+        clienteId,
+        fecha: new Date(`${diaIso}T00:00:00.000Z`),
+        cabezasPlanificadas: 0,
+        cabezasVendidas: garrones.size,
+        comentarios: null,
+        activo: true,
+        createdAt: null,
+        updatedAt: null,
+      });
+    }
+
+    return [...filas.values()].sort(
+      (a, b) => a.fecha.getTime() - b.fecha.getTime() || a.clienteId.localeCompare(b.clienteId),
+    );
   }
 
+  /**
+   * `setUTCHours`, no `setHours`: `desde`/`hasta` llegan de "YYYY-MM-DD"
+   * parseado por `z.coerce.date()` (siempre medianoche UTC), y `aClaveDeDia`
+   * también arma la clave en UTC. Si acá se normalizara en horario local del
+   * server (ej. Argentina, UTC-3), el rango de la consulta quedaría corrido
+   * ~3hs respecto de esas otras dos piezas — quedan bien mientras las tres
+   * usen el mismo criterio (UTC).
+   */
   private inicioDeDia(fecha: Date): Date {
     const normalizada = new Date(fecha);
-    normalizada.setHours(0, 0, 0, 0);
+    normalizada.setUTCHours(0, 0, 0, 0);
     return normalizada;
   }
 
   private finDeDia(fecha: Date): Date {
     const normalizada = new Date(fecha);
-    normalizada.setHours(23, 59, 59, 999);
+    normalizada.setUTCHours(23, 59, 59, 999);
     return normalizada;
   }
 

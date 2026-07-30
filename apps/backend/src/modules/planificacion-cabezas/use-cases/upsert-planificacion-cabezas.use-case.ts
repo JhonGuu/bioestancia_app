@@ -53,9 +53,18 @@ export class UpsertPlanificacionCabezas {
     );
   }
 
+  /**
+   * Normaliza a medianoche en UTC (no en horario local del server): el
+   * frontend manda "YYYY-MM-DD", que `z.coerce.date()` parsea siempre como
+   * medianoche UTC. Si acá se usara `setHours` (horario local), en un server
+   * corriendo en una zona horaria negativa (ej. Argentina, UTC-3) la fecha
+   * quedaría corrida un día para atrás — el plan de un día terminaría
+   * guardado bajo la clave del día anterior y desaparecería de la semana
+   * que se estaba editando.
+   */
   private aMedianoche(fecha: Date): Date {
     const normalizada = new Date(fecha);
-    normalizada.setHours(0, 0, 0, 0);
+    normalizada.setUTCHours(0, 0, 0, 0);
     return normalizada;
   }
 }

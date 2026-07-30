@@ -13,6 +13,26 @@
     -->
     <meta name="google" content="notranslate" />
     <title>Bioestancia</title>
+    <script>
+      // Resuelve el tema (guardado en localStorage, o el del sistema si nunca
+      // se eligió uno) y le pone la clase "dark" al <html> ANTES de que React
+      // pinte nada. Sin esto, la primera carga siempre arranca en claro y
+      // "parpadea" a oscuro un instante después si el usuario lo tenía elegido.
+      (function () {
+        try {
+          var stored = localStorage.getItem("bioestancia-theme");
+          var isDark =
+            stored === "dark" ||
+            (stored !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+          if (isDark) {
+            document.documentElement.classList.add("dark");
+            document.documentElement.style.colorScheme = "dark";
+          } else {
+            document.documentElement.style.colorScheme = "light";
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

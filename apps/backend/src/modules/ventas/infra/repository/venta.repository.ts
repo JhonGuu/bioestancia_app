@@ -63,6 +63,20 @@ export class VentaRepositoryDrizzle implements VentaRepository {
     return rows.map((row) => this.toDomain(row));
   }
 
+  async listByEmpresaYRango(empresaId: string, desde: Date, hasta: Date): Promise<Venta[]> {
+    const rows = await this.orm.db
+      .select()
+      .from(ventas)
+      .where(
+        and(
+          eq(ventas.empresaId, empresaId),
+          between(ventas.fecha, desde, hasta),
+          isNull(ventas.deletedAt),
+        ),
+      );
+    return rows.map((row) => this.toDomain(row));
+  }
+
   async create(input: CreateVentaInput): Promise<Venta> {
     const [row] = await this.orm.db
       .insert(ventas)

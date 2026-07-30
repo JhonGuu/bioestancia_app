@@ -17,10 +17,13 @@ export interface CerrarCompraInput {
  * Cierra una compra: reconcilia las cabezas vendidas contra las compradas y,
  * si coinciden, calcula el rinde.
  *
- * "Cabezas compradas" y "peso neto comprado" ya NO son escalares del header
- * de `Compra` — son la suma de las líneas de `compra_categorias` (el
- * remito/DTE real viene separado por categoría/raza, ver
- * `domain/compra-categoria.ts`).
+ * "Cabezas compradas" NO es un escalar del header de `Compra` — es la suma
+ * de las líneas de `compra_categorias` (el remito/DTE real viene separado
+ * por categoría/raza, ver `domain/compra-categoria.ts`). "Peso neto
+ * comprado" en cambio SÍ es un escalar de `Compra` (`pesoNeto`, calculado al
+ * crear la compra) — no se puede sumar por categoría porque el peso recién
+ * se discrimina por categoría al armar la liquidación de compra, que puede
+ * no haberse hecho todavía cuando se cierra la compra.
  *
  * "Cabezas vendidas" = garrones DISTINTOS en `ventas` para esa compra (no
  * filas: cada garrón tiene 2 medias reses, pueden estar en 2 filas separadas).
@@ -50,7 +53,6 @@ export class CerrarCompra {
 
     const categorias = await this.compraCategoriaRepository.listByCompra(compra.id);
     const cantidadAnimales = categorias.reduce((acc, c) => acc + c.cabezas, 0);
-    const pesoNetoTotal = categorias.reduce((acc, c) => acc + c.pesoNeto, 0);
 
     const ventasDeLaCompra = await this.ventaRepository.listByCompra(compra.id, input.empresaId);
 
@@ -70,7 +72,7 @@ export class CerrarCompra {
     }
 
     const pesoFinalVenta = ventasDeLaCompra.reduce((acc, v) => acc + v.kg, 0);
-    const rinde = Math.round((pesoFinalVenta / pesoNetoTotal) * 100 * 100) / 100;
+    const rinde = Math.round((pesoFinalVenta / compra.pesoNeto) * 100 * 100) / 100;
 
     return this.compraRepository.cerrar(compra.id, input.empresaId, {
       pesoFinalVenta: Math.round(pesoFinalVenta * 100) / 100,

@@ -10,6 +10,7 @@ import {
 } from "@/modules/proveedores/domain/proveedor.repository";
 import { Proveedor } from "@/modules/proveedores/domain/proveedor";
 import { CondicionFiscal } from "@/modules/clientes/domain/condicion-fiscal";
+import { CodigoAfipPorcino } from "@/modules/proveedores/domain/codigo-afip-porcino";
 import { proveedores } from "@/modules/proveedores/infra/database/schema";
 
 @injectable()
@@ -59,6 +60,8 @@ export class ProveedorRepositoryDrizzle implements ProveedorRepository {
         datosBancarios: input.datosBancarios ?? null,
         porcentajeDesbaste:
           input.porcentajeDesbaste !== undefined ? String(input.porcentajeDesbaste) : null,
+        renspa: input.renspa ?? null,
+        codigoAfip: input.codigoAfip ?? null,
       })
       .returning();
     if (!row) {
@@ -84,6 +87,8 @@ export class ProveedorRepositoryDrizzle implements ProveedorRepository {
       condicionFiscal: row.condicionFiscal as CondicionFiscal,
       datosBancarios: row.datosBancarios,
       porcentajeDesbaste: row.porcentajeDesbaste !== null ? Number(row.porcentajeDesbaste) : null,
+      renspa: row.renspa,
+      codigoAfip: row.codigoAfip as CodigoAfipPorcino | null,
       activo: row.activo,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,

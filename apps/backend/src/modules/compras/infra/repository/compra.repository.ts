@@ -8,6 +8,7 @@ import {
   CompraRepository,
   CreateCompraInput,
   CerrarCompraData,
+  UpdateCompraData,
 } from "@/modules/compras/domain/compra.repository";
 import { Compra } from "@/modules/compras/domain/compra";
 import { EspecieAnimal } from "@/modules/compras/domain/especie-animal";
@@ -46,11 +47,58 @@ export class CompraRepositoryDrizzle implements CompraRepository {
         dte: input.dte,
         remito: input.remito,
         porcentajeDesbaste: String(input.porcentajeDesbaste),
+        pesoBruto: String(input.pesoBruto),
+        pesoNeto: String(input.pesoNeto),
         comentarios: input.comentarios ?? null,
       })
       .returning();
     if (!row) {
       throw new ApiError("Failed to create compra", Code.INTERNAL_SERVER_ERROR);
+    }
+    return this.toDomain(row);
+  }
+
+  async update(id: string, empresaId: string, input: UpdateCompraData): Promise<Compra> {
+    const [row] = await this.orm.db
+      .update(compras)
+      .set({
+        ...(input.proveedorId !== undefined && { proveedorId: input.proveedorId }),
+        ...(input.especie !== undefined && { especie: input.especie }),
+        ...(input.numero !== undefined && { numero: input.numero }),
+        ...(input.letra !== undefined && { letra: input.letra }),
+        ...(input.fecha !== undefined && { fecha: input.fecha }),
+        ...(input.dte !== undefined && { dte: input.dte }),
+        ...(input.remito !== undefined && { remito: input.remito }),
+        ...(input.porcentajeDesbaste !== undefined && {
+          porcentajeDesbaste: String(input.porcentajeDesbaste),
+        }),
+        ...(input.pesoBruto !== undefined && { pesoBruto: String(input.pesoBruto) }),
+        ...(input.pesoNeto !== undefined && { pesoNeto: String(input.pesoNeto) }),
+        ...(input.comentarios !== undefined && { comentarios: input.comentarios }),
+        updatedAt: new Date(),
+      })
+      .where(and(eq(compras.id, id), eq(compras.empresaId, empresaId), isNull(compras.deletedAt)))
+      .returning();
+    if (!row) {
+      throw new ApiError("Compra no encontrada", Code.NOT_FOUND);
+    }
+    return this.toDomain(row);
+  }
+
+  async reabrir(id: string, empresaId: string): Promise<Compra> {
+    const [row] = await this.orm.db
+      .update(compras)
+      .set({
+        cerrada: false,
+        fechaCierre: null,
+        pesoFinalVenta: null,
+        rinde: null,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(compras.id, id), eq(compras.empresaId, empresaId), isNull(compras.deletedAt)))
+      .returning();
+    if (!row) {
+      throw new ApiError("Compra no encontrada", Code.NOT_FOUND);
     }
     return this.toDomain(row);
   }
@@ -85,6 +133,8 @@ export class CompraRepositoryDrizzle implements CompraRepository {
       dte: row.dte,
       remito: row.remito,
       porcentajeDesbaste: Number(row.porcentajeDesbaste),
+      pesoBruto: Number(row.pesoBruto),
+      pesoNeto: Number(row.pesoNeto),
       cerrada: row.cerrada,
       fechaCierre: row.fechaCierre,
       pesoFinalVenta: row.pesoFinalVenta !== null ? Number(row.pesoFinalVenta) : null,

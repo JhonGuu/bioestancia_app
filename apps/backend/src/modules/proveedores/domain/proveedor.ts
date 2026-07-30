@@ -1,4 +1,5 @@
 import { CondicionFiscal } from "@/modules/clientes/domain/condicion-fiscal";
+import { CodigoAfipPorcino } from "@/modules/proveedores/domain/codigo-afip-porcino";
 
 /**
  * Representación del Proveedor en el dominio. Mismo patrón que `Cliente`
@@ -41,6 +42,19 @@ export interface Proveedor {
    * donde se compran animales.
    */
   porcentajeDesbaste: number | null;
+  /**
+   * RENSPA (Registro Nacional Sanitario de Productores Agropecuarios) del
+   * establecimiento del proveedor — código SENASA con formato
+   * "NN.NNN.N.NNNNN/NN" (ej. "11.016.0.00312/00"). Nullable: no todo
+   * proveedor tiene un establecimiento registrado cargado.
+   */
+  renspa: string | null;
+  /**
+   * Código AFIP (WSLSP, "carácter" del sujeto) que se usa al generar la
+   * liquidación de compra — ver `CodigoAfipPorcino`. Nullable: no todo
+   * proveedor participa de liquidaciones electrónicas.
+   */
+  codigoAfip: CodigoAfipPorcino | null;
   activo: boolean;
   createdAt: Date;
   updatedAt: Date;

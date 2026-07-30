@@ -8,7 +8,9 @@ import { CompraValidation } from "@/modules/compras/infra/http/validation";
 import { CreateCompra, CreateCompraUseCaseInput } from "@/modules/compras/use-cases/create-compra.use-case";
 import { ListCompras } from "@/modules/compras/use-cases/list-compras.use-case";
 import { GetCompra } from "@/modules/compras/use-cases/get-compra.use-case";
+import { UpdateCompra, UpdateCompraUseCaseInput } from "@/modules/compras/use-cases/update-compra.use-case";
 import { CerrarCompra } from "@/modules/compras/use-cases/cerrar-compra.use-case";
+import { ReabrirCompra } from "@/modules/compras/use-cases/reabrir-compra.use-case";
 
 @injectable()
 export class CompraController {
@@ -18,7 +20,9 @@ export class CompraController {
     @inject(DI_TYPES.CreateCompra) private readonly createCompra: CreateCompra,
     @inject(DI_TYPES.ListCompras) private readonly listCompras: ListCompras,
     @inject(DI_TYPES.GetCompra) private readonly getCompra: GetCompra,
+    @inject(DI_TYPES.UpdateCompra) private readonly updateCompra: UpdateCompra,
     @inject(DI_TYPES.CerrarCompra) private readonly cerrarCompra: CerrarCompra,
+    @inject(DI_TYPES.ReabrirCompra) private readonly reabrirCompra: ReabrirCompra,
   ) {
     this.registerRoutes();
   }
@@ -75,6 +79,29 @@ export class CompraController {
       },
     });
 
+    // Admin + contable: edita los datos generales. Bloqueado si está cerrada.
+    this.httpServer.register({
+      method: "patch",
+      url: "/compras/:id",
+      auth: "jwt-empresa",
+      roles: RoleGroups.AdminAndContable,
+      validation: this.validation.update,
+      handler: async ({ params, body, auth }) => {
+        if (!auth?.empresaId) throw new ApiError("Unauthorized", Code.UNAUTHORIZED);
+        const input = body as Omit<UpdateCompraUseCaseInput, "id" | "empresaId">;
+        const data = await this.updateCompra.execute({
+          ...input,
+          id: params.id,
+          empresaId: auth.empresaId,
+        });
+        return new ApiResponse({
+          data,
+          message: "Compra actualizada correctamente",
+          status: Code.OK,
+        });
+      },
+    });
+
     // Admin + contable: cerrar una compra reconcilia cabezas y calcula rinde.
     this.httpServer.register({
       method: "post",
@@ -88,6 +115,24 @@ export class CompraController {
         return new ApiResponse({
           data,
           message: "Compra cerrada correctamente",
+          status: Code.OK,
+        });
+      },
+    });
+
+    // Admin + contable: deshace el cierre (para corregir algo y volver a cerrar).
+    this.httpServer.register({
+      method: "post",
+      url: "/compras/:id/reabrir",
+      auth: "jwt-empresa",
+      roles: RoleGroups.AdminAndContable,
+      validation: this.validation.reabrir,
+      handler: async ({ params, auth }) => {
+        if (!auth?.empresaId) throw new ApiError("Unauthorized", Code.UNAUTHORIZED);
+        const data = await this.reabrirCompra.execute({ id: params.id, empresaId: auth.empresaId });
+        return new ApiResponse({
+          data,
+          message: "Compra reabierta correctamente",
           status: Code.OK,
         });
       },

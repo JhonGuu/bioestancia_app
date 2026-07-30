@@ -42,10 +42,12 @@ export const especieAnimalEnum = pgEnum(
  * por compra). Se guardan como texto, no se valida formato — son números que
  * emiten terceros (SENASA / el proveedor).
  *
- * NO tiene `cantidadAnimales`/`pesoBruto`/`pesoNeto`: el remito/DTE real ya
- * viene separado por categoría/raza (ej. "30 machos + 90 hembras"), así que
- * esos totales viven en `compra_categorias` (una fila por categoría) y son
- * la suma de sus líneas, no un escalar acá.
+ * NO tiene `cantidadAnimales`: el remito/DTE real ya viene separado por
+ * categoría/raza (ej. "30 machos + 90 hembras"), así que ese total vive en
+ * `compra_categorias` (una fila por categoría) y es la suma de sus líneas.
+ * `peso_bruto`/`peso_neto` en cambio SÍ son un escalar acá: en la báscula se
+ * pesa la tropa entera de una vez — el desglose por categoría recién se
+ * hace más adelante, al armar la liquidación de compra.
  *
  * `cerrada`/`fechaCierre`/`pesoFinalVenta`/`rinde`: se completan recién al
  * cerrar la compra (`use-cases/cerrar-compra.use-case.ts`), por eso son
@@ -66,6 +68,8 @@ export const compras = pgTable("compras", {
   dte: varchar("dte", { length: 50 }).notNull(),
   remito: varchar("remito", { length: 50 }).notNull(),
   porcentajeDesbaste: numeric("porcentaje_desbaste", { precision: 5, scale: 2 }).notNull(),
+  pesoBruto: numeric("peso_bruto", { precision: 10, scale: 2 }).notNull(),
+  pesoNeto: numeric("peso_neto", { precision: 10, scale: 2 }).notNull(),
   cerrada: boolean("cerrada").notNull().default(false),
   fechaCierre: timestamp("fecha_cierre"),
   pesoFinalVenta: numeric("peso_final_venta", { precision: 10, scale: 2 }),
@@ -92,8 +96,10 @@ export const compraCategorias = pgTable("compra_categorias", {
   categoria: varchar("categoria", { length: 100 }).notNull(),
   raza: varchar("raza", { length: 100 }),
   cabezas: integer("cabezas").notNull(),
-  pesoBruto: numeric("peso_bruto", { precision: 10, scale: 2 }).notNull(),
-  pesoNeto: numeric("peso_neto", { precision: 10, scale: 2 }).notNull(),
+  // Nullable: se discrimina recién al armar la liquidación de compra (ver
+  // `domain/compra-categoria.ts`) — ya no se carga al crear la compra.
+  pesoBruto: numeric("peso_bruto", { precision: 10, scale: 2 }),
+  pesoNeto: numeric("peso_neto", { precision: 10, scale: 2 }),
   // Fase 2: resultado de faena.
   kgVivoFaena: numeric("kg_vivo_faena", { precision: 10, scale: 2 }),
   kgCarne: numeric("kg_carne", { precision: 10, scale: 2 }),

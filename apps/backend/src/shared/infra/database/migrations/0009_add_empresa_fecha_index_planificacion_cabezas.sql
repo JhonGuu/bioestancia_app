@@ -1,0 +1,1 @@
+CREATE INDEX "planificacion_cabezas_empresa_fecha_idx" ON "planificacion_cabezas" USING btree ("empresa_id","fecha");

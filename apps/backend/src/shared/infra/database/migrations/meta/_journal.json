@@ -64,6 +64,27 @@
       "when": 1785312000000,
       "tag": "0008_planificacion_cabezas",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1785378704483,
+      "tag": "0009_add_empresa_fecha_index_planificacion_cabezas",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1785385488185,
+      "tag": "0010_add_renspa_and_codigo_afip_proveedores",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1785387541911,
+      "tag": "0011_compra_peso_bruto_total_y_categorias_afip",
+      "breakpoints": true
     }
   ]
 }

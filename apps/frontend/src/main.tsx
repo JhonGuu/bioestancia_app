@@ -5,6 +5,7 @@ import { RouterProvider, createRouter } from "@tanstack/react-router";
 
 import { routeTree } from "./routeTree.gen";
 import { AuthProvider, useAuth } from "@/modules/auth/context/auth-context";
+import { ThemeProvider } from "@/shared/theme/theme-provider";
 import "./index.css";
 
 const queryClient = new QueryClient({
@@ -55,10 +56,12 @@ function InnerApp() {
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <InnerApp />
-      </AuthProvider>
-    </QueryClientProvider>
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <InnerApp />
+        </AuthProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
   </StrictMode>,
 );

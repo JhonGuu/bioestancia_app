@@ -7,13 +7,14 @@ import { CompraCategoria } from "@/modules/compras/domain/compra-categoria";
 import { CompraRepository } from "@/modules/compras/domain/compra.repository";
 import { CompraCategoriaRepository } from "@/modules/compras/domain/compra-categoria.repository";
 import { EspecieAnimal } from "@/modules/compras/domain/especie-animal";
+import { CategoriaPorcino } from "@/modules/compras/domain/categoria-porcino";
+import { RazaPorcino } from "@/modules/compras/domain/raza-porcino";
 import { ProveedorRepository } from "@/modules/proveedores/domain/proveedor.repository";
 
 export interface CreateCompraCategoriaUseCaseInput {
-  categoria: string;
-  raza?: string;
+  categoria: CategoriaPorcino;
+  raza?: RazaPorcino;
   cabezas: number;
-  pesoBruto: number;
 }
 
 export interface CreateCompraUseCaseInput {
@@ -27,6 +28,12 @@ export interface CreateCompraUseCaseInput {
   remito: string;
   /** Si no se manda, se usa el `porcentajeDesbaste` por defecto del proveedor. */
   porcentajeDesbaste?: number;
+  /**
+   * Kg vivo de báscula de la tropa entera — se pesa una sola vez, no
+   * discriminado por categoría (eso se hace después, al armar la
+   * liquidación de compra).
+   */
+  pesoBruto: number;
   comentarios?: string;
   /** El remito/DTE real ya viene separado por categoría/raza — al menos una línea. */
   categorias: CreateCompraCategoriaUseCaseInput[];
@@ -47,6 +54,8 @@ export class CreateCompra {
 
   async execute(input: CreateCompraUseCaseInput): Promise<CompraConCategorias> {
     const porcentajeDesbaste = await this.resolvePorcentajeDesbaste(input);
+    // Redondeo a 2 decimales para no arrastrar error de punto flotante al guardar.
+    const pesoNeto = Math.round(input.pesoBruto * (1 - porcentajeDesbaste / 100) * 100) / 100;
 
     const compra = await this.compraRepository.create({
       empresaId: input.empresaId,
@@ -58,22 +67,18 @@ export class CreateCompra {
       dte: input.dte,
       remito: input.remito,
       porcentajeDesbaste,
+      pesoBruto: input.pesoBruto,
+      pesoNeto,
       comentarios: input.comentarios,
     });
 
     const categorias = await this.compraCategoriaRepository.createMany(
-      input.categorias.map((linea) => {
-        // Redondeo a 2 decimales para no arrastrar error de punto flotante al guardar.
-        const pesoNeto = Math.round(linea.pesoBruto * (1 - porcentajeDesbaste / 100) * 100) / 100;
-        return {
-          compraId: compra.id,
-          categoria: linea.categoria,
-          raza: linea.raza,
-          cabezas: linea.cabezas,
-          pesoBruto: linea.pesoBruto,
-          pesoNeto,
-        };
-      }),
+      input.categorias.map((linea) => ({
+        compraId: compra.id,
+        categoria: linea.categoria,
+        raza: linea.raza,
+        cabezas: linea.cabezas,
+      })),
     );
 
     return { ...compra, categorias };

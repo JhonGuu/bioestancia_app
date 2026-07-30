@@ -23,10 +23,13 @@ import { EspecieAnimal } from "@/modules/compras/domain/especie-animal";
  * puntualmente) — se aplica parejo a todas las líneas de categoría de la
  * compra (ver `domain/compra-categoria.ts`).
  *
- * Ni `cantidadAnimales` ni `pesoBruto`/`pesoNeto` viven acá como escalares:
- * el remito/DTE real ya viene separado por categoría/raza (ej. "30 machos +
- * 90 hembras"), así que esos totales son la SUMA de `CompraCategoria[]`
- * (`cabezas`, `pesoBruto`, `pesoNeto` de cada línea).
+ * `pesoBruto`/`pesoNeto` SÍ viven acá como escalares (a diferencia de
+ * `cabezas`, que es la suma de `CompraCategoria[]`): en la báscula solo se
+ * pesa la tropa entera de una vez, no discriminada por categoría — el
+ * desglose de peso por categoría recién se hace más adelante, al armar la
+ * liquidación de compra (ver `domain/compra-categoria.ts`). `pesoNeto` se
+ * calcula en el server con `porcentajeDesbaste` (`pesoBruto × (1 -
+ * porcentajeDesbaste/100)`), igual que antes se calculaba por línea.
  *
  * El cierre de compra (`cerrada`) es una acción aparte (ver
  * `use-cases/cerrar-compra.use-case.ts`): reconcilia que las cabezas vendidas
@@ -46,6 +49,10 @@ export interface Compra {
   dte: string;
   remito: string;
   porcentajeDesbaste: number;
+  /** Kg vivo de báscula de la tropa entera (sin discriminar por categoría). */
+  pesoBruto: number;
+  /** `pesoBruto × (1 - porcentajeDesbaste / 100)`, calculado en el server. */
+  pesoNeto: number;
   cerrada: boolean;
   fechaCierre: Date | null;
   pesoFinalVenta: number | null;

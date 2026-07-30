@@ -33,6 +33,16 @@ export interface VentaRepository {
    */
   listByClienteYRango(clienteId: string, empresaId: string, desde: Date, hasta: Date): Promise<Venta[]>;
 
+  /**
+   * Lista las ventas de TODA la empresa en un rango de fechas (inclusive) —
+   * la usa `planificacion-cabezas` para detectar entregas de clientes que no
+   * tienen ningún día planificado en el rango (si solo mirara los clientes
+   * con plan, esas entregas quedarían invisibles). Mismo criterio que
+   * `listByClienteYRango`: devuelve todo, el filtro de `formaVenta`/garrones
+   * distintos lo hace el caller.
+   */
+  listByEmpresaYRango(empresaId: string, desde: Date, hasta: Date): Promise<Venta[]>;
+
   create(input: CreateVentaInput): Promise<Venta>;
 }
 

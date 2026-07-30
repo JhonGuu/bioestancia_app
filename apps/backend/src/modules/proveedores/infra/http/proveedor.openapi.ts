@@ -4,6 +4,7 @@ import { registry } from "@/shared/infra/openapi/registry";
 import { apiResponseSchema, empresaIdHeaderSchema } from "@/shared/infra/openapi/common";
 import { ProveedorValidation } from "@/modules/proveedores/infra/http/validation";
 import { CondicionFiscal } from "@/modules/clientes/domain/condicion-fiscal";
+import { CodigoAfipPorcino } from "@/modules/proveedores/domain/codigo-afip-porcino";
 
 const validation = new ProveedorValidation();
 
@@ -23,6 +24,8 @@ const proveedorSchema = z.object({
   condicionFiscal: z.nativeEnum(CondicionFiscal),
   datosBancarios: z.string().nullable(),
   porcentajeDesbaste: z.number().nullable(),
+  renspa: z.string().nullable(),
+  codigoAfip: z.nativeEnum(CodigoAfipPorcino).nullable(),
   activo: z.boolean(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),

@@ -11,8 +11,11 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
+  /* Verde claro de la marca Bioestancia (#8BC34A) como primary. Foreground
+     oscuro en vez de blanco: es un verde luminoso, con texto blanco el
+     contraste queda muy débil. */
+  --primary: oklch(0.735 0.176 129.7);
+  --primary-foreground: oklch(0.205 0.03 145);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
@@ -23,7 +26,10 @@
   --destructive-foreground: oklch(0.985 0 0);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --ring: oklch(0.735 0.176 129.7);
+  /* Verde oscuro del wordmark "Bio Estancia" — disponible como acento de
+     marca (ej. franjas, badges), no forma parte del set estándar de shadcn. */
+  --brand-forest: oklch(0.475 0.11 152);
 }
 
 .dark {
@@ -33,8 +39,9 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
+  /* Mismo verde de marca, un toque más claro para que "brille" sobre fondo oscuro. */
+  --primary: oklch(0.795 0.176 129.7);
+  --primary-foreground: oklch(0.175 0.03 145);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
@@ -45,7 +52,8 @@
   --destructive-foreground: oklch(0.985 0 0);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --ring: oklch(0.795 0.176 129.7);
+  --brand-forest: oklch(0.62 0.11 152);
 }
 
 @theme inline {
@@ -68,6 +76,7 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-brand-forest: var(--brand-forest);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);

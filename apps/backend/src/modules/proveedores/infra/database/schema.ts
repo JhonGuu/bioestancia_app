@@ -39,6 +39,16 @@ export const proveedores = pgTable("proveedores", {
   condicionFiscal: condicionFiscalEnum("condicion_fiscal").notNull(),
   datosBancarios: varchar("datos_bancarios", { length: 22 }),
   porcentajeDesbaste: numeric("porcentaje_desbaste", { precision: 5, scale: 2 }),
+  // RENSPA (SENASA): "NN.NNN.N.NNNNN/NN" (18 caracteres) — 20 deja margen.
+  renspa: varchar("renspa", { length: 20 }),
+  /**
+   * Código + descripción del WSLSP (AFIP) juntos en un solo texto — ver
+   * `domain/codigo-afip-porcino.ts`. `varchar` y no un `pgEnum`: algunas
+   * descripciones (ej. código 103) superan los 63 bytes que Postgres permite
+   * por etiqueta de enum. La validez del valor se garantiza en la capa de
+   * aplicación (Zod, `z.nativeEnum(CodigoAfipPorcino)`), no en el tipo de columna.
+   */
+  codigoAfip: varchar("codigo_afip", { length: 255 }),
   activo: boolean("activo").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),

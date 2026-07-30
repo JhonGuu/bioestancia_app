@@ -10,6 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { BrandLogo } from "@/components/brand-logo";
 
 export const Route = createFileRoute("/_authenticated/empresas")({
   component: EmpresasPage,
@@ -56,6 +57,13 @@ function EmpresasPage() {
                   <CardDescription className="capitalize">
                     {empresa.rubro}
                   </CardDescription>
+                  <div>
+                    {empresa.razonSocial === "El Meridiano" ? (
+                      <BrandLogo company="el-meridiano" className="h-44" />
+                    ) : (
+                      <BrandLogo company="bioestancia" className="h-28" />
+                    )}  
+                  </div>
                 </div>
                 <Badge variant="secondary" className="capitalize">
                   {empresa.rol}

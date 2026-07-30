@@ -4,6 +4,8 @@ import { registry } from "@/shared/infra/openapi/registry";
 import { apiResponseSchema, empresaIdHeaderSchema } from "@/shared/infra/openapi/common";
 import { CompraValidation } from "@/modules/compras/infra/http/validation";
 import { EspecieAnimal } from "@/modules/compras/domain/especie-animal";
+import { CategoriaPorcino } from "@/modules/compras/domain/categoria-porcino";
+import { RazaPorcino } from "@/modules/compras/domain/raza-porcino";
 
 const validation = new CompraValidation();
 
@@ -18,6 +20,8 @@ const compraSchema = z.object({
   dte: z.string(),
   remito: z.string(),
   porcentajeDesbaste: z.number(),
+  pesoBruto: z.number(),
+  pesoNeto: z.number(),
   cerrada: z.boolean(),
   fechaCierre: z.string().datetime().nullable(),
   pesoFinalVenta: z.number().nullable(),
@@ -31,11 +35,11 @@ const compraSchema = z.object({
 const compraCategoriaSchema = z.object({
   id: z.string().uuid(),
   compraId: z.string().uuid(),
-  categoria: z.string(),
-  raza: z.string().nullable(),
+  categoria: z.nativeEnum(CategoriaPorcino),
+  raza: z.nativeEnum(RazaPorcino).nullable(),
   cabezas: z.number().int(),
-  pesoBruto: z.number(),
-  pesoNeto: z.number(),
+  pesoBruto: z.number().nullable(),
+  pesoNeto: z.number().nullable(),
   kgVivoFaena: z.number().nullable(),
   kgCarne: z.number().nullable(),
   porcentajeMagro: z.number().nullable(),
@@ -62,9 +66,12 @@ export function registerComprasOpenApi(): void {
     summary:
       "Crea una compra (lote de animales a un proveedor) con sus líneas de categoría/raza " +
       "para la empresa activa. El remito/DTE real ya viene separado por categoría (ej. " +
-      "\"30 machos + 90 hembras\"), por eso `categorias` es un array con al menos una línea. " +
-      "`pesoNeto` de cada línea se calcula en el server (pesoBruto × (1 - porcentajeDesbaste/100)). " +
-      "Si no se manda porcentajeDesbaste, se usa el del proveedor. Admin o contable.",
+      "\"30 machos + 90 hembras\"), por eso `categorias` es un array con al menos una línea, " +
+      "pero el peso (`pesoBruto`) se carga una sola vez para toda la tropa (se pesa entera en " +
+      "la báscula, sin discriminar por categoría) — el desglose de peso por categoría se hace " +
+      "después, al armar la liquidación de compra. `pesoNeto` se calcula en el server " +
+      "(pesoBruto × (1 - porcentajeDesbaste/100)). Si no se manda porcentajeDesbaste, se usa " +
+      "el del proveedor. Admin o contable.",
     security: [{ bearerAuth: [] }],
     request: {
       headers: empresaIdHeaderSchema,
@@ -120,6 +127,34 @@ export function registerComprasOpenApi(): void {
   });
 
   registry.registerPath({
+    method: "patch",
+    path: "/compras/{id}",
+    tags: ["Compras"],
+    summary:
+      "Edita una compra completa: proveedor, especie, datos generales (número, letra, fecha, " +
+      "DTE, remito, porcentajeDesbaste, pesoBruto, comentarios) y, si se manda `categorias`, " +
+      "sincroniza el detalle completo (las líneas con `id` se actualizan, las que no vienen se " +
+      "borran, las que no traen `id` se crean). Si cambia pesoBruto o porcentajeDesbaste, " +
+      "pesoNeto se recalcula en el server. Rechazado si la compra ya está cerrada (reabrila " +
+      "primero con /compras/{id}/reabrir). Admin o contable.",
+    security: [{ bearerAuth: [] }],
+    request: {
+      headers: empresaIdHeaderSchema,
+      params: z.object({ id: z.string().uuid() }),
+      body: { content: { "application/json": { schema: validation.update.body } } },
+    },
+    responses: {
+      200: {
+        description: "Compra actualizada, con sus categorías",
+        content: { "application/json": { schema: apiResponseSchema(compraConCategoriasSchema) } },
+      },
+      400: { description: "La compra ya está cerrada" },
+      403: { description: "No sos admin/contable de la empresa activa" },
+      404: { description: "No existe o no pertenece a la empresa activa" },
+    },
+  });
+
+  registry.registerPath({
     method: "post",
     path: "/compras/{id}/cerrar",
     tags: ["Compras"],
@@ -139,6 +174,29 @@ export function registerComprasOpenApi(): void {
       400: {
         description: "La compra ya está cerrada, o las cabezas vendidas no coinciden con las compradas",
       },
+      403: { description: "No sos admin/contable de la empresa activa" },
+      404: { description: "No existe o no pertenece a la empresa activa" },
+    },
+  });
+
+  registry.registerPath({
+    method: "post",
+    path: "/compras/{id}/reabrir",
+    tags: ["Compras"],
+    summary:
+      "Deshace el cierre de una compra: vuelve a cerrada=false y limpia fechaCierre/" +
+      "pesoFinalVenta/rinde, para corregir algo y volver a cerrar después. Admin o contable.",
+    security: [{ bearerAuth: [] }],
+    request: {
+      headers: empresaIdHeaderSchema,
+      params: z.object({ id: z.string().uuid() }),
+    },
+    responses: {
+      200: {
+        description: "Compra reabierta",
+        content: { "application/json": { schema: apiResponseSchema(compraSchema) } },
+      },
+      400: { description: "La compra no está cerrada" },
       403: { description: "No sos admin/contable de la empresa activa" },
       404: { description: "No existe o no pertenece a la empresa activa" },
     },
