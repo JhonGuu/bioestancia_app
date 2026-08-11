@@ -60,9 +60,10 @@ export function registerProveedoresOpenApi(): void {
     method: "get",
     path: "/proveedores",
     tags: ["Proveedores"],
-    summary: "Lista los proveedores de la empresa activa",
+    summary:
+      "Lista los proveedores de la empresa activa. `estado` filtra activos/inactivos/todos (default activos).",
     security: [{ bearerAuth: [] }],
-    request: { headers: empresaIdHeaderSchema },
+    request: { headers: empresaIdHeaderSchema, query: validation.list.query },
     responses: {
       200: {
         description: "OK",
@@ -86,6 +87,66 @@ export function registerProveedoresOpenApi(): void {
         description: "OK",
         content: { "application/json": { schema: apiResponseSchema(proveedorSchema) } },
       },
+      404: { description: "No existe o no pertenece a la empresa activa" },
+    },
+  });
+
+  registry.registerPath({
+    method: "patch",
+    path: "/proveedores/{id}",
+    tags: ["Proveedores"],
+    summary: "Edita un proveedor (reemplaza todos los campos, mismas reglas que el alta). Admin o contable.",
+    security: [{ bearerAuth: [] }],
+    request: {
+      headers: empresaIdHeaderSchema,
+      params: z.object({ id: z.string().uuid() }),
+      body: { content: { "application/json": { schema: validation.update.body } } },
+    },
+    responses: {
+      200: {
+        description: "Proveedor actualizado",
+        content: { "application/json": { schema: apiResponseSchema(proveedorSchema) } },
+      },
+      400: { description: "Datos inválidos" },
+      403: { description: "No sos admin/contable de la empresa activa" },
+      404: { description: "No existe o no pertenece a la empresa activa" },
+    },
+  });
+
+  registry.registerPath({
+    method: "delete",
+    path: "/proveedores/{id}",
+    tags: ["Proveedores"],
+    summary:
+      "Elimina (soft-delete) un proveedor — deja de listarse, pero sus compras históricas no se tocan. Admin o contable.",
+    security: [{ bearerAuth: [] }],
+    request: {
+      headers: empresaIdHeaderSchema,
+      params: z.object({ id: z.string().uuid() }),
+    },
+    responses: {
+      200: { description: "Proveedor eliminado" },
+      403: { description: "No sos admin/contable de la empresa activa" },
+      404: { description: "No existe o no pertenece a la empresa activa" },
+    },
+  });
+
+  registry.registerPath({
+    method: "post",
+    path: "/proveedores/{id}/reactivar",
+    tags: ["Proveedores"],
+    summary: "Deshace el soft-delete de un proveedor (vuelve a activo). Admin o contable.",
+    security: [{ bearerAuth: [] }],
+    request: {
+      headers: empresaIdHeaderSchema,
+      params: z.object({ id: z.string().uuid() }),
+    },
+    responses: {
+      200: {
+        description: "Proveedor reactivado",
+        content: { "application/json": { schema: apiResponseSchema(proveedorSchema) } },
+      },
+      403: { description: "No sos admin/contable de la empresa activa" },
       404: { description: "No existe o no pertenece a la empresa activa" },
     },
   });

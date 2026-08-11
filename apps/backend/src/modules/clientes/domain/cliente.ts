@@ -13,6 +13,13 @@ import { CondicionFiscal } from "@/modules/clientes/domain/condicion-fiscal";
  * `listaDePreciosId` es nullable: un cliente puede no tener lista de precios
  * asignada todavía (referencia opcional a `listas_de_precios`, ver
  * infra/database/schema.ts).
+ *
+ * `esRevendedor` marca clientes que revenden lo que reciben y para los que
+ * Bioestancia gestiona el reparto (caso real: "Ivan", revende media res de
+ * Novillo). Habilita en el frontend la carga de reventa (`CategoriaReventa`,
+ * ver `modules/ventas/domain/categoria-venta.ts`) y el catálogo de sus
+ * destinos propios (`modules/clientes/domain/cliente-final.ts`) al cargar una
+ * boleta. `false` por defecto: la gran mayoría de los clientes no revende.
  */
 export interface Cliente {
   id: string;
@@ -29,7 +36,13 @@ export interface Cliente {
   provincia: string | null;
   ubicacion: string | null;
   condicionFiscal: CondicionFiscal;
+  esRevendedor: boolean;
   activo: boolean;
   createdAt: Date;
   updatedAt: Date;
+}
+
+/** Nombre para mostrar: razón social si es persona jurídica, nombre+apellido si es física. Espejo del frontend (`cliente.types.ts`). */
+export function nombreCliente(cliente: Cliente): string {
+  return cliente.razonSocial ?? [cliente.nombre, cliente.apellido].filter(Boolean).join(" ");
 }

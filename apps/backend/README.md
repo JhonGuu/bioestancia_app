@@ -84,7 +84,7 @@ Ya vienen implementados:
 
 - **Signup**: crea el usuario SIN acceso a ninguna empresa. El acceso se otorga aparte.
 - **Signin**: devuelve el JWT + la lista de empresas a las que el usuario tiene acceso (con su rol en cada una) — el frontend usa esto para armar el selector de empresa (o auto-seleccionar si solo hay una).
-- **Roles** (`src/modules/users/domain/roles.ts`): `admin`, `contable`, `veterinario`. Para sumar uno nuevo (ej. `operario`, `gerente`): agregalo al enum, corré `pnpm db:generate <nombre>` y `pnpm db:migrate`, y sumalo a los `RoleGroups` que corresponda.
+- **Roles** (`src/modules/users/domain/roles.ts`): `admin`, `contable`, `veterinario`, `operario` (carga boletas desde el reparto, sin ver precios — ver módulo `boletas`). Para sumar uno nuevo (ej. `gerente`): agregalo al enum, corré `pnpm db:generate <nombre>` y `pnpm db:migrate`, y sumalo a los `RoleGroups` que corresponda.
 - **Permisos por endpoint**: `ExpressAdapter.register()` acepta `roles: string[]` (ver `RoleGroups` en `domain/role-groups.ts`). Vacío o ausente = cualquier usuario con acceso a la empresa activa.
 
 Endpoints ya disponibles:
@@ -99,6 +99,7 @@ Endpoints ya disponibles:
 | POST | `/api/account/access` | JWT + empresa + admin | Otorga acceso a la empresa activa a un usuario que YA existe (por email) |
 | POST | `/api/empresas` | JWT + empresa + admin | Crea una empresa nueva (uso administrativo/bootstrap) |
 | GET | `/api/empresas` | JWT + empresa + admin | Lista todas las empresas del sistema |
+| PATCH | `/api/empresas/:id` | JWT + empresa + admin | Completa/edita cuit, teléfono, dirección (se muestran en el encabezado del PDF de boleta) |
 
 ## Listas de precios (módulo `listas-precios`)
 
@@ -114,11 +115,17 @@ Solo el encabezado por ahora (nombre, descripción, activa) — los ítems con p
 
 Un cliente es persona física (`nombre` + `apellido` + `dni`) o persona jurídica (`razonSocial` + `cuit`) — nunca los dos juegos de campos obligatorios a la vez. Esa regla se valida con Zod (`infra/http/validation.ts`), no en el dominio ni en la DB (ahí todos esos campos son nullable).
 
+`esRevendedor` marca clientes que revenden lo que reciben y para los que gestionamos el reparto (caso real: "Ivan", revende media res de Novillo). Habilita en el frontend la carga de reventa (`CategoriaReventa`, ver módulo `ventas`) y el catálogo `clientes_finales` de sus destinos propios. `false` por defecto.
+
 | Método | Ruta | Auth | Descripción |
 |---|---|---|---|
 | POST | `/api/clientes` | JWT + empresa + admin/contable | Crea un cliente para la empresa activa |
 | GET | `/api/clientes` | JWT + empresa | Lista los clientes de la empresa activa |
 | GET | `/api/clientes/:id` | JWT + empresa | Obtiene un cliente por id |
+| PATCH | `/api/clientes/:id` | JWT + empresa + admin/contable | Edita un cliente (reemplaza todos los campos) |
+| DELETE | `/api/clientes/:id` | JWT + empresa + admin/contable | Soft-delete (no borra la fila, ver `ClienteRepository.delete`) |
+| POST | `/api/clientes/:clienteId/clientes-finales` | JWT + empresa + admin/contable/operario | Crea un destino de reventa (requiere `esRevendedor=true`) |
+| GET | `/api/clientes/:clienteId/clientes-finales` | JWT + empresa | Lista los destinos de reventa activos de ese cliente |
 
 ## Proveedores (módulo `proveedores`)
 
@@ -176,40 +183,55 @@ Una vez que se conoce el resultado de faena, El Meridiano emite la liquidación 
 
 Al cargarla, se manda el header (`numeroComprobante`, `fecha`, `fechaOperacion`, `cae`, `fechaVencimientoCae`, `totalGastos`, `ivaSobreGastos`, `totalTributos`, `comentarios`) más `categorias: [{ compraCategoriaId, precioKg, porcentajeIva }]`. El server calcula, por línea, `importeBruto = kgVivoFaena × precioKg` e `importeIva = importeBruto × porcentajeIva / 100`, los guarda en `compra_categorias`, y arma los totales del header (`importeBruto`, `ivaSobreBruto`, `importeNeto`) sumando las líneas más gastos/tributos adicionales. Si alguna categoría todavía no tiene `kgVivoFaena` cargado, falla con 400.
 
-Hoy esto se carga a mano con los datos que ya salen del comprobante emitido en AFIP. `numeroComprobante`/`cae`/`fechaVencimientoCae` quedan como referencia — el día que haya integración directa con la API de ARCA, esos campos se completarían solos.
+Esto se puede cargar a mano con los datos que ya salen del comprobante emitido en AFIP, o pedirle el CAE directo a AFIP vía WSLSP (ver `shared/infra/afip/README.md`) — mientras no haya certificado digital configurado (`AFIP_*` en `.env`), el segundo camino devuelve 501.
 
 | Método | Ruta | Auth | Descripción |
 |---|---|---|---|
 | POST | `/api/compras/:compraId/liquidacion` | JWT + empresa + admin/contable | Emite la liquidación de una compra |
 | GET | `/api/compras/:compraId/liquidacion` | JWT + empresa | Obtiene la liquidación de una compra, con sus categorías |
+| POST | `/api/compras/:compraId/liquidacion/emitir-cae` | JWT + empresa + admin/contable | Le pide el CAE a AFIP (WSLSP) para la liquidación ya cargada |
 
 ## Boletas (módulo `boletas`)
 
 Una boleta es el comprobante físico que se le entrega a un cliente por lo vendido en el día — es una entidad propia (no un reporte armado a partir de `ventas`) porque tiene su propio número impreso que hay que guardar tal cual, y porque a futuro puede sumar el escaneo/foto del documento físico, que vive una sola vez por boleta y no una vez por línea de venta.
 
-Encabezado: `clienteId`, `fecha`, `numero` (el número impreso en el papel, opcional), `comentarios`. Cada línea de `ventas` puede referenciar una boleta vía `boletaId` (nullable, para no romper ventas cargadas sin boleta).
+Encabezado: `clienteId`, `fecha`, `numero` (el número impreso en el papel, opcional), `comentarios`. Es el punto de carga del **operario** que reparte en planta: `POST /boletas` acepta un array `items` opcional — cada ítem es un garrón/media res/corte (`compraId`, `garron`, `formaVenta`, `categoria`, `kg`) — y crea la boleta Y las ventas de esos ítems en el mismo request. El operario NO carga precio: esas ventas quedan "pendientes de precio" (`Venta.precioKg === null`) hasta que admin/contable las completa con `PATCH /ventas/:id/precio` (ver módulo `ventas`). Si `items` no viene, queda una boleta vacía a la que se le pueden agregar ventas después vía `POST /ventas` (flujo de back-office, sin celular).
+
+`GET /boletas/:id` devuelve la boleta con sus ventas (`ventas: Venta[]`) — así se puede revisar qué se cargó, y qué le falta precio.
+
+### Exportar a PDF/Excel
+
+`GET /boletas/:id/pdf` arma un PDF de una boleta puntual con un diseño que imita el formulario de papel físico de El Meridiano — pensado para mandárselo al cliente. El encabezado es un cuadro con bordes redondeados dividido en dos sectores por un cuadrado con "X" (indicador de recibo): a la izquierda el logo (`shared/infra/documents/brand-logo.util.ts`, elegido según `Empresa.razonSocial`) más razón social/cuit/teléfono/dirección, y a la derecha el aviso "Documento no válido como factura", el N° de boleta y la fecha. `Empresa.cuit`/`telefono`/`direccion` son opcionales — si faltan, esa línea simplemente no se dibuja (ver `PATCH /empresas/:id` o `pnpm db:seed` para completarlos). `GET /boletas/reporte-diario/pdf?fecha=YYYY-MM-DD` arma un PDF con TODAS las boletas de la empresa en ese día, agrupadas por cliente (un sub-cuadro por boleta, con su N° como título arriba), con el detalle completo de cada ítem (incluye la tropa real, número+letra) y subtotales + total general (`GET /boletas/reporte-diario/excel` es lo mismo pero en `.xlsx`, sin dividir por boleta). Los tres generan el archivo con PDFKit/ExcelJS (ver `shared/infra/documents/`) — no hay archivos temporales, se arma todo en memoria y se devuelve como binario (`Content-Type`/`Content-Disposition` según corresponda).
+
+Importante: las rutas `/boletas/reporte-diario/pdf` y `/boletas/reporte-diario/excel` están registradas ANTES de `/boletas/:id/pdf` en el controller — si no, Express matchea `reporte-diario` contra el param `:id`.
 
 | Método | Ruta | Auth | Descripción |
 |---|---|---|---|
-| POST | `/api/boletas` | JWT + empresa + admin/contable | Crea una boleta para la empresa activa |
-| GET | `/api/boletas` | JWT + empresa | Lista las boletas de la empresa activa |
-| GET | `/api/boletas/:id` | JWT + empresa | Obtiene una boleta por id |
+| POST | `/api/boletas` | JWT + empresa + admin/contable/operario | Crea una boleta, con sus ítems opcionales |
+| GET | `/api/boletas` | JWT + empresa | Lista las boletas de la empresa activa (sin ítems) |
+| GET | `/api/boletas/:id` | JWT + empresa | Obtiene una boleta por id, con sus ventas |
+| GET | `/api/boletas/:id/pdf` | JWT + empresa | PDF de una boleta puntual (diseño tipo papel físico) |
+| GET | `/api/boletas/reporte-diario/pdf` | JWT + empresa | PDF con todas las boletas del día, agrupadas por cliente |
+| GET | `/api/boletas/reporte-diario/excel` | JWT + empresa | Igual al anterior, en Excel (.xlsx) |
 
 ## Ventas (módulo `ventas`)
 
-Cada fila es **una venta de un garrón** (cabeza entera, media res, o un corte como pulpa) o un ajuste de compensación — no un lote. `formaVenta` es un enum (`cabeza_capon`, `cabeza_chancha`, `media_res_capon`, `pulpa`, `compensacion_kg`). `total` se calcula en el servidor (`kg × precioKg`), nunca se toma del body.
+Cada fila es **una venta de un garrón** (cabeza entera, media res, o un corte como pulpa) o un ajuste de compensación — no un lote. Dos campos separados describen el ítem: `formaVenta` es la **presentación** (`cabeza`, `media_res`, `pulpa`, `compensacion_kg`), y `categoria` es la **categoría del animal** (mismo catálogo `CategoriaPorcino` que usa `compras` — Capón, Chancha, MEI, etc., nullable solo en `compensacion_kg`). Antes estaban mezclados en un solo enum; se separaron para poder reusar el catálogo completo de categorías porcinas en vez de mantener uno aparte para ventas.
 
-`compraId` + `garron` son nullable: las filas de `compensacion_kg` son ajustes sin animal físico asociado. Cuando sí hay animal, la regla de negocio (Zod) exige los dos juntos. El `garron` (caravana del animal) **puede repetirse** para una misma compra: cada garrón tiene 2 medias reses, y se pueden vender por separado a dos clientes distintos (dos filas con el mismo `compraId`+`garron`). Por eso NO hay `UNIQUE(compraId, garron)` — la reconciliación de cabezas vendidas (al cerrar una compra, ver módulo `compras`) cuenta garrones distintos, no filas.
+`precioKg`/`total` son **nullable**: el operario carga la venta con kg/categoría/tropa pero sin precio (ver módulo `boletas`); admin/contable la completa después con `PATCH /ventas/:id/precio`, que recalcula `total`. `total` nunca se recibe del body, se calcula siempre en el servidor (`kg × precioKg`).
+
+`compraId` es nullable (ajustes de `compensacion_kg` no tienen animal asociado); cuando sí hay animal, la regla de negocio (Zod) exige `compraId` + `categoria` juntos, y `garron` además si es `cabeza`/`media_res`. El `garron` (caravana del animal) **puede repetirse** para una misma compra: cada garrón tiene 2 medias reses, y se pueden vender por separado a dos clientes distintos (dos filas con el mismo `compraId`+`garron`). Por eso NO hay `UNIQUE(compraId, garron)` — la reconciliación de cabezas vendidas (al cerrar una compra, ver módulo `compras`) cuenta garrones distintos, no filas.
 
 `boletaId` es nullable: referencia la boleta física (ver módulo `boletas`) en la que se cargó esta línea, cuando corresponde.
 
-`clienteFinalReferencia` es un campo libre, no una relación: cubre el caso de clientes que revenden (ej. un cliente que le vende a otro cliente final) — queda anotado solo como referencia de la boleta, sin crear un cliente ni una venta nueva.
+`clienteFinalId` referencia el catálogo `clientes_finales` (ver módulo `clientes`) — cubre el caso de clientes que revenden (ej. "Ivan", ver `esRevendedor`): anota a quién le vendió el revendedor, sin crear un cliente ni una venta nueva. Nullable: solo aplica a ventas de clientes `esRevendedor`.
 
 | Método | Ruta | Auth | Descripción |
 |---|---|---|---|
-| POST | `/api/ventas` | JWT + empresa + admin/contable | Crea una venta para la empresa activa |
+| POST | `/api/ventas` | JWT + empresa + admin/contable | Crea una venta para la empresa activa (precioKg opcional) |
 | GET | `/api/ventas` | JWT + empresa | Lista las ventas de la empresa activa |
 | GET | `/api/ventas/:id` | JWT + empresa | Obtiene una venta por id |
+| PATCH | `/api/ventas/:id/precio` | JWT + empresa + admin/contable | Completa/corrige el precio de una venta, recalcula el total |
 
 ## Planificación de cabezas (módulo `planificacion-cabezas`)
 

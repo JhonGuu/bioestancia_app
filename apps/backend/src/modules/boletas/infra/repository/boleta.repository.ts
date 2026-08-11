@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, gte, isNull, lt } from "drizzle-orm";
 import { inject, injectable } from "inversify";
 
 import { DI_TYPES } from "@/shared/infra/di/types";
@@ -25,6 +25,21 @@ export class BoletaRepositoryDrizzle implements BoletaRepository {
       .select()
       .from(boletas)
       .where(and(eq(boletas.empresaId, empresaId), isNull(boletas.deletedAt)));
+    return rows.map((row) => this.toDomain(row));
+  }
+
+  async listByRango(empresaId: string, desde: Date, hasta: Date): Promise<Boleta[]> {
+    const rows = await this.orm.db
+      .select()
+      .from(boletas)
+      .where(
+        and(
+          eq(boletas.empresaId, empresaId),
+          gte(boletas.fecha, desde),
+          lt(boletas.fecha, hasta),
+          isNull(boletas.deletedAt),
+        ),
+      );
     return rows.map((row) => this.toDomain(row));
   }
 

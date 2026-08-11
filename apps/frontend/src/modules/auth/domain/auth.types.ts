@@ -15,6 +15,8 @@ export const Roles = {
   ADMIN: "admin",
   CONTABLE: "contable",
   VETERINARIO: "veterinario",
+  /** Carga boletas desde el reparto (celular) — no ve precios. */
+  OPERARIO: "operario",
 } as const;
 export type Roles = (typeof Roles)[keyof typeof Roles];
 

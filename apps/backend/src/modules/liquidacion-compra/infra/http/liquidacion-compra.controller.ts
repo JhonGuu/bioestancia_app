@@ -10,6 +10,7 @@ import {
   CreateLiquidacionCompraUseCaseInput,
 } from "@/modules/liquidacion-compra/use-cases/create-liquidacion-compra.use-case";
 import { GetLiquidacionCompra } from "@/modules/liquidacion-compra/use-cases/get-liquidacion-compra.use-case";
+import { EmitirCaeLiquidacionCompra } from "@/modules/liquidacion-compra/use-cases/emitir-cae-liquidacion-compra.use-case";
 
 @injectable()
 export class LiquidacionCompraController {
@@ -19,6 +20,8 @@ export class LiquidacionCompraController {
     @inject(DI_TYPES.CreateLiquidacionCompra)
     private readonly createLiquidacionCompra: CreateLiquidacionCompra,
     @inject(DI_TYPES.GetLiquidacionCompra) private readonly getLiquidacionCompra: GetLiquidacionCompra,
+    @inject(DI_TYPES.EmitirCaeLiquidacionCompra)
+    private readonly emitirCaeLiquidacionCompra: EmitirCaeLiquidacionCompra,
   ) {
     this.registerRoutes();
   }
@@ -62,6 +65,28 @@ export class LiquidacionCompraController {
         return new ApiResponse({
           data,
           message: "Liquidación de compra obtenida correctamente",
+          status: Code.OK,
+        });
+      },
+    });
+
+    // Le pide el CAE a AFIP (WSLSP) para la liquidación ya cargada. Misma
+    // franja de roles que crearla — es un trámite fiscal, no una consulta.
+    this.httpServer.register({
+      method: "post",
+      url: "/compras/:compraId/liquidacion/emitir-cae",
+      auth: "jwt-empresa",
+      roles: RoleGroups.AdminAndContable,
+      validation: this.validation.getByCompra,
+      handler: async ({ params, auth }) => {
+        if (!auth?.empresaId) throw new ApiError("Unauthorized", Code.UNAUTHORIZED);
+        const data = await this.emitirCaeLiquidacionCompra.execute({
+          compraId: params.compraId,
+          empresaId: auth.empresaId,
+        });
+        return new ApiResponse({
+          data,
+          message: "CAE emitido correctamente",
           status: Code.OK,
         });
       },

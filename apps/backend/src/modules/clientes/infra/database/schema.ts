@@ -48,8 +48,29 @@ export const clientes = pgTable("clientes", {
   provincia: varchar("provincia", { length: 100 }),
   ubicacion: varchar("ubicacion", { length: 255 }),
   condicionFiscal: condicionFiscalEnum("condicion_fiscal").notNull(),
+  /** Ver comentario en `domain/cliente.ts` — habilita reventa (Novillo) y catálogo de destinos propios. */
+  esRevendedor: boolean("es_revendedor").notNull().default(false),
   activo: boolean("activo").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
   deletedAt: timestamp("deleted_at"),
+});
+
+/**
+ * Tabla clientes_finales — ver `domain/cliente-final.ts`. `clienteId`
+ * referencia al REVENDEDOR (ej. "Ivan"), `onDelete: "cascade"`: si se borra
+ * ese cliente, no tiene sentido conservar sus destinos.
+ */
+export const clientesFinales = pgTable("clientes_finales", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  empresaId: uuid("empresa_id")
+    .notNull()
+    .references(() => empresas.id, { onDelete: "cascade" }),
+  clienteId: uuid("cliente_id")
+    .notNull()
+    .references(() => clientes.id, { onDelete: "cascade" }),
+  nombre: varchar("nombre", { length: 150 }).notNull(),
+  activo: boolean("activo").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

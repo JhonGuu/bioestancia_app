@@ -7,6 +7,19 @@ export interface LiquidacionCompraRepository {
   getByCompraId(compraId: string, empresaId: string): Promise<LiquidacionCompra | null>;
 
   create(input: CreateLiquidacionCompraInput): Promise<LiquidacionCompra>;
+
+  /**
+   * Completa `numeroComprobante`/`cae`/`fechaVencimientoCae` una vez que
+   * AFIP autorizó la liquidación (ver `EmitirCaeLiquidacionCompra`). Antes
+   * de esto esos campos se cargaban a mano en `create`.
+   */
+  updateCae(id: string, empresaId: string, input: UpdateCaeInput): Promise<LiquidacionCompra>;
+}
+
+export interface UpdateCaeInput {
+  numeroComprobante: string;
+  cae: string;
+  fechaVencimientoCae: Date;
 }
 
 export interface CreateLiquidacionCompraInput {

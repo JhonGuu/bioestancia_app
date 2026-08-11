@@ -40,6 +40,8 @@ export interface Cliente {
   provincia: string | null;
   ubicacion: string | null;
   condicionFiscal: CondicionFiscal;
+  /** Ver `boleta-form.tsx`: habilita la carga de reventa (Novillo) y el catálogo de sus destinos propios. */
+  esRevendedor: boolean;
   activo: boolean;
   createdAt: string;
   updatedAt: string;

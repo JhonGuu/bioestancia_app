@@ -22,6 +22,17 @@ const clienteSchema = z.object({
   provincia: z.string().nullable(),
   ubicacion: z.string().nullable(),
   condicionFiscal: z.nativeEnum(CondicionFiscal),
+  esRevendedor: z.boolean(),
+  activo: z.boolean(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
+const clienteFinalSchema = z.object({
+  id: z.string().uuid(),
+  empresaId: z.string().uuid(),
+  clienteId: z.string().uuid(),
+  nombre: z.string(),
   activo: z.boolean(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
@@ -80,6 +91,86 @@ export function registerClientesOpenApi(): void {
         content: { "application/json": { schema: apiResponseSchema(clienteSchema) } },
       },
       404: { description: "No existe o no pertenece a la empresa activa" },
+    },
+  });
+
+  registry.registerPath({
+    method: "patch",
+    path: "/clientes/{id}",
+    tags: ["Clientes"],
+    summary:
+      "Edita un cliente (reemplaza todos los campos, misma regla de negocio que el alta). Admin o contable.",
+    security: [{ bearerAuth: [] }],
+    request: {
+      headers: empresaIdHeaderSchema,
+      params: z.object({ id: z.string().uuid() }),
+      body: { content: { "application/json": { schema: validation.update.body } } },
+    },
+    responses: {
+      200: {
+        description: "Cliente actualizado",
+        content: { "application/json": { schema: apiResponseSchema(clienteSchema) } },
+      },
+      400: { description: "Falta nombre+apellido/razonSocial, o falta cuit/dni" },
+      403: { description: "No sos admin/contable de la empresa activa" },
+      404: { description: "No existe o no pertenece a la empresa activa" },
+    },
+  });
+
+  registry.registerPath({
+    method: "delete",
+    path: "/clientes/{id}",
+    tags: ["Clientes"],
+    summary:
+      "Elimina un cliente (soft-delete: no borra la fila, así no rompe ventas/boletas históricas). Admin o contable.",
+    security: [{ bearerAuth: [] }],
+    request: {
+      headers: empresaIdHeaderSchema,
+      params: z.object({ id: z.string().uuid() }),
+    },
+    responses: {
+      200: { description: "Cliente eliminado" },
+      403: { description: "No sos admin/contable de la empresa activa" },
+      404: { description: "No existe o no pertenece a la empresa activa" },
+    },
+  });
+
+  registry.registerPath({
+    method: "post",
+    path: "/clientes/{clienteId}/clientes-finales",
+    tags: ["Clientes"],
+    summary:
+      "Crea un destino de reventa para un cliente revendedor (esRevendedor=true). Admin, contable, u operario.",
+    security: [{ bearerAuth: [] }],
+    request: {
+      headers: empresaIdHeaderSchema,
+      params: z.object({ clienteId: z.string().uuid() }),
+      body: { content: { "application/json": { schema: validation.createClienteFinal.body } } },
+    },
+    responses: {
+      201: {
+        description: "Destino creado",
+        content: { "application/json": { schema: apiResponseSchema(clienteFinalSchema) } },
+      },
+      400: { description: "El cliente no existe, no es de esta empresa, o no es revendedor" },
+    },
+  });
+
+  registry.registerPath({
+    method: "get",
+    path: "/clientes/{clienteId}/clientes-finales",
+    tags: ["Clientes"],
+    summary: "Lista los destinos de reventa activos de un cliente revendedor",
+    security: [{ bearerAuth: [] }],
+    request: {
+      headers: empresaIdHeaderSchema,
+      params: z.object({ clienteId: z.string().uuid() }),
+    },
+    responses: {
+      200: {
+        description: "OK",
+        content: { "application/json": { schema: apiResponseSchema(z.array(clienteFinalSchema)) } },
+      },
     },
   });
 }

@@ -14,9 +14,14 @@ export class CreateVenta {
    * `total` no se recibe del caller: se calcula acá (`kg * precioKg`) para no
    * confiar en un total que mande el cliente HTTP — la única fuente de verdad
    * son los kg y el precio.
+   *
+   * `precioKg` es opcional (ver `Venta.precioKg`): si no viene, la venta
+   * queda cargada sin precio ni total — pendiente de que alguien de
+   * administración/contable la complete con `SetPrecioVenta`.
    */
   async execute(input: CreateVentaUseCaseInput): Promise<Venta> {
-    const total = Math.round(input.kg * input.precioKg * 100) / 100;
+    const total =
+      input.precioKg !== undefined ? Math.round(input.kg * input.precioKg * 100) / 100 : undefined;
     return this.ventaRepository.create({ ...input, total });
   }
 }

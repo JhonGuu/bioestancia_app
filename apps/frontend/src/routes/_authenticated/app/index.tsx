@@ -1,9 +1,17 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 import { useAuth } from "@/modules/auth/context/auth-context";
+import { Roles } from "@/modules/auth/domain/auth.types";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export const Route = createFileRoute("/_authenticated/app/")({
+  // El operario no tiene nada que hacer en el dashboard genérico — lo manda
+  // directo a cargar boletas, que es lo único que puede hacer.
+  beforeLoad: ({ context }) => {
+    if (context.auth.empresaActiva?.rol === Roles.OPERARIO) {
+      throw redirect({ to: "/app/boletas" });
+    }
+  },
   component: DashboardPage,
 });
 

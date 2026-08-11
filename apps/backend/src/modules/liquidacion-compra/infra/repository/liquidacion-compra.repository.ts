@@ -7,6 +7,7 @@ import { ApiError, Code } from "@/shared/infra/http/api.responses";
 import {
   CreateLiquidacionCompraInput,
   LiquidacionCompraRepository,
+  UpdateCaeInput,
 } from "@/modules/liquidacion-compra/domain/liquidacion-compra.repository";
 import { LiquidacionCompra } from "@/modules/liquidacion-compra/domain/liquidacion-compra";
 import { liquidacionCompra } from "@/modules/liquidacion-compra/infra/database/schema";
@@ -65,6 +66,29 @@ export class LiquidacionCompraRepositoryDrizzle implements LiquidacionCompraRepo
       .returning();
     if (!row) {
       throw new ApiError("Failed to create liquidación de compra", Code.INTERNAL_SERVER_ERROR);
+    }
+    return this.toDomain(row);
+  }
+
+  async updateCae(id: string, empresaId: string, input: UpdateCaeInput): Promise<LiquidacionCompra> {
+    const [row] = await this.orm.db
+      .update(liquidacionCompra)
+      .set({
+        numeroComprobante: input.numeroComprobante,
+        cae: input.cae,
+        fechaVencimientoCae: input.fechaVencimientoCae,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(liquidacionCompra.id, id),
+          eq(liquidacionCompra.empresaId, empresaId),
+          isNull(liquidacionCompra.deletedAt),
+        ),
+      )
+      .returning();
+    if (!row) {
+      throw new ApiError("Liquidación de compra no encontrada", Code.NOT_FOUND);
     }
     return this.toDomain(row);
   }

@@ -7,6 +7,8 @@ import { RoleGroups } from "@/modules/users/domain/role-groups";
 import { EmpresaValidation } from "@/modules/empresas/infra/http/validation";
 import { CreateEmpresa, CreateEmpresaInput } from "@/modules/empresas/use-cases/create-empresa.use-case";
 import { ListEmpresas } from "@/modules/empresas/use-cases/list-empresas.use-case";
+import { UpdateEmpresa } from "@/modules/empresas/use-cases/update-empresa.use-case";
+import { UpdateEmpresaInput } from "@/modules/empresas/domain/empresa.repository";
 
 /**
  * Endpoints administrativos sobre empresas. En la práctica, con dos empresas
@@ -24,6 +26,7 @@ export class EmpresaController {
     @inject(DI_TYPES.EmpresaValidation) private readonly validation: EmpresaValidation,
     @inject(DI_TYPES.CreateEmpresa) private readonly createEmpresa: CreateEmpresa,
     @inject(DI_TYPES.ListEmpresas) private readonly listEmpresas: ListEmpresas,
+    @inject(DI_TYPES.UpdateEmpresa) private readonly updateEmpresa: UpdateEmpresa,
   ) {
     this.registerRoutes();
   }
@@ -55,6 +58,24 @@ export class EmpresaController {
         return new ApiResponse({
           data,
           message: "Empresas obtenidas correctamente",
+          status: Code.OK,
+        });
+      },
+    });
+
+    // Completar/editar cuit, teléfono, dirección — hoy sobre todo para que
+    // aparezcan en el encabezado del PDF de boleta (ver `BoletaPdfGenerator`).
+    this.httpServer.register({
+      method: "patch",
+      url: "/empresas/:id",
+      auth: "jwt-empresa",
+      roles: RoleGroups.AdminOnly,
+      validation: this.validation.update,
+      handler: async ({ params, body }) => {
+        const data = await this.updateEmpresa.execute(params.id, body as UpdateEmpresaInput);
+        return new ApiResponse({
+          data,
+          message: "Empresa actualizada correctamente",
           status: Code.OK,
         });
       },

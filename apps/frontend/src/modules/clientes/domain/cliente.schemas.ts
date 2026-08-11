@@ -24,6 +24,7 @@ export const createClienteSchema = z
     condicionFiscal: z.nativeEnum(CondicionFiscal, {
       message: "Elegí una condición fiscal",
     }),
+    esRevendedor: z.boolean(),
   })
   .refine((data) => (data.nombre && data.apellido) || data.razonSocial, {
     message: "Indicá nombre y apellido (persona física) o razón social (persona jurídica)",

@@ -7,6 +7,7 @@ import { VentaRepositoryDrizzle } from "@/modules/ventas/infra/repository/venta.
 import { CreateVenta } from "@/modules/ventas/use-cases/create-venta.use-case";
 import { ListVentas } from "@/modules/ventas/use-cases/list-ventas.use-case";
 import { GetVenta } from "@/modules/ventas/use-cases/get-venta.use-case";
+import { SetPrecioVenta } from "@/modules/ventas/use-cases/set-precio-venta.use-case";
 
 export function registerVentasModule(container: Container): void {
   container.bind(DI_TYPES.VentaValidation).to(VentaValidation);
@@ -14,6 +15,7 @@ export function registerVentasModule(container: Container): void {
   container.bind(DI_TYPES.CreateVenta).to(CreateVenta);
   container.bind(DI_TYPES.ListVentas).to(ListVentas);
   container.bind(DI_TYPES.GetVenta).to(GetVenta);
+  container.bind(DI_TYPES.SetPrecioVenta).to(SetPrecioVenta);
   container.bind(DI_TYPES.VentaController).to(VentaController);
   container.get(DI_TYPES.VentaController);
 }

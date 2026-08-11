@@ -11,10 +11,21 @@ export interface EmpresaRepository {
   list(): Promise<Empresa[]>;
 
   create(input: CreateEmpresaInput): Promise<Empresa>;
+
+  /** Actualiza los datos de contacto/fiscales de una empresa (ver `UpdateEmpresa`). */
+  update(id: string, input: UpdateEmpresaInput): Promise<Empresa>;
 }
 
 export interface CreateEmpresaInput {
   razonSocial: string;
   cuit?: string | null;
+  telefono?: string | null;
+  direccion?: string | null;
   rubro: Rubro;
+}
+
+export interface UpdateEmpresaInput {
+  cuit?: string | null;
+  telefono?: string | null;
+  direccion?: string | null;
 }

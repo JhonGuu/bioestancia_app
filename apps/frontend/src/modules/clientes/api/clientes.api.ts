@@ -29,4 +29,14 @@ export const clientesApi = {
   create(input: CreateClienteFormValues): Promise<Cliente> {
     return unwrap(httpClient.post("/clientes", cleanPayload(input)));
   },
+
+  /** Reemplaza todos los campos editables (mismas reglas que el alta). */
+  update(id: string, input: CreateClienteFormValues): Promise<Cliente> {
+    return unwrap(httpClient.patch(`/clientes/${id}`, cleanPayload(input)));
+  },
+
+  /** Soft-delete — el cliente deja de listarse, pero sus ventas/boletas históricas no se tocan. */
+  remove(id: string): Promise<void> {
+    return unwrap(httpClient.delete(`/clientes/${id}`));
+  },
 };

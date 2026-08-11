@@ -27,6 +27,7 @@ import {
 import {
   CONDICION_FISCAL_LABELS,
   CondicionFiscal,
+  type Cliente,
 } from "@/modules/clientes/domain/cliente.types";
 
 type TipoPersona = "fisica" | "juridica";
@@ -34,25 +35,36 @@ type TipoPersona = "fisica" | "juridica";
 interface ClienteFormProps {
   onSubmit: (values: CreateClienteFormValues) => Promise<void>;
   isSubmitting?: boolean;
+  /** Si viene, el form arranca precargado con sus datos (edición) en vez de vacío (alta). */
+  cliente?: Cliente;
 }
 
-export function ClienteForm({ onSubmit, isSubmitting }: ClienteFormProps) {
-  const [tipoPersona, setTipoPersona] = React.useState<TipoPersona>("fisica");
+/**
+ * Se usa tanto para alta como para edición: en edición, `cliente` precarga
+ * todos los campos y el tipo de persona inicial se infiere de si tiene
+ * `razonSocial` cargada (jurídica) o no (física) — el mismo criterio que usa
+ * `nombreCliente()`.
+ */
+export function ClienteForm({ onSubmit, isSubmitting, cliente }: ClienteFormProps) {
+  const [tipoPersona, setTipoPersona] = React.useState<TipoPersona>(
+    cliente?.razonSocial ? "juridica" : "fisica",
+  );
 
   const form = useForm<CreateClienteFormValues>({
     resolver: zodResolver(createClienteSchema),
     defaultValues: {
-      nombre: "",
-      apellido: "",
-      razonSocial: "",
-      cuit: "",
-      dni: "",
-      domicilio: "",
-      email: "",
-      pais: "",
-      provincia: "",
-      ubicacion: "",
-      condicionFiscal: CondicionFiscal.CONSUMIDOR_FINAL,
+      nombre: cliente?.nombre ?? "",
+      apellido: cliente?.apellido ?? "",
+      razonSocial: cliente?.razonSocial ?? "",
+      cuit: cliente?.cuit ?? "",
+      dni: cliente?.dni ?? "",
+      domicilio: cliente?.domicilio ?? "",
+      email: cliente?.email ?? "",
+      pais: cliente?.pais ?? "",
+      provincia: cliente?.provincia ?? "",
+      ubicacion: cliente?.ubicacion ?? "",
+      condicionFiscal: cliente?.condicionFiscal ?? CondicionFiscal.CONSUMIDOR_FINAL,
+      esRevendedor: cliente?.esRevendedor ?? false,
     },
   });
 
@@ -241,8 +253,35 @@ export function ClienteForm({ onSubmit, isSubmitting }: ClienteFormProps) {
           )}
         />
 
+        <FormField
+          control={form.control}
+          name="esRevendedor"
+          render={({ field }) => (
+            <FormItem>
+              <label className="flex w-fit cursor-pointer items-start gap-2">
+                <FormControl>
+                  <input
+                    type="checkbox"
+                    checked={field.value}
+                    onChange={(e) => field.onChange(e.target.checked)}
+                    className="accent-primary mt-1 size-4"
+                  />
+                </FormControl>
+                <span>
+                  <span className="text-sm font-medium">Es revendedor</span>
+                  <span className="text-muted-foreground block text-xs">
+                    Reparte a sus propios clientes (ej. Ivan) — habilita la reventa de Novillo y un
+                    catálogo de sus destinos al cargar boletas.
+                  </span>
+                </span>
+              </label>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         <Button type="submit" disabled={isSubmitting} className="w-fit">
-          {isSubmitting ? "Guardando..." : "Guardar cliente"}
+          {isSubmitting ? "Guardando..." : cliente ? "Guardar cambios" : "Guardar cliente"}
         </Button>
       </form>
     </Form>

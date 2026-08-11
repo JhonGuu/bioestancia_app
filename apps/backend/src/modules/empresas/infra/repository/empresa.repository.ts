@@ -7,6 +7,7 @@ import { ApiError, Code } from "@/shared/infra/http/api.responses";
 import {
   CreateEmpresaInput,
   EmpresaRepository,
+  UpdateEmpresaInput,
 } from "@/modules/empresas/domain/empresa.repository";
 import { Empresa, Rubro } from "@/modules/empresas/domain/empresa";
 import { empresas } from "@/modules/empresas/infra/database/schema";
@@ -39,6 +40,8 @@ export class EmpresaRepositoryDrizzle implements EmpresaRepository {
       .values({
         razonSocial: input.razonSocial,
         cuit: input.cuit ?? null,
+        telefono: input.telefono ?? null,
+        direccion: input.direccion ?? null,
         rubro: input.rubro,
       })
       .returning();
@@ -48,11 +51,30 @@ export class EmpresaRepositoryDrizzle implements EmpresaRepository {
     return this.toDomain(row);
   }
 
+  async update(id: string, input: UpdateEmpresaInput): Promise<Empresa> {
+    const [row] = await this.orm.db
+      .update(empresas)
+      .set({
+        ...(input.cuit !== undefined ? { cuit: input.cuit } : {}),
+        ...(input.telefono !== undefined ? { telefono: input.telefono } : {}),
+        ...(input.direccion !== undefined ? { direccion: input.direccion } : {}),
+        updatedAt: new Date(),
+      })
+      .where(and(eq(empresas.id, id), isNull(empresas.deletedAt)))
+      .returning();
+    if (!row) {
+      throw new ApiError("Empresa no encontrada", Code.NOT_FOUND);
+    }
+    return this.toDomain(row);
+  }
+
   private toDomain(row: typeof empresas.$inferSelect): Empresa {
     return {
       id: row.id,
       razonSocial: row.razonSocial,
       cuit: row.cuit,
+      telefono: row.telefono,
+      direccion: row.direccion,
       rubro: row.rubro as Rubro,
       activa: row.activa,
       createdAt: row.createdAt,

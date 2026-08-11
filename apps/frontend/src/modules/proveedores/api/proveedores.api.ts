@@ -17,9 +17,12 @@ function cleanPayload<T extends Record<string, unknown>>(values: T): Partial<T> 
   return cleaned;
 }
 
+export type EstadoProveedorFiltro = "activos" | "inactivos" | "todos";
+
 export const proveedoresApi = {
-  list(): Promise<Proveedor[]> {
-    return unwrap(httpClient.get("/proveedores"));
+  /** `estado` filtra activos/inactivos/todos — default "activos" (mismo default que el backend). */
+  list(estado?: EstadoProveedorFiltro): Promise<Proveedor[]> {
+    return unwrap(httpClient.get("/proveedores", { params: estado ? { estado } : undefined }));
   },
 
   getById(id: string): Promise<Proveedor> {
@@ -28,5 +31,20 @@ export const proveedoresApi = {
 
   create(input: CreateProveedorFormValues): Promise<Proveedor> {
     return unwrap(httpClient.post("/proveedores", cleanPayload(input)));
+  },
+
+  /** Reemplaza todos los campos editables (mismas reglas que el alta). */
+  update(id: string, input: CreateProveedorFormValues): Promise<Proveedor> {
+    return unwrap(httpClient.patch(`/proveedores/${id}`, cleanPayload(input)));
+  },
+
+  /** Soft-delete — el proveedor deja de listarse, pero sus compras históricas no se tocan. */
+  remove(id: string): Promise<void> {
+    return unwrap(httpClient.delete(`/proveedores/${id}`));
+  },
+
+  /** Deshace el soft-delete: vuelve a poner al proveedor como activo. */
+  reactivar(id: string): Promise<Proveedor> {
+    return unwrap(httpClient.post(`/proveedores/${id}/reactivar`, {}));
   },
 };

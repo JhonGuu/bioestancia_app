@@ -1,22 +1,62 @@
 import { useState } from "react";
 import { Link, Outlet, useNavigate } from "@tanstack/react-router";
-import { Building2, CalendarClock, LogOut, Menu, ShoppingCart, Truck, Users } from "lucide-react";
+import {
+  Building2,
+  CalendarClock,
+  LogOut,
+  Menu,
+  Receipt,
+  Settings,
+  ShoppingCart,
+  Truck,
+  Users,
+} from "lucide-react";
 
 import { useAuth } from "@/modules/auth/context/auth-context";
+import { Roles } from "@/modules/auth/domain/auth.types";
 import { BrandLogo, brandCompanyFromRazonSocial } from "@/components/brand-logo";
 import { ThemeToggle } from "@/shared/theme/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
+/**
+ * `roles` opcional: si no se especifica, el item es visible para cualquier
+ * rol. El operario carga boletas desde el celular y nada más — no necesita
+ * (ni debería ver) clientes/proveedores/compras/planificación, así que esos
+ * items sí llevan `roles` explícito.
+ */
 const NAV_ITEMS = [
-  { to: "/app/clientes" as const, label: "Clientes", icon: Users },
-  { to: "/app/proveedores" as const, label: "Proveedores", icon: Truck },
-  { to: "/app/compras" as const, label: "Compras", icon: ShoppingCart },
+  {
+    to: "/app/boletas" as const,
+    label: "Boletas",
+    icon: Receipt,
+    roles: [Roles.ADMIN, Roles.CONTABLE, Roles.OPERARIO],
+  },
+  { to: "/app/clientes" as const, label: "Clientes", icon: Users, roles: [Roles.ADMIN, Roles.CONTABLE] },
+  {
+    to: "/app/proveedores" as const,
+    label: "Proveedores",
+    icon: Truck,
+    roles: [Roles.ADMIN, Roles.CONTABLE],
+  },
+  {
+    to: "/app/compras" as const,
+    label: "Compras",
+    icon: ShoppingCart,
+    roles: [Roles.ADMIN, Roles.CONTABLE],
+  },
   {
     to: "/app/planificacion-cabezas" as const,
     label: "Planificación de cabezas",
     icon: CalendarClock,
+    roles: [Roles.ADMIN, Roles.CONTABLE],
+  },
+  {
+    to: "/app/empresa" as const,
+    label: "Datos de la empresa",
+    icon: Settings,
+    roles: [Roles.ADMIN],
   },
 ];
 
@@ -59,7 +99,7 @@ export function AppShell() {
                 )}
               </SheetHeader>
               <nav className="p-3">
-                <NavLinks onNavigate={() => setMenuAbierto(false)} />
+                <NavLinks rol={auth.empresaActiva?.rol} onNavigate={() => setMenuAbierto(false)} />
               </nav>
             </SheetContent>
           </Sheet>
@@ -100,7 +140,7 @@ export function AppShell() {
 
       <div className="flex flex-1">
         <nav className="hidden w-56 shrink-0 border-r p-3 md:block">
-          <NavLinks />
+          <NavLinks rol={auth.empresaActiva?.rol} />
         </nav>
 
         <main className="flex-1 p-4 md:p-6">
@@ -111,10 +151,12 @@ export function AppShell() {
   );
 }
 
-function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
+function NavLinks({ rol, onNavigate }: { rol?: Roles; onNavigate?: () => void }) {
+  const items = NAV_ITEMS.filter((item) => !rol || item.roles.includes(rol));
+
   return (
     <ul className="space-y-1">
-      {NAV_ITEMS.map((item) => (
+      {items.map((item) => (
         <li key={item.to}>
           <Link
             to={item.to}

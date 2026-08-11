@@ -4,6 +4,10 @@
  *   - admin: acceso total a la empresa donde tiene este rol.
  *   - contable: gestión contable/administrativa (ventas, gastos, facturación).
  *   - veterinario: tareas sanitarias (control, vacunación, decomiso).
+ *   - operario: carga boletas desde el reparto (planta/entrega) — cliente,
+ *     tropa, categoría/presentación y kg. No carga precio (eso lo completa
+ *     alguien de administración/contable después, ver
+ *     `modules/ventas/use-cases/set-precio-venta.use-case.ts`).
  *
  * IMPORTANTE: el rol es siempre relativo a una empresa — vive en la tabla
  * `usuario_empresas` (domain/usuario-empresa.ts), NO en `users`. El mismo usuario
@@ -23,4 +27,5 @@ export enum Roles {
   ADMIN = "admin",
   CONTABLE = "contable",
   VETERINARIO = "veterinario",
+  OPERARIO = "operario",
 }

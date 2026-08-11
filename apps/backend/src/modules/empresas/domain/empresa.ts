@@ -19,6 +19,10 @@ export interface Empresa {
   id: string;
   razonSocial: string;
   cuit: string | null;
+  /** Teléfono de contacto — se muestra en el encabezado del PDF de boleta. */
+  telefono: string | null;
+  /** Dirección — se muestra en el encabezado del PDF de boleta. */
+  direccion: string | null;
   rubro: Rubro;
   activa: boolean;
   createdAt: Date;

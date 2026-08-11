@@ -8,7 +8,11 @@ import { ClienteValidation } from "@/modules/clientes/infra/http/validation";
 import { CreateCliente } from "@/modules/clientes/use-cases/create-cliente.use-case";
 import { ListClientes } from "@/modules/clientes/use-cases/list-clientes.use-case";
 import { GetCliente } from "@/modules/clientes/use-cases/get-cliente.use-case";
-import { CreateClienteInput } from "@/modules/clientes/domain/cliente.repository";
+import { UpdateCliente } from "@/modules/clientes/use-cases/update-cliente.use-case";
+import { DeleteCliente } from "@/modules/clientes/use-cases/delete-cliente.use-case";
+import { CreateClienteFinal } from "@/modules/clientes/use-cases/create-cliente-final.use-case";
+import { ListClientesFinales } from "@/modules/clientes/use-cases/list-clientes-finales.use-case";
+import { CreateClienteInput, UpdateClienteInput } from "@/modules/clientes/domain/cliente.repository";
 
 @injectable()
 export class ClienteController {
@@ -18,6 +22,10 @@ export class ClienteController {
     @inject(DI_TYPES.CreateCliente) private readonly createCliente: CreateCliente,
     @inject(DI_TYPES.ListClientes) private readonly listClientes: ListClientes,
     @inject(DI_TYPES.GetCliente) private readonly getCliente: GetCliente,
+    @inject(DI_TYPES.UpdateCliente) private readonly updateCliente: UpdateCliente,
+    @inject(DI_TYPES.DeleteCliente) private readonly deleteCliente: DeleteCliente,
+    @inject(DI_TYPES.CreateClienteFinal) private readonly createClienteFinal: CreateClienteFinal,
+    @inject(DI_TYPES.ListClientesFinales) private readonly listClientesFinales: ListClientesFinales,
   ) {
     this.registerRoutes();
   }
@@ -69,6 +77,92 @@ export class ClienteController {
         return new ApiResponse({
           data,
           message: "Cliente obtenido correctamente",
+          status: Code.OK,
+        });
+      },
+    });
+
+    // Admin + contable: edición completa (reemplaza todos los campos, misma
+    // regla de negocio que el alta — ver `ClienteValidation.update`).
+    this.httpServer.register({
+      method: "patch",
+      url: "/clientes/:id",
+      auth: "jwt-empresa",
+      roles: RoleGroups.AdminAndContable,
+      validation: this.validation.update,
+      handler: async ({ params, body, auth }) => {
+        if (!auth?.empresaId) throw new ApiError("Unauthorized", Code.UNAUTHORIZED);
+        const input = body as UpdateClienteInput;
+        const data = await this.updateCliente.execute({
+          ...input,
+          id: params.id,
+          empresaId: auth.empresaId,
+        });
+        return new ApiResponse({
+          data,
+          message: "Cliente actualizado correctamente",
+          status: Code.OK,
+        });
+      },
+    });
+
+    // Admin + contable: soft-delete (ver `ClienteRepository.delete`) — nunca
+    // borra la fila, así no rompe ventas/boletas históricas que ya lo referencian.
+    this.httpServer.register({
+      method: "delete",
+      url: "/clientes/:id",
+      auth: "jwt-empresa",
+      roles: RoleGroups.AdminAndContable,
+      validation: this.validation.delete,
+      handler: async ({ params, auth }) => {
+        if (!auth?.empresaId) throw new ApiError("Unauthorized", Code.UNAUTHORIZED);
+        await this.deleteCliente.execute({ id: params.id, empresaId: auth.empresaId });
+        return new ApiResponse({
+          message: "Cliente eliminado correctamente",
+          status: Code.OK,
+        });
+      },
+    });
+
+    // Destinos de reventa (ver `esRevendedor` en el dominio) — quien carga
+    // boletas también puede dar de alta un destino nuevo al vuelo (ej. el
+    // operario, si Ivan reparte a un local que todavía no está en la lista).
+    this.httpServer.register({
+      method: "post",
+      url: "/clientes/:clienteId/clientes-finales",
+      auth: "jwt-empresa",
+      roles: RoleGroups.BoletaLoaders,
+      validation: this.validation.createClienteFinal,
+      handler: async ({ params, body, auth }) => {
+        if (!auth?.empresaId) throw new ApiError("Unauthorized", Code.UNAUTHORIZED);
+        const { nombre } = body as { nombre: string };
+        const data = await this.createClienteFinal.execute({
+          clienteId: params.clienteId,
+          empresaId: auth.empresaId,
+          nombre,
+        });
+        return new ApiResponse({
+          data,
+          message: "Destino creado correctamente",
+          status: Code.CREATED,
+        });
+      },
+    });
+
+    this.httpServer.register({
+      method: "get",
+      url: "/clientes/:clienteId/clientes-finales",
+      auth: "jwt-empresa",
+      validation: this.validation.listClientesFinales,
+      handler: async ({ params, auth }) => {
+        if (!auth?.empresaId) throw new ApiError("Unauthorized", Code.UNAUTHORIZED);
+        const data = await this.listClientesFinales.execute({
+          clienteId: params.clienteId,
+          empresaId: auth.empresaId,
+        });
+        return new ApiResponse({
+          data,
+          message: "Destinos obtenidos correctamente",
           status: Code.OK,
         });
       },

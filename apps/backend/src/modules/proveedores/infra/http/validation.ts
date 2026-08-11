@@ -41,13 +41,27 @@ const createBody = z
     path: ["cuit"],
   });
 
+const updateBody = createBody;
+
+const idParams = z.object({
+  id: z.string().uuid("Id inválido"),
+});
+
+const listQuery = z.object({
+  estado: z.enum(["activos", "inactivos", "todos"]).optional(),
+});
+
 @injectable()
 export class ProveedorValidation {
   create = { body: createBody };
 
-  getById = {
-    params: z.object({
-      id: z.string().uuid("Id inválido"),
-    }),
-  };
+  list = { query: listQuery };
+
+  getById = { params: idParams };
+
+  update = { params: idParams, body: updateBody };
+
+  delete = { params: idParams };
+
+  reactivar = { params: idParams };
 }

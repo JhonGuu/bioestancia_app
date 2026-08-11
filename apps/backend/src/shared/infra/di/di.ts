@@ -5,6 +5,11 @@ import { DrizzleAdapter } from "@/shared/infra/database/db-connection";
 import { ExpressAdapter } from "@/shared/infra/http/http-server";
 import { JsonWebTokenProvider } from "@/shared/infra/jwt/jwt-provider";
 import { PinoLogger } from "@/shared/infra/logger/logger";
+import { WsaaClient } from "@/shared/infra/afip/wsaa.client";
+import { WslspClient } from "@/shared/infra/afip/wslsp.client";
+import { BoletaPdfGenerator } from "@/shared/infra/documents/boleta-pdf.generator";
+import { ReporteDiarioPdfGenerator } from "@/shared/infra/documents/reporte-diario-pdf.generator";
+import { ReporteDiarioExcelGenerator } from "@/shared/infra/documents/reporte-diario-excel.generator";
 import { registerEmpresasModule } from "@/modules/empresas/empresas.module";
 import { registerUsersModule } from "@/modules/users/users.module";
 import { registerListasPreciosModule } from "@/modules/listas-precios/listas-precios.module";
@@ -62,7 +67,6 @@ export class DI {
     registerListasPreciosModule(this.container);
     registerClientesModule(this.container);
     registerProveedoresModule(this.container);
-    registerBoletasModule(this.container);
     // `ventas` antes que `compras`: `CerrarCompra` (dentro de compras) inyecta
     // `VentaRepository` para reconciliar cabezas al cerrar una compra. Si
     // `compras` se registrara primero, su `.get()` eager fallaría con
@@ -73,6 +77,11 @@ export class DI {
     // CompraCategoriaRepository (bindeados en `compras`) — van después.
     registerResultadoFaenaModule(this.container);
     registerLiquidacionCompraModule(this.container);
+    // `boletas` inyecta VentaRepository (bindeado en `ventas`) y
+    // CompraRepository (bindeado en `compras`) desde que `CreateBoleta`
+    // puede crear las ventas de sus ítems en el mismo request — va después
+    // de ambos.
+    registerBoletasModule(this.container);
     // `planificacion-cabezas` inyecta ClienteRepository (bindeado en
     // `clientes`) y VentaRepository (bindeado en `ventas`) — va después de
     // ambos.
@@ -93,5 +102,17 @@ export class DI {
 
     // HTTP server (Express)
     this.container.bind(DI_TYPES.HttpServer).to(ExpressAdapter);
+
+    // AFIP (WSAA + WSLSP) — ver shared/infra/afip/README.md. Se bindean
+    // siempre (no rompen el boot sin certificado: los checks de
+    // `Env.afipHabilitado` viven adentro, recién se disparan al llamar un
+    // método real).
+    this.container.bind(DI_TYPES.WsaaClient).to(WsaaClient);
+    this.container.bind(DI_TYPES.WslspClient).to(WslspClient);
+
+    // Generadores de documentos (PDF/Excel) — ver módulo boletas.
+    this.container.bind(DI_TYPES.BoletaPdfGenerator).to(BoletaPdfGenerator);
+    this.container.bind(DI_TYPES.ReporteDiarioPdfGenerator).to(ReporteDiarioPdfGenerator);
+    this.container.bind(DI_TYPES.ReporteDiarioExcelGenerator).to(ReporteDiarioExcelGenerator);
   }
 }

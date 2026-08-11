@@ -20,6 +20,14 @@ export const RoleGroups = {
   /** Administración y sanidad — control veterinario. */
   AdminAndVeterinario: [Roles.ADMIN, Roles.VETERINARIO] as string[],
 
+  /**
+   * Quienes pueden cargar una boleta (encabezado + ítems): administración,
+   * contable, y el operario que reparte en planta. El operario NO entra en
+   * `AdminAndContable` (no puede tocar precios, cerrar compras, etc.) — solo
+   * este flujo puntual.
+   */
+  BoletaLoaders: [Roles.ADMIN, Roles.CONTABLE, Roles.OPERARIO] as string[],
+
   /** Cualquier usuario con acceso a la empresa activa (sin restricción de rol). */
   AnyAuthenticated: [] as string[],
 } as const;

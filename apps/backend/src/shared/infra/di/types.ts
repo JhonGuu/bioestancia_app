@@ -11,12 +11,18 @@ export const DI_TYPES = {
   JWTProvider: Symbol.for("JWTProvider"),
   Logger: Symbol.for("Logger"),
   AuthProvider: Symbol.for("AuthProvider"),
+  WsaaClient: Symbol.for("WsaaClient"),
+  WslspClient: Symbol.for("WslspClient"),
+  BoletaPdfGenerator: Symbol.for("BoletaPdfGenerator"),
+  ReporteDiarioPdfGenerator: Symbol.for("ReporteDiarioPdfGenerator"),
+  ReporteDiarioExcelGenerator: Symbol.for("ReporteDiarioExcelGenerator"),
 
   // ── Module: empresas ───────────────────────────
   EmpresaValidation: Symbol.for("EmpresaValidation"),
   EmpresaRepository: Symbol.for("EmpresaRepository"),
   CreateEmpresa: Symbol.for("CreateEmpresa"),
   ListEmpresas: Symbol.for("ListEmpresas"),
+  UpdateEmpresa: Symbol.for("UpdateEmpresa"),
   EmpresaController: Symbol.for("EmpresaController"),
 
   // ── Module: users ──────────────────────────────
@@ -44,6 +50,11 @@ export const DI_TYPES = {
   CreateCliente: Symbol.for("CreateCliente"),
   ListClientes: Symbol.for("ListClientes"),
   GetCliente: Symbol.for("GetCliente"),
+  UpdateCliente: Symbol.for("UpdateCliente"),
+  DeleteCliente: Symbol.for("DeleteCliente"),
+  ClienteFinalRepository: Symbol.for("ClienteFinalRepository"),
+  CreateClienteFinal: Symbol.for("CreateClienteFinal"),
+  ListClientesFinales: Symbol.for("ListClientesFinales"),
   ClienteController: Symbol.for("ClienteController"),
 
   // ── Module: proveedores ─────────────────────────
@@ -52,6 +63,9 @@ export const DI_TYPES = {
   CreateProveedor: Symbol.for("CreateProveedor"),
   ListProveedores: Symbol.for("ListProveedores"),
   GetProveedor: Symbol.for("GetProveedor"),
+  UpdateProveedor: Symbol.for("UpdateProveedor"),
+  DeleteProveedor: Symbol.for("DeleteProveedor"),
+  ReactivarProveedor: Symbol.for("ReactivarProveedor"),
   ProveedorController: Symbol.for("ProveedorController"),
 
   // ── Module: compras (antes "tropas") ────────────
@@ -78,6 +92,7 @@ export const DI_TYPES = {
   LiquidacionCompraRepository: Symbol.for("LiquidacionCompraRepository"),
   CreateLiquidacionCompra: Symbol.for("CreateLiquidacionCompra"),
   GetLiquidacionCompra: Symbol.for("GetLiquidacionCompra"),
+  EmitirCaeLiquidacionCompra: Symbol.for("EmitirCaeLiquidacionCompra"),
   LiquidacionCompraController: Symbol.for("LiquidacionCompraController"),
 
   // ── Module: boletas ──────────────────────────────
@@ -86,6 +101,10 @@ export const DI_TYPES = {
   CreateBoleta: Symbol.for("CreateBoleta"),
   ListBoletas: Symbol.for("ListBoletas"),
   GetBoleta: Symbol.for("GetBoleta"),
+  ObtenerReporteDiarioData: Symbol.for("ObtenerReporteDiarioData"),
+  GenerarBoletaPdf: Symbol.for("GenerarBoletaPdf"),
+  GenerarReporteDiarioPdf: Symbol.for("GenerarReporteDiarioPdf"),
+  GenerarReporteDiarioExcel: Symbol.for("GenerarReporteDiarioExcel"),
   BoletaController: Symbol.for("BoletaController"),
 
   // ── Module: ventas ───────────────────────────────
@@ -94,6 +113,7 @@ export const DI_TYPES = {
   CreateVenta: Symbol.for("CreateVenta"),
   ListVentas: Symbol.for("ListVentas"),
   GetVenta: Symbol.for("GetVenta"),
+  SetPrecioVenta: Symbol.for("SetPrecioVenta"),
   VentaController: Symbol.for("VentaController"),
 
   // ── Module: planificacion-cabezas ────────────────

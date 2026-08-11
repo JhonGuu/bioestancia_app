@@ -62,3 +62,14 @@ export interface Compra {
   createdAt: Date;
   updatedAt: Date;
 }
+
+/**
+ * "45 - A" (o solo "45" si todavía no tiene letra asignada) — para reportes
+ * INTERNOS (reporte diario), donde sí queremos saber la tropa real. Distinto
+ * de lo que se le muestra al cliente en su boleta individual, que usa SOLO
+ * `letra` (ver comentario del campo `letra` más arriba) — ahí no se expone
+ * `numero`.
+ */
+export function compraNumeroYLetra(compra: Compra): string {
+  return compra.letra ? `${compra.numero} - ${compra.letra}` : compra.numero;
+}

@@ -1,5 +1,6 @@
 import { Venta } from "@/modules/ventas/domain/venta";
 import { FormaVenta } from "@/modules/ventas/domain/forma-venta";
+import { CategoriaVenta } from "@/modules/ventas/domain/categoria-venta";
 
 /**
  * Interface del repositorio de Ventas. Forma parte del DOMINIO.
@@ -25,6 +26,9 @@ export interface VentaRepository {
    */
   listByCompra(compraId: string, empresaId: string): Promise<Venta[]>;
 
+  /** Lista los ítems (ventas) de una boleta puntual — la usa `GetBoleta`. */
+  listByBoleta(boletaId: string, empresaId: string): Promise<Venta[]>;
+
   /**
    * Lista las ventas de un cliente en un rango de fechas (inclusive) — la usa
    * `planificacion-cabezas` para cruzar lo planificado contra lo realmente
@@ -44,6 +48,12 @@ export interface VentaRepository {
   listByEmpresaYRango(empresaId: string, desde: Date, hasta: Date): Promise<Venta[]>;
 
   create(input: CreateVentaInput): Promise<Venta>;
+
+  /**
+   * Completa `precioKg`/`total` de una venta que se cargó sin precio (ver
+   * `use-cases/set-precio-venta.use-case.ts`). No toca ningún otro campo.
+   */
+  setPrecio(id: string, empresaId: string, input: SetPrecioInput): Promise<Venta>;
 }
 
 export interface CreateVentaInput {
@@ -53,10 +63,21 @@ export interface CreateVentaInput {
   compraId?: string | null;
   garron?: number | null;
   formaVenta: FormaVenta;
+  /** Null solo para `compensacion_kg`. Puede ser `CategoriaReventa.NOVILLO` (ver `categoria-venta.ts`). */
+  categoria?: CategoriaVenta | null;
   kg: number;
+  /**
+   * Opcional: si no se manda (flujo del operario), la venta queda
+   * "pendiente de precio" — `total` tampoco se calcula hasta que se cargue.
+   */
+  precioKg?: number;
+  total?: number;
+  fecha: Date;
+  clienteFinalId?: string | null;
+  comentarios?: string;
+}
+
+export interface SetPrecioInput {
   precioKg: number;
   total: number;
-  fecha: Date;
-  clienteFinalReferencia?: string;
-  comentarios?: string;
 }

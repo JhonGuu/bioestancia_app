@@ -1,14 +1,16 @@
 import { inject, injectable } from "inversify";
 
 import { DI_TYPES } from "@/shared/infra/di/types";
-import { ApiError, ApiResponse, Code } from "@/shared/infra/http/api.responses";
+import { ApiError, ApiResponse, Code, FileResponse } from "@/shared/infra/http/api.responses";
 import { ExpressAdapter } from "@/shared/infra/http/http-server";
 import { RoleGroups } from "@/modules/users/domain/role-groups";
 import { BoletaValidation } from "@/modules/boletas/infra/http/validation";
-import { CreateBoleta } from "@/modules/boletas/use-cases/create-boleta.use-case";
+import { CreateBoleta, CreateBoletaUseCaseInput } from "@/modules/boletas/use-cases/create-boleta.use-case";
 import { ListBoletas } from "@/modules/boletas/use-cases/list-boletas.use-case";
 import { GetBoleta } from "@/modules/boletas/use-cases/get-boleta.use-case";
-import { CreateBoletaInput } from "@/modules/boletas/domain/boleta.repository";
+import { GenerarBoletaPdf } from "@/modules/boletas/use-cases/generar-boleta-pdf.use-case";
+import { GenerarReporteDiarioPdf } from "@/modules/boletas/use-cases/generar-reporte-diario-pdf.use-case";
+import { GenerarReporteDiarioExcel } from "@/modules/boletas/use-cases/generar-reporte-diario-excel.use-case";
 
 @injectable()
 export class BoletaController {
@@ -18,21 +20,26 @@ export class BoletaController {
     @inject(DI_TYPES.CreateBoleta) private readonly createBoleta: CreateBoleta,
     @inject(DI_TYPES.ListBoletas) private readonly listBoletas: ListBoletas,
     @inject(DI_TYPES.GetBoleta) private readonly getBoleta: GetBoleta,
+    @inject(DI_TYPES.GenerarBoletaPdf) private readonly generarBoletaPdf: GenerarBoletaPdf,
+    @inject(DI_TYPES.GenerarReporteDiarioPdf) private readonly generarReporteDiarioPdf: GenerarReporteDiarioPdf,
+    @inject(DI_TYPES.GenerarReporteDiarioExcel)
+    private readonly generarReporteDiarioExcel: GenerarReporteDiarioExcel,
   ) {
     this.registerRoutes();
   }
 
   private registerRoutes(): void {
-    // Admin + contable: cargar una boleta es una tarea comercial/administrativa.
+    // Admin, contable, y operario (carga desde el reparto/celular — ver
+    // RoleGroups.BoletaLoaders y CreateBoleta).
     this.httpServer.register({
       method: "post",
       url: "/boletas",
       auth: "jwt-empresa",
-      roles: RoleGroups.AdminAndContable,
+      roles: RoleGroups.BoletaLoaders,
       validation: this.validation.create,
       handler: async ({ body, auth }) => {
         if (!auth?.empresaId) throw new ApiError("Unauthorized", Code.UNAUTHORIZED);
-        const input = body as Omit<CreateBoletaInput, "empresaId">;
+        const input = body as Omit<CreateBoletaUseCaseInput, "empresaId">;
         const data = await this.createBoleta.execute({ ...input, empresaId: auth.empresaId });
         return new ApiResponse({
           data,
@@ -71,6 +78,61 @@ export class BoletaController {
           message: "Boleta obtenida correctamente",
           status: Code.OK,
         });
+      },
+    });
+
+    // OJO con el orden: estas dos rutas (`/boletas/reporte-diario/...`) tienen
+    // que registrarse ANTES de `/boletas/:id/pdf` — si no, Express matchea
+    // "reporte-diario" contra el param `:id` y nunca llegan acá.
+    this.httpServer.register({
+      method: "get",
+      url: "/boletas/reporte-diario/pdf",
+      auth: "jwt-empresa",
+      validation: this.validation.reporteDiario,
+      handler: async ({ query, auth }) => {
+        if (!auth?.empresaId) throw new ApiError("Unauthorized", Code.UNAUTHORIZED);
+        const { fecha } = query as unknown as { fecha: Date };
+        const { buffer, filename } = await this.generarReporteDiarioPdf.execute({
+          empresaId: auth.empresaId,
+          fecha,
+        });
+        return new FileResponse(buffer, filename, "application/pdf", "inline");
+      },
+    });
+
+    this.httpServer.register({
+      method: "get",
+      url: "/boletas/reporte-diario/excel",
+      auth: "jwt-empresa",
+      validation: this.validation.reporteDiario,
+      handler: async ({ query, auth }) => {
+        if (!auth?.empresaId) throw new ApiError("Unauthorized", Code.UNAUTHORIZED);
+        const { fecha } = query as unknown as { fecha: Date };
+        const { buffer, filename } = await this.generarReporteDiarioExcel.execute({
+          empresaId: auth.empresaId,
+          fecha,
+        });
+        return new FileResponse(
+          buffer,
+          filename,
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "attachment",
+        );
+      },
+    });
+
+    this.httpServer.register({
+      method: "get",
+      url: "/boletas/:id/pdf",
+      auth: "jwt-empresa",
+      validation: this.validation.pdf,
+      handler: async ({ params, auth }) => {
+        if (!auth?.empresaId) throw new ApiError("Unauthorized", Code.UNAUTHORIZED);
+        const { buffer, filename } = await this.generarBoletaPdf.execute({
+          id: params.id,
+          empresaId: auth.empresaId,
+        });
+        return new FileResponse(buffer, filename, "application/pdf", "inline");
       },
     });
   }

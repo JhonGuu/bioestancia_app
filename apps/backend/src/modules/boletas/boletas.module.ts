@@ -7,13 +7,28 @@ import { BoletaRepositoryDrizzle } from "@/modules/boletas/infra/repository/bole
 import { CreateBoleta } from "@/modules/boletas/use-cases/create-boleta.use-case";
 import { ListBoletas } from "@/modules/boletas/use-cases/list-boletas.use-case";
 import { GetBoleta } from "@/modules/boletas/use-cases/get-boleta.use-case";
+import { ObtenerReporteDiarioData } from "@/modules/boletas/use-cases/obtener-reporte-diario-data.use-case";
+import { GenerarBoletaPdf } from "@/modules/boletas/use-cases/generar-boleta-pdf.use-case";
+import { GenerarReporteDiarioPdf } from "@/modules/boletas/use-cases/generar-reporte-diario-pdf.use-case";
+import { GenerarReporteDiarioExcel } from "@/modules/boletas/use-cases/generar-reporte-diario-excel.use-case";
 
+/**
+ * Depende de `ventas` (VentaRepository), `compras` (CompraRepository) y
+ * `clientes` (ClienteFinalRepository) — `CreateBoleta` crea las ventas de los
+ * ítems de la boleta en el mismo request y valida sus referencias (tropa,
+ * destino de reventa). Debe registrarse DESPUÉS de los tres en `di.ts`
+ * (`clientes` ya se registra primero por su cuenta, no hace falta reordenar).
+ */
 export function registerBoletasModule(container: Container): void {
   container.bind(DI_TYPES.BoletaValidation).to(BoletaValidation);
   container.bind(DI_TYPES.BoletaRepository).to(BoletaRepositoryDrizzle);
   container.bind(DI_TYPES.CreateBoleta).to(CreateBoleta);
   container.bind(DI_TYPES.ListBoletas).to(ListBoletas);
   container.bind(DI_TYPES.GetBoleta).to(GetBoleta);
+  container.bind(DI_TYPES.ObtenerReporteDiarioData).to(ObtenerReporteDiarioData);
+  container.bind(DI_TYPES.GenerarBoletaPdf).to(GenerarBoletaPdf);
+  container.bind(DI_TYPES.GenerarReporteDiarioPdf).to(GenerarReporteDiarioPdf);
+  container.bind(DI_TYPES.GenerarReporteDiarioExcel).to(GenerarReporteDiarioExcel);
   container.bind(DI_TYPES.BoletaController).to(BoletaController);
   container.get(DI_TYPES.BoletaController);
 }

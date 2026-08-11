@@ -4,9 +4,10 @@ import { inject, injectable } from "inversify";
 import { DI_TYPES } from "@/shared/infra/di/types";
 import { DrizzleAdapter } from "@/shared/infra/database/db-connection";
 import { ApiError, Code } from "@/shared/infra/http/api.responses";
-import { VentaRepository, CreateVentaInput } from "@/modules/ventas/domain/venta.repository";
+import { VentaRepository, CreateVentaInput, SetPrecioInput } from "@/modules/ventas/domain/venta.repository";
 import { Venta } from "@/modules/ventas/domain/venta";
 import { FormaVenta } from "@/modules/ventas/domain/forma-venta";
+import { CategoriaVenta } from "@/modules/ventas/domain/categoria-venta";
 import { ventas } from "@/modules/ventas/infra/database/schema";
 
 @injectable()
@@ -39,6 +40,16 @@ export class VentaRepositoryDrizzle implements VentaRepository {
           eq(ventas.empresaId, empresaId),
           isNull(ventas.deletedAt),
         ),
+      );
+    return rows.map((row) => this.toDomain(row));
+  }
+
+  async listByBoleta(boletaId: string, empresaId: string): Promise<Venta[]> {
+    const rows = await this.orm.db
+      .select()
+      .from(ventas)
+      .where(
+        and(eq(ventas.boletaId, boletaId), eq(ventas.empresaId, empresaId), isNull(ventas.deletedAt)),
       );
     return rows.map((row) => this.toDomain(row));
   }
@@ -87,16 +98,33 @@ export class VentaRepositoryDrizzle implements VentaRepository {
         compraId: input.compraId ?? null,
         garron: input.garron ?? null,
         formaVenta: input.formaVenta,
+        categoria: input.categoria ?? null,
         kg: String(input.kg),
-        precioKg: String(input.precioKg),
-        total: String(input.total),
+        precioKg: input.precioKg !== undefined ? String(input.precioKg) : null,
+        total: input.total !== undefined ? String(input.total) : null,
         fecha: input.fecha,
-        clienteFinalReferencia: input.clienteFinalReferencia ?? null,
+        clienteFinalId: input.clienteFinalId ?? null,
         comentarios: input.comentarios ?? null,
       })
       .returning();
     if (!row) {
       throw new ApiError("Failed to create venta", Code.INTERNAL_SERVER_ERROR);
+    }
+    return this.toDomain(row);
+  }
+
+  async setPrecio(id: string, empresaId: string, input: SetPrecioInput): Promise<Venta> {
+    const [row] = await this.orm.db
+      .update(ventas)
+      .set({
+        precioKg: String(input.precioKg),
+        total: String(input.total),
+        updatedAt: new Date(),
+      })
+      .where(and(eq(ventas.id, id), eq(ventas.empresaId, empresaId), isNull(ventas.deletedAt)))
+      .returning();
+    if (!row) {
+      throw new ApiError("Venta no encontrada", Code.NOT_FOUND);
     }
     return this.toDomain(row);
   }
@@ -110,11 +138,12 @@ export class VentaRepositoryDrizzle implements VentaRepository {
       compraId: row.compraId,
       garron: row.garron,
       formaVenta: row.formaVenta as FormaVenta,
+      categoria: row.categoria as CategoriaVenta | null,
       kg: Number(row.kg),
-      precioKg: Number(row.precioKg),
-      total: Number(row.total),
+      precioKg: row.precioKg !== null ? Number(row.precioKg) : null,
+      total: row.total !== null ? Number(row.total) : null,
       fecha: row.fecha,
-      clienteFinalReferencia: row.clienteFinalReferencia,
+      clienteFinalId: row.clienteFinalId,
       comentarios: row.comentarios,
       activo: row.activo,
       createdAt: row.createdAt,

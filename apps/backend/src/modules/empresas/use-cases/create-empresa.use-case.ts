@@ -7,6 +7,8 @@ import { EmpresaRepository } from "@/modules/empresas/domain/empresa.repository"
 export interface CreateEmpresaInput {
   razonSocial: string;
   cuit?: string;
+  telefono?: string;
+  direccion?: string;
   rubro: Rubro;
 }
 

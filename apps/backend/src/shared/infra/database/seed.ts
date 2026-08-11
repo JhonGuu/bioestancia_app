@@ -9,7 +9,7 @@ import { Env } from "@/shared/infra/env/env";
 import { Logger } from "@/shared/infra/logger/logger";
 import { DrizzleAdapter } from "@/shared/infra/database/db-connection";
 import { Rubro } from "@/modules/empresas/domain/empresa";
-import { EmpresaRepository } from "@/modules/empresas/domain/empresa.repository";
+import { EmpresaRepository, UpdateEmpresaInput } from "@/modules/empresas/domain/empresa.repository";
 import { UserRepository } from "@/modules/users/domain/user.repository";
 import { UsuarioEmpresaRepository } from "@/modules/users/domain/usuario-empresa.repository";
 import { Roles } from "@/modules/users/domain/roles";
@@ -28,6 +28,12 @@ import { Roles } from "@/modules/users/domain/roles";
  *   SEED_ADMIN_EMAIL=vos@bioestancia.com SEED_ADMIN_PASSWORD=algo-seguro pnpm db:seed
  *
  * Sin esas dos variables, solo crea las empresas (sin admin).
+ *
+ * También completa cuit/teléfono/dirección de cada empresa (se muestran en el
+ * encabezado del PDF de boleta — ver `BoletaPdfGenerator`) si vienen seteados
+ * por env (`SEED_BIOESTANCIA_*` / `SEED_EL_MERIDIANO_*`, ver abajo). Es
+ * backfill, no pisa datos ya cargados: solo completa los campos que estén
+ * vacíos, así que es seguro correrlo de nuevo con variables distintas.
  */
 async function seed(): Promise<void> {
   const container = DI.getInstance().container;
@@ -43,16 +49,44 @@ async function seed(): Promise<void> {
 
   // 1. Empresas (idempotente por razón social)
   const existentes = await empresaRepository.list();
-  const findOrCreateEmpresa = async (razonSocial: string, rubro: Rubro) => {
+
+  type DatosContacto = { cuit?: string; telefono?: string; direccion?: string };
+
+  const findOrCreateEmpresa = async (razonSocial: string, rubro: Rubro, datos: DatosContacto = {}) => {
     const found = existentes.find((e) => e.razonSocial === razonSocial);
-    if (found) return found;
-    const created = await empresaRepository.create({ razonSocial, rubro });
+    if (found) {
+      // Backfill: solo completa los campos que vinieron por env Y todavía
+      // están vacíos — nunca pisa un valor ya cargado (a mano o en un seed
+      // anterior).
+      const faltantes: UpdateEmpresaInput = {};
+      if (datos.cuit && !found.cuit) faltantes.cuit = datos.cuit;
+      if (datos.telefono && !found.telefono) faltantes.telefono = datos.telefono;
+      if (datos.direccion && !found.direccion) faltantes.direccion = datos.direccion;
+      if (Object.keys(faltantes).length === 0) return found;
+
+      const actualizado = await empresaRepository.update(found.id, faltantes);
+      logger.info(
+        { empresaId: found.id, razonSocial, campos: Object.keys(faltantes) },
+        "Datos de contacto de la empresa completados desde env",
+      );
+      return actualizado;
+    }
+
+    const created = await empresaRepository.create({ razonSocial, rubro, ...datos });
     logger.info({ empresaId: created.id, razonSocial }, "Empresa creada");
     return created;
   };
 
-  const bioestancia = await findOrCreateEmpresa("Bioestancia", Rubro.FRIGORIFICO);
-  const elMeridiano = await findOrCreateEmpresa("El Meridiano", Rubro.REVENDEDORA);
+  const bioestancia = await findOrCreateEmpresa("Bioestancia", Rubro.FRIGORIFICO, {
+    cuit: process.env.SEED_BIOESTANCIA_CUIT,
+    telefono: process.env.SEED_BIOESTANCIA_TELEFONO,
+    direccion: process.env.SEED_BIOESTANCIA_DIRECCION,
+  });
+  const elMeridiano = await findOrCreateEmpresa("El Meridiano", Rubro.REVENDEDORA, {
+    cuit: process.env.SEED_EL_MERIDIANO_CUIT,
+    telefono: process.env.SEED_EL_MERIDIANO_TELEFONO,
+    direccion: process.env.SEED_EL_MERIDIANO_DIRECCION,
+  });
 
   // 2. Admin inicial (opcional, vía env)
   const email = process.env.SEED_ADMIN_EMAIL;

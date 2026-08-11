@@ -28,36 +28,48 @@ import {
   CONDICION_FISCAL_LABELS,
   CondicionFiscal,
 } from "@/modules/clientes/domain/cliente.types";
-import { CodigoAfipPorcino } from "@/modules/proveedores/domain/proveedor.types";
+import { CodigoAfipPorcino, type Proveedor } from "@/modules/proveedores/domain/proveedor.types";
 
 type TipoPersona = "fisica" | "juridica";
 
 interface ProveedorFormProps {
   onSubmit: (values: CreateProveedorFormValues) => Promise<void>;
   isSubmitting?: boolean;
+  /** Si viene, el form arranca precargado con sus datos (edición) en vez de vacío (alta). */
+  proveedor?: Proveedor;
 }
 
-export function ProveedorForm({ onSubmit, isSubmitting }: ProveedorFormProps) {
-  const [tipoPersona, setTipoPersona] = React.useState<TipoPersona>("fisica");
+/**
+ * Se usa tanto para alta como para edición: en edición, `proveedor` precarga
+ * todos los campos y el tipo de persona inicial se infiere de si tiene
+ * `razonSocial` cargada (jurídica) o no (física) — mismo criterio que `ClienteForm`.
+ */
+export function ProveedorForm({ onSubmit, isSubmitting, proveedor }: ProveedorFormProps) {
+  const [tipoPersona, setTipoPersona] = React.useState<TipoPersona>(
+    proveedor?.razonSocial ? "juridica" : "fisica",
+  );
 
   const form = useForm<CreateProveedorFormValues>({
     resolver: zodResolver(createProveedorSchema),
     defaultValues: {
-      nombre: "",
-      apellido: "",
-      razonSocial: "",
-      cuit: "",
-      dni: "",
-      domicilio: "",
-      email: "",
-      pais: "",
-      provincia: "",
-      ubicacion: "",
-      condicionFiscal: CondicionFiscal.CONSUMIDOR_FINAL,
-      datosBancarios: "",
-      porcentajeDesbaste: "",
-      renspa: "",
-      codigoAfip: CodigoAfipPorcino.PRODUCTORES_CRIADORES_COMERCIALES,
+      nombre: proveedor?.nombre ?? "",
+      apellido: proveedor?.apellido ?? "",
+      razonSocial: proveedor?.razonSocial ?? "",
+      cuit: proveedor?.cuit ?? "",
+      dni: proveedor?.dni ?? "",
+      domicilio: proveedor?.domicilio ?? "",
+      email: proveedor?.email ?? "",
+      pais: proveedor?.pais ?? "",
+      provincia: proveedor?.provincia ?? "",
+      ubicacion: proveedor?.ubicacion ?? "",
+      condicionFiscal: proveedor?.condicionFiscal ?? CondicionFiscal.CONSUMIDOR_FINAL,
+      datosBancarios: proveedor?.datosBancarios ?? "",
+      porcentajeDesbaste:
+        proveedor?.porcentajeDesbaste !== undefined && proveedor?.porcentajeDesbaste !== null
+          ? String(proveedor.porcentajeDesbaste)
+          : "",
+      renspa: proveedor?.renspa ?? "",
+      codigoAfip: proveedor?.codigoAfip ?? CodigoAfipPorcino.PRODUCTORES_CRIADORES_COMERCIALES,
     },
   });
 
@@ -316,7 +328,7 @@ export function ProveedorForm({ onSubmit, isSubmitting }: ProveedorFormProps) {
         />
 
         <Button type="submit" disabled={isSubmitting} className="w-fit">
-          {isSubmitting ? "Guardando..." : "Guardar proveedor"}
+          {isSubmitting ? "Guardando..." : proveedor ? "Guardar cambios" : "Guardar proveedor"}
         </Button>
       </form>
     </Form>

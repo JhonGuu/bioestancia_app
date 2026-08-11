@@ -11,7 +11,7 @@ import {
 
 import { FormaVenta } from "@/modules/ventas/domain/forma-venta";
 import { empresas } from "@/modules/empresas/infra/database/schema";
-import { clientes } from "@/modules/clientes/infra/database/schema";
+import { clientes, clientesFinales } from "@/modules/clientes/infra/database/schema";
 import { compras } from "@/modules/compras/infra/database/schema";
 import { boletas } from "@/modules/boletas/infra/database/schema";
 
@@ -55,11 +55,16 @@ export const ventas = pgTable("ventas", {
   compraId: uuid("compra_id").references(() => compras.id, { onDelete: "restrict" }),
   garron: integer("garron"),
   formaVenta: formaVentaEnum("forma_venta").notNull(),
+  /** Categoría del animal (Capón, Chancha, MEI, etc.) — texto libre, mismo criterio que `compra_categorias.categoria` (ver ese schema). Null en `compensacion_kg`. */
+  categoria: varchar("categoria", { length: 100 }),
   kg: numeric("kg", { precision: 10, scale: 2 }).notNull(),
-  precioKg: numeric("precio_kg", { precision: 12, scale: 2 }).notNull(),
-  total: numeric("total", { precision: 14, scale: 2 }).notNull(),
+  /** Nullable: el operario carga la venta sin precio, se completa después (`set-precio-venta.use-case.ts`). */
+  precioKg: numeric("precio_kg", { precision: 12, scale: 2 }),
+  /** Nullable, ídem `precioKg` — se calcula en el server recién cuando se carga el precio. */
+  total: numeric("total", { precision: 14, scale: 2 }),
   fecha: timestamp("fecha").notNull(),
-  clienteFinalReferencia: varchar("cliente_final_referencia", { length: 255 }),
+  /** Ver comentario en `domain/venta.ts` — destino del catálogo `clientes_finales`, solo para revendedores. */
+  clienteFinalId: uuid("cliente_final_id").references(() => clientesFinales.id, { onDelete: "set null" }),
   comentarios: varchar("comentarios", { length: 255 }),
   activo: boolean("activo").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),

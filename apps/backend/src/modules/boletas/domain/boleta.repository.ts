@@ -12,6 +12,14 @@ export interface BoletaRepository {
   /** Lista las boletas de una empresa puntual. */
   list(empresaId: string): Promise<Boleta[]>;
 
+  /**
+   * Lista las boletas de una empresa en un rango de fechas — la usa el
+   * reporte diario (`ObtenerReporteDiarioData`). `desde` inclusive, `hasta`
+   * exclusive (medio-abierto), para no depender de que las fechas guardadas
+   * sean exactamente medianoche.
+   */
+  listByRango(empresaId: string, desde: Date, hasta: Date): Promise<Boleta[]>;
+
   create(input: CreateBoletaInput): Promise<Boleta>;
 }
 

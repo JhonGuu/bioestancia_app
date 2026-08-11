@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Loader2, Plus } from "lucide-react";
 
+import { useAuth } from "@/modules/auth/context/auth-context";
+import { Roles } from "@/modules/auth/domain/auth.types";
 import { useClientes } from "@/modules/clientes/hooks/use-clientes";
 import { ClientesTable } from "@/modules/clientes/components/clientes-table";
 import { Button } from "@/components/ui/button";
@@ -11,7 +13,9 @@ export const Route = createFileRoute("/_authenticated/app/clientes/")({
 });
 
 function ClientesPage() {
+  const { empresaActiva } = useAuth();
   const clientesQuery = useClientes();
+  const puedeEditar = empresaActiva?.rol === Roles.ADMIN || empresaActiva?.rol === Roles.CONTABLE;
 
   return (
     <div className="space-y-4">
@@ -42,7 +46,7 @@ function ClientesPage() {
               {clientesQuery.error.message}
             </p>
           ) : (
-            <ClientesTable clientes={clientesQuery.data} />
+            <ClientesTable clientes={clientesQuery.data} puedeEditar={puedeEditar} />
           )}
         </CardContent>
       </Card>

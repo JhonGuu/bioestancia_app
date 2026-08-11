@@ -33,9 +33,17 @@ httpClient.interceptors.request.use((config) => {
 // Response: desenvuelve `{ data }` en éxito, normaliza errores a `ApiError` en falla.
 httpClient.interceptors.response.use(
   (response) => response,
-  (error: AxiosError<ApiErrorBody>) => {
+  async (error: AxiosError<ApiErrorBody>) => {
     if (error.response) {
-      const { status, data } = error.response;
+      const { status } = error.response;
+      let { data } = error.response;
+
+      // Los endpoints de descarga (PDF/Excel) piden `responseType: "blob"` —
+      // si esa misma request falla, el error también llega como Blob (no
+      // como el JSON de `ApiErrorBody`) y hay que parsearlo a mano.
+      if (data instanceof Blob && data.type.includes("json")) {
+        data = JSON.parse(await data.text());
+      }
 
       // El backend limpia el token del lado del cliente forzando logout ante 401.
       if (status === 401) {

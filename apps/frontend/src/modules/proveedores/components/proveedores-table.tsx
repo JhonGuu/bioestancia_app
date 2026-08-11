@@ -1,3 +1,6 @@
+import { Link } from "@tanstack/react-router";
+import { Pencil } from "lucide-react";
+
 import {
   Table,
   TableBody,
@@ -7,6 +10,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { EliminarProveedorDialog } from "@/modules/proveedores/components/eliminar-proveedor-dialog";
+import { ReactivarProveedorButton } from "@/modules/proveedores/components/reactivar-proveedor-button";
 import { CONDICION_FISCAL_LABELS } from "@/modules/clientes/domain/cliente.types";
 import {
   documentoProveedor,
@@ -14,7 +20,13 @@ import {
   type Proveedor,
 } from "@/modules/proveedores/domain/proveedor.types";
 
-export function ProveedoresTable({ proveedores }: { proveedores: Proveedor[] }) {
+interface ProveedoresTableProps {
+  proveedores: Proveedor[];
+  /** Admin/contable: muestra editar/inactivar/reactivar en cada fila. */
+  puedeEditar?: boolean;
+}
+
+export function ProveedoresTable({ proveedores, puedeEditar }: ProveedoresTableProps) {
   if (proveedores.length === 0) {
     return (
       <p className="text-muted-foreground py-8 text-center text-sm">
@@ -34,6 +46,7 @@ export function ProveedoresTable({ proveedores }: { proveedores: Proveedor[] }) 
           <TableHead>% desbaste</TableHead>
           <TableHead>Email</TableHead>
           <TableHead>Estado</TableHead>
+          {puedeEditar && <TableHead className="text-right">Acciones</TableHead>}
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -52,6 +65,25 @@ export function ProveedoresTable({ proveedores }: { proveedores: Proveedor[] }) 
                 {proveedor.activo ? "Activo" : "Inactivo"}
               </Badge>
             </TableCell>
+            {puedeEditar && (
+              <TableCell className="text-right">
+                <div className="flex justify-end gap-1">
+                  <Button variant="ghost" size="icon" asChild title="Editar proveedor">
+                    <Link to="/app/proveedores/$proveedorId/editar" params={{ proveedorId: proveedor.id }}>
+                      <Pencil className="size-4" />
+                    </Link>
+                  </Button>
+                  {proveedor.activo ? (
+                    <EliminarProveedorDialog
+                      proveedorId={proveedor.id}
+                      nombre={nombreProveedor(proveedor)}
+                    />
+                  ) : (
+                    <ReactivarProveedorButton proveedorId={proveedor.id} />
+                  )}
+                </div>
+              </TableCell>
+            )}
           </TableRow>
         ))}
       </TableBody>

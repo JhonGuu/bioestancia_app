@@ -23,6 +23,8 @@ export const empresas = pgTable("empresas", {
   id: uuid("id").primaryKey().defaultRandom(),
   razonSocial: varchar("razon_social", { length: 255 }).notNull(),
   cuit: varchar("cuit", { length: 20 }),
+  telefono: varchar("telefono", { length: 50 }),
+  direccion: varchar("direccion", { length: 255 }),
   rubro: rubroEnum("rubro").notNull(),
   activa: boolean("activa").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),

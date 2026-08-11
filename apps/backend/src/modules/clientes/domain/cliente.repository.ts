@@ -20,6 +20,18 @@ export interface ClienteRepository {
   list(empresaId: string): Promise<Cliente[]>;
 
   create(input: CreateClienteInput): Promise<Cliente>;
+
+  /** Reemplaza todos los campos editables. Tira NOT_FOUND si no existe (o no es de esta empresa). */
+  update(id: string, empresaId: string, input: UpdateClienteInput): Promise<Cliente>;
+
+  /**
+   * Soft-delete: marca `deletedAt` + `activo=false`, no borra la fila. Nunca
+   * emite un DELETE real — así no hay riesgo de romper el `onDelete:
+   * "restrict"` de `ventas.clienteId` si el cliente ya tiene ventas
+   * cargadas; esas filas siguen apuntando a un cliente que simplemente deja
+   * de listarse. Tira NOT_FOUND si no existe (o no es de esta empresa).
+   */
+  delete(id: string, empresaId: string): Promise<void>;
 }
 
 export interface CreateClienteInput {
@@ -36,4 +48,8 @@ export interface CreateClienteInput {
   provincia?: string;
   ubicacion?: string;
   condicionFiscal: CondicionFiscal;
+  esRevendedor?: boolean;
 }
+
+/** Reemplazo completo (no parcial) de los campos editables — ver `update()` arriba. */
+export type UpdateClienteInput = Omit<CreateClienteInput, "empresaId">;

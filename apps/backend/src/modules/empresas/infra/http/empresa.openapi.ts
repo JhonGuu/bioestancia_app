@@ -10,6 +10,8 @@ const empresaSchema = z.object({
   id: z.string().uuid(),
   razonSocial: z.string(),
   cuit: z.string().nullable(),
+  telefono: z.string().nullable(),
+  direccion: z.string().nullable(),
   rubro: z.enum(["frigorifico", "revendedora"]),
   activa: z.boolean(),
   createdAt: z.string().datetime(),
@@ -55,6 +57,29 @@ export function registerEmpresasOpenApi(): void {
         content: { "application/json": { schema: apiResponseSchema(z.array(empresaSchema)) } },
       },
       403: { description: "No sos admin de la empresa activa" },
+    },
+  });
+
+  registry.registerPath({
+    method: "patch",
+    path: "/empresas/{id}",
+    tags: ["Empresas (admin)"],
+    summary:
+      "Completa/edita cuit, teléfono y dirección de una empresa — se usan en el encabezado del PDF " +
+      "de boleta. No permite tocar razonSocial/rubro. Solo admin.",
+    security: [{ bearerAuth: [] }],
+    request: {
+      headers: empresaIdHeaderSchema,
+      params: z.object({ id: z.string().uuid() }),
+      body: { content: { "application/json": { schema: validation.update.body } } },
+    },
+    responses: {
+      200: {
+        description: "Empresa actualizada",
+        content: { "application/json": { schema: apiResponseSchema(empresaSchema) } },
+      },
+      403: { description: "No sos admin de la empresa activa" },
+      404: { description: "No existe esa empresa" },
     },
   });
 }

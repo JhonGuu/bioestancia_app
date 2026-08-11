@@ -8,6 +8,7 @@ import { VentaValidation } from "@/modules/ventas/infra/http/validation";
 import { CreateVenta, CreateVentaUseCaseInput } from "@/modules/ventas/use-cases/create-venta.use-case";
 import { ListVentas } from "@/modules/ventas/use-cases/list-ventas.use-case";
 import { GetVenta } from "@/modules/ventas/use-cases/get-venta.use-case";
+import { SetPrecioVenta } from "@/modules/ventas/use-cases/set-precio-venta.use-case";
 
 @injectable()
 export class VentaController {
@@ -17,6 +18,7 @@ export class VentaController {
     @inject(DI_TYPES.CreateVenta) private readonly createVenta: CreateVenta,
     @inject(DI_TYPES.ListVentas) private readonly listVentas: ListVentas,
     @inject(DI_TYPES.GetVenta) private readonly getVenta: GetVenta,
+    @inject(DI_TYPES.SetPrecioVenta) private readonly setPrecioVenta: SetPrecioVenta,
   ) {
     this.registerRoutes();
   }
@@ -68,6 +70,29 @@ export class VentaController {
         return new ApiResponse({
           data,
           message: "Venta obtenida correctamente",
+          status: Code.OK,
+        });
+      },
+    });
+
+    // Admin + contable: completa el precio de una venta que se cargó sin él
+    // (flujo del operario vía boletas) — nunca el operario.
+    this.httpServer.register({
+      method: "patch",
+      url: "/ventas/:id/precio",
+      auth: "jwt-empresa",
+      roles: RoleGroups.AdminAndContable,
+      validation: this.validation.setPrecio,
+      handler: async ({ params, body, auth }) => {
+        if (!auth?.empresaId) throw new ApiError("Unauthorized", Code.UNAUTHORIZED);
+        const data = await this.setPrecioVenta.execute({
+          id: params.id,
+          empresaId: auth.empresaId,
+          precioKg: (body as { precioKg: number }).precioKg,
+        });
+        return new ApiResponse({
+          data,
+          message: "Precio cargado correctamente",
           status: Code.OK,
         });
       },

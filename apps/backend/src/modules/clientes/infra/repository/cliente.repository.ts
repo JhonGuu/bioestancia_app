@@ -7,6 +7,7 @@ import { ApiError, Code } from "@/shared/infra/http/api.responses";
 import {
   ClienteRepository,
   CreateClienteInput,
+  UpdateClienteInput,
 } from "@/modules/clientes/domain/cliente.repository";
 import { Cliente } from "@/modules/clientes/domain/cliente";
 import { CondicionFiscal } from "@/modules/clientes/domain/condicion-fiscal";
@@ -57,12 +58,51 @@ export class ClienteRepositoryDrizzle implements ClienteRepository {
         provincia: input.provincia ?? null,
         ubicacion: input.ubicacion ?? null,
         condicionFiscal: input.condicionFiscal,
+        esRevendedor: input.esRevendedor ?? false,
       })
       .returning();
     if (!row) {
       throw new ApiError("Failed to create cliente", Code.INTERNAL_SERVER_ERROR);
     }
     return this.toDomain(row);
+  }
+
+  async update(id: string, empresaId: string, input: UpdateClienteInput): Promise<Cliente> {
+    const [row] = await this.orm.db
+      .update(clientes)
+      .set({
+        listaDePreciosId: input.listaDePreciosId ?? null,
+        nombre: input.nombre ?? null,
+        apellido: input.apellido ?? null,
+        razonSocial: input.razonSocial ?? null,
+        cuit: input.cuit ?? null,
+        dni: input.dni ?? null,
+        domicilio: input.domicilio ?? null,
+        email: input.email ?? null,
+        pais: input.pais ?? null,
+        provincia: input.provincia ?? null,
+        ubicacion: input.ubicacion ?? null,
+        condicionFiscal: input.condicionFiscal,
+        esRevendedor: input.esRevendedor ?? false,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(clientes.id, id), eq(clientes.empresaId, empresaId), isNull(clientes.deletedAt)))
+      .returning();
+    if (!row) {
+      throw new ApiError("Cliente no encontrado", Code.NOT_FOUND);
+    }
+    return this.toDomain(row);
+  }
+
+  async delete(id: string, empresaId: string): Promise<void> {
+    const [row] = await this.orm.db
+      .update(clientes)
+      .set({ deletedAt: new Date(), activo: false, updatedAt: new Date() })
+      .where(and(eq(clientes.id, id), eq(clientes.empresaId, empresaId), isNull(clientes.deletedAt)))
+      .returning();
+    if (!row) {
+      throw new ApiError("Cliente no encontrado", Code.NOT_FOUND);
+    }
   }
 
   private toDomain(row: typeof clientes.$inferSelect): Cliente {
@@ -81,6 +121,7 @@ export class ClienteRepositoryDrizzle implements ClienteRepository {
       provincia: row.provincia,
       ubicacion: row.ubicacion,
       condicionFiscal: row.condicionFiscal as CondicionFiscal,
+      esRevendedor: row.esRevendedor,
       activo: row.activo,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,

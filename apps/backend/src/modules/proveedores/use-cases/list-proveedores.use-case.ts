@@ -2,10 +2,14 @@ import { inject, injectable } from "inversify";
 
 import { DI_TYPES } from "@/shared/infra/di/types";
 import { Proveedor } from "@/modules/proveedores/domain/proveedor";
-import { ProveedorRepository } from "@/modules/proveedores/domain/proveedor.repository";
+import {
+  EstadoProveedorFiltro,
+  ProveedorRepository,
+} from "@/modules/proveedores/domain/proveedor.repository";
 
 export interface ListProveedoresInput {
   empresaId: string;
+  estado?: EstadoProveedorFiltro;
 }
 
 @injectable()
@@ -15,6 +19,6 @@ export class ListProveedores {
   ) {}
 
   async execute(input: ListProveedoresInput): Promise<Proveedor[]> {
-    return this.proveedorRepository.list(input.empresaId);
+    return this.proveedorRepository.list(input.empresaId, input.estado);
   }
 }
