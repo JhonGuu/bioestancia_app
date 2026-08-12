@@ -18,3 +18,6 @@ export * from "@/modules/ventas/infra/database/schema";
 export * from "@/modules/resultado-faena/infra/database/schema";
 export * from "@/modules/liquidacion-compra/infra/database/schema";
 export * from "@/modules/planificacion-cabezas/infra/database/schema";
+export * from "@/modules/cheques/infra/database/schema";
+export * from "@/modules/cargos-cuenta-corriente/infra/database/schema";
+export * from "@/modules/cobros/infra/database/schema";

@@ -29,6 +29,9 @@ export interface VentaRepository {
   /** Lista los ítems (ventas) de una boleta puntual — la usa `GetBoleta`. */
   listByBoleta(boletaId: string, empresaId: string): Promise<Venta[]>;
 
+  /** Lista TODAS las ventas de un cliente puntual (sin límite de fecha) — la usa `modules/cuenta-corriente`. */
+  listByCliente(clienteId: string, empresaId: string): Promise<Venta[]>;
+
   /**
    * Lista las ventas de un cliente en un rango de fechas (inclusive) — la usa
    * `planificacion-cabezas` para cruzar lo planificado contra lo realmente

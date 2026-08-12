@@ -14,6 +14,7 @@ const boletaSchema = z.object({
   empresaId: z.string().uuid(),
   clienteId: z.string().uuid(),
   fecha: z.string().datetime(),
+  fechaVencimiento: z.string().datetime().nullable(),
   numero: z.string().nullable(),
   comentarios: z.string().nullable(),
   activo: z.boolean(),

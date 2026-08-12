@@ -17,6 +17,8 @@ const baseBody = z.object({
   ubicacion: z.string().max(255).optional(),
   condicionFiscal: z.nativeEnum(CondicionFiscal),
   esRevendedor: z.boolean().optional(),
+  // Días de plazo para pagar una boleta (cuenta corriente) — si no se manda, se usa el default global (7).
+  diasPlazoPago: z.coerce.number().int().min(0).max(365).nullable().optional(),
 });
 
 /**

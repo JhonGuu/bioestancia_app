@@ -23,6 +23,7 @@ const clienteSchema = z.object({
   ubicacion: z.string().nullable(),
   condicionFiscal: z.nativeEnum(CondicionFiscal),
   esRevendedor: z.boolean(),
+  diasPlazoPago: z.number().nullable(),
   activo: z.boolean(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),

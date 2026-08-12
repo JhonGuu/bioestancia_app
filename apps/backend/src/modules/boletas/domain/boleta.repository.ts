@@ -20,6 +20,9 @@ export interface BoletaRepository {
    */
   listByRango(empresaId: string, desde: Date, hasta: Date): Promise<Boleta[]>;
 
+  /** Lista TODAS las boletas de un cliente puntual (sin límite de fecha) — la usa `modules/cuenta-corriente`. */
+  listByCliente(clienteId: string, empresaId: string): Promise<Boleta[]>;
+
   create(input: CreateBoletaInput): Promise<Boleta>;
 }
 
@@ -27,6 +30,8 @@ export interface CreateBoletaInput {
   empresaId: string;
   clienteId: string;
   fecha: Date;
+  /** Calculado por el use-case (`CreateBoleta`) antes de llamar al repositorio — ver `Boleta.fechaVencimiento`. */
+  fechaVencimiento: Date;
   numero?: string;
   comentarios?: string;
 }

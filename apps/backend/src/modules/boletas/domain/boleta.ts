@@ -20,9 +20,23 @@ export interface Boleta {
   empresaId: string;
   clienteId: string;
   fecha: Date;
+  /**
+   * `fecha + diasPlazoPagoEfectivo(cliente)`, calculado UNA vez al crear la
+   * boleta (`CreateBoleta`) — no se recalcula si después cambia el plazo del
+   * cliente (el plazo pactado es el vigente al momento de la entrega). Se usa
+   * para el saldo vencido/a vencer de la cuenta corriente (ver
+   * `modules/cuenta-corriente`). Nullable solo por boletas cargadas antes de
+   * que existiera este campo.
+   */
+  fechaVencimiento: Date | null;
   numero: string | null;
   comentarios: string | null;
   activo: boolean;
   createdAt: Date;
   updatedAt: Date;
+}
+
+/** `fecha + diasPlazoPago` días corridos — sin lógica de días hábiles. */
+export function calcularFechaVencimiento(fecha: Date, diasPlazoPago: number): Date {
+  return new Date(fecha.getTime() + diasPlazoPago * 24 * 60 * 60 * 1000);
 }

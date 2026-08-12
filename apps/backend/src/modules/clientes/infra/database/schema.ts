@@ -1,5 +1,6 @@
 import {
   boolean,
+  integer,
   pgEnum,
   pgTable,
   timestamp,
@@ -50,6 +51,8 @@ export const clientes = pgTable("clientes", {
   condicionFiscal: condicionFiscalEnum("condicion_fiscal").notNull(),
   /** Ver comentario en `domain/cliente.ts` — habilita reventa (Novillo) y catálogo de destinos propios. */
   esRevendedor: boolean("es_revendedor").notNull().default(false),
+  /** Nullable: si no está cargado se usa `DIAS_PLAZO_PAGO_DEFAULT` (ver `domain/cliente.ts`). */
+  diasPlazoPago: integer("dias_plazo_pago"),
   activo: boolean("activo").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),

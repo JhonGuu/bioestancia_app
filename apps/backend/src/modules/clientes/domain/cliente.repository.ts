@@ -49,6 +49,7 @@ export interface CreateClienteInput {
   ubicacion?: string;
   condicionFiscal: CondicionFiscal;
   esRevendedor?: boolean;
+  diasPlazoPago?: number | null;
 }
 
 /** Reemplazo completo (no parcial) de los campos editables — ver `update()` arriba. */

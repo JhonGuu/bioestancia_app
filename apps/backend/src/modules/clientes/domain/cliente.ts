@@ -20,6 +20,12 @@ import { CondicionFiscal } from "@/modules/clientes/domain/condicion-fiscal";
  * ver `modules/ventas/domain/categoria-venta.ts`) y el catálogo de sus
  * destinos propios (`modules/clientes/domain/cliente-final.ts`) al cargar una
  * boleta. `false` por defecto: la gran mayoría de los clientes no revende.
+ *
+ * `diasPlazoPago`: cuántos días tiene este cliente para pagar una boleta
+ * antes de que se considere vencida (cuenta corriente, ver
+ * `modules/cuenta-corriente`). Nullable: si no está cargado se usa
+ * `DIAS_PLAZO_PAGO_DEFAULT` (ver más abajo) — mismo patrón que
+ * `Proveedor.porcentajeDesbaste`.
  */
 export interface Cliente {
   id: string;
@@ -37,9 +43,18 @@ export interface Cliente {
   ubicacion: string | null;
   condicionFiscal: CondicionFiscal;
   esRevendedor: boolean;
+  diasPlazoPago: number | null;
   activo: boolean;
   createdAt: Date;
   updatedAt: Date;
+}
+
+/** Default cuando `Cliente.diasPlazoPago` es `null` — ver `Boleta.fechaVencimiento`. */
+export const DIAS_PLAZO_PAGO_DEFAULT = 7;
+
+/** Plazo efectivo de un cliente: el suyo si está cargado, si no el default. */
+export function diasPlazoPagoEfectivo(cliente: Pick<Cliente, "diasPlazoPago">): number {
+  return cliente.diasPlazoPago ?? DIAS_PLAZO_PAGO_DEFAULT;
 }
 
 /** Nombre para mostrar: razón social si es persona jurídica, nombre+apellido si es física. Espejo del frontend (`cliente.types.ts`). */

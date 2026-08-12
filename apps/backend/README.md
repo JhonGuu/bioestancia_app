@@ -117,6 +117,8 @@ Un cliente es persona física (`nombre` + `apellido` + `dni`) o persona jurídic
 
 `esRevendedor` marca clientes que revenden lo que reciben y para los que gestionamos el reparto (caso real: "Ivan", revende media res de Novillo). Habilita en el frontend la carga de reventa (`CategoriaReventa`, ver módulo `ventas`) y el catálogo `clientes_finales` de sus destinos propios. `false` por defecto.
 
+`diasPlazoPago`: días de plazo para pagar una boleta antes de que se considere vencida (cuenta corriente, ver módulo `cuenta-corriente`). Nullable — si no está cargado se usa el default global (`DIAS_PLAZO_PAGO_DEFAULT` = 7).
+
 | Método | Ruta | Auth | Descripción |
 |---|---|---|---|
 | POST | `/api/clientes` | JWT + empresa + admin/contable | Crea un cliente para la empresa activa |
@@ -197,6 +199,8 @@ Una boleta es el comprobante físico que se le entrega a un cliente por lo vendi
 
 Encabezado: `clienteId`, `fecha`, `numero` (el número impreso en el papel, opcional), `comentarios`. Es el punto de carga del **operario** que reparte en planta: `POST /boletas` acepta un array `items` opcional — cada ítem es un garrón/media res/corte (`compraId`, `garron`, `formaVenta`, `categoria`, `kg`) — y crea la boleta Y las ventas de esos ítems en el mismo request. El operario NO carga precio: esas ventas quedan "pendientes de precio" (`Venta.precioKg === null`) hasta que admin/contable las completa con `PATCH /ventas/:id/precio` (ver módulo `ventas`). Si `items` no viene, queda una boleta vacía a la que se le pueden agregar ventas después vía `POST /ventas` (flujo de back-office, sin celular).
 
+`fechaVencimiento` se calcula una sola vez al crear la boleta (`fecha` + `diasPlazoPago` efectivo del cliente, ver módulo `clientes`) — no se recalcula si después cambia el plazo del cliente. La usa la cuenta corriente para el saldo vencido/a vencer (ver módulo `cuenta-corriente`). Nullable solo en boletas cargadas antes de que existiera este campo.
+
 `GET /boletas/:id` devuelve la boleta con sus ventas (`ventas: Venta[]`) — así se puede revisar qué se cargó, y qué le falta precio.
 
 ### Exportar a PDF/Excel
@@ -232,6 +236,7 @@ Cada fila es **una venta de un garrón** (cabeza entera, media res, o un corte c
 | GET | `/api/ventas` | JWT + empresa | Lista las ventas de la empresa activa |
 | GET | `/api/ventas/:id` | JWT + empresa | Obtiene una venta por id |
 | PATCH | `/api/ventas/:id/precio` | JWT + empresa + admin/contable | Completa/corrige el precio de una venta, recalcula el total |
+| PATCH | `/api/ventas/precio-lote` | JWT + empresa + admin/contable | Aplica el mismo precio a varias ventas (`ventaIds`) de una vez |
 
 ## Planificación de cabezas (módulo `planificacion-cabezas`)
 
@@ -247,6 +252,71 @@ La lectura (`GET /api/planificacion-cabezas?desde=...&hasta=...&clienteId=...`) 
 |---|---|---|---|
 | POST | `/api/planificacion-cabezas` | JWT + empresa + admin/contable | Guarda o revisa el plan de uno o varios días de un cliente |
 | GET | `/api/planificacion-cabezas` | JWT + empresa | Lista el plan en un rango de fechas, cruzado contra lo vendido |
+
+## Cheques (módulo `cheques`)
+
+Cartera de cheques/echeqs entregados por clientes como forma de pago. **No se crean directamente** — nacen siempre de una línea de un `Cobro` (ver módulo `cobros`) con `medioPago` `cheque` o `echeq`; no hay `POST /cheques`.
+
+`estado` sigue el ciclo de vida típico: `en_cartera` → `depositado` → `acreditado` (o `rechazado`/`endosado_a_terceros` en cualquier punto). Cambiar a `rechazado` exige `motivoRechazo`. No tiene `activo`/`deletedAt`: un cheque no se "da de baja", su estado de negocio ya lo cubre `estado`.
+
+| Método | Ruta | Auth | Descripción |
+|---|---|---|---|
+| GET | `/api/cheques` | JWT + empresa + admin/contable | Lista la cartera de cheques, filtrable por `estado`/`clienteId` |
+| GET | `/api/cheques/:id` | JWT + empresa + admin/contable | Obtiene un cheque por id |
+| PATCH | `/api/cheques/:id/estado` | JWT + empresa + admin/contable | Cambia el estado (exige `motivoRechazo` si es `rechazado`) |
+
+## Cobros (módulo `cobros`)
+
+Un cobro es un pago de un cliente — **no necesariamente la cancelación de una boleta puntual**: el cliente puede pagar "a cuenta" sin indicar qué boleta cancela. Un mismo cobro puede combinar varios medios de pago (`efectivo`, `transferencia_banco`, `billetera_virtual`, `cheque`, `echeq`) en distintas líneas (`lineas: [...]`); las líneas `cheque`/`echeq` requieren los datos del cheque (`numeroCheque`, `bancoCheque`, `fechaEmisionCheque`, `fechaPagoCheque`, opcionalmente `cuitLibradorCheque`/`titularCheque`) y crean automáticamente el `Cheque` correspondiente.
+
+Al crear un cobro, el monto total (suma de sus líneas) se distribuye automáticamente entre las boletas pendientes del cliente con **FIFO por fecha de boleta** (la más antigua primero) — ver `AplicarCobroFifo`. Una boleta con alguna venta sin precio cargado todavía ("pendiente de precio") no participa del reparto: su monto real recién se conoce cuando administración/contable completa el precio de todas sus ventas. Si el cobro alcanza y sobra, el excedente no se fuerza a ninguna boleta futura — queda como "saldo a favor" (ver módulo `cuenta-corriente`).
+
+| Método | Ruta | Auth | Descripción |
+|---|---|---|---|
+| POST | `/api/cobros` | JWT + empresa + admin/contable | Crea un cobro (una o más líneas) y aplica FIFO a las boletas pendientes |
+| GET | `/api/cobros` | JWT + empresa + admin/contable | Lista los cobros de la empresa activa, filtrable por `clienteId` |
+| GET | `/api/cobros/:id` | JWT + empresa + admin/contable | Obtiene un cobro por id, con sus líneas |
+
+### Recargo por cheque a más de 7 días y comisión por rechazo
+
+Ambos se calculan pero **nunca se cargan solos** — siempre hace falta confirmarlos a mano (dos pasos: "sugerencia" que solo calcula, y "confirmar" que recién ahí crea el cargo). Los porcentajes están fijos en `modules/cobros/domain/calcular-cargos-cheque.ts` (`PORCENTAJE_RECARGO_CHEQUE = 0.05`, `PORCENTAJE_COMISION_RECHAZO = 0.07`).
+
+**Recargo (5%)**: corresponde cuando pasan más de 7 días entre la fecha del `Cobro` (cuándo el cliente entregó el cheque) y `Cheque.fechaPago`. `GET /cobros/cheques/:chequeId/sugerencia-recargo` calcula `dias`/`corresponde`/`montoSugerido` sin guardar nada; `POST /cobros/cheques/:chequeId/confirmar-recargo` (body `{ monto? }`, opcional para ajustar el sugerido) crea el `CargoCuentaCorriente` — tira `409` si ya se había confirmado.
+
+**Comisión por rechazo (7%)**: se sugiere/confirma solo si el cheque ya está en estado `rechazado` (`PATCH /cheques/:id/estado` primero). `GET /cobros/cheques/:chequeId/sugerencia-rechazo` informa cuánto se revertiría y la comisión sugerida; `POST /cobros/cheques/:chequeId/confirmar-rechazo` (body `{ comision? }`) hace dos cosas: revierte, en orden LIFO (lo más reciente aplicado primero), hasta el monto del cheque de las `AplicacionCobro` del cliente — esas boletas vuelven a tener saldo pendiente porque esa plata nunca llegó — y crea el `CargoCuentaCorriente` de la comisión. No se puede saber con precisión exacta qué aplicaciones vinieron de ESE cheque puntual (un cobro puede mezclar cheque + efectivo en la misma carga), por eso se revierte por orden cronológico, no por origen exacto.
+
+| Método | Ruta | Auth | Descripción |
+|---|---|---|---|
+| GET | `/api/cobros/cheques/:chequeId/sugerencia-recargo` | JWT + empresa + admin/contable | Calcula si corresponde el recargo del 5% (no guarda nada) |
+| POST | `/api/cobros/cheques/:chequeId/confirmar-recargo` | JWT + empresa + admin/contable | Confirma el recargo y lo carga a la cuenta del cliente |
+| GET | `/api/cobros/cheques/:chequeId/sugerencia-rechazo` | JWT + empresa + admin/contable | Calcula la reversión + comisión del 7% de un cheque rechazado (no guarda nada) |
+| POST | `/api/cobros/cheques/:chequeId/confirmar-rechazo` | JWT + empresa + admin/contable | Revierte lo aplicado a boletas y carga la comisión |
+
+## Cargos cuenta corriente (módulo `cargos-cuenta-corriente`)
+
+Un cargo es plata que un cliente pasa a deber sin que haya una venta de por medio — hoy los genera `modules/cobros` (recargo por cheque, comisión por rechazo, ver arriba), pero también se puede cargar un ajuste manual (`tipo: "otro"`) desde acá. Suma directo al saldo vencido de la cuenta corriente (ver abajo).
+
+| Método | Ruta | Auth | Descripción |
+|---|---|---|---|
+| POST | `/api/cargos-cuenta-corriente` | JWT + empresa + admin/contable | Carga un cargo manual (`tipo: "otro"`) |
+| GET | `/api/cargos-cuenta-corriente` | JWT + empresa + admin/contable | Lista los cargos de la empresa activa, filtrable por `clienteId` |
+
+## Cuenta corriente (módulo `cuenta-corriente`)
+
+No tiene tabla ni repositorio propio — es una capa de **agregación pura** sobre `clientes` + `boletas` + `ventas` + las aplicaciones FIFO de `cobros` + `cargos-cuenta-corriente`, calculada al vuelo en cada request.
+
+`GET /:clienteId/saldo` devuelve `saldoVencido` (boletas con `fechaVencimiento` ya pasada — las boletas sin `fechaVencimiento` cargada, de antes de que existiera el campo, cuentan como vencidas — más todos los cargos activos, que no tienen vencimiento propio y se suman directo acá), `saldoPorVencer`, `saldoTotal` (suma de los dos anteriores), y `saldoAFavor` (plata cobrada que todavía no se aplicó a ninguna boleta — no se descuenta de `saldoTotal`, son dos números independientes).
+
+`GET /:clienteId/movimientos` devuelve la línea de tiempo de boletas (deuda, solo las ya facturadas), cobros (pago), y cargos (deuda), más reciente primero, cada uno con `saldoCorriente` (el saldo total del cliente inmediatamente después de ese movimiento) — mismo formato que la hoja de cuenta corriente por cliente que ya usa la empresa.
+
+`GET /:clienteId/resumen/pdf` y `/resumen/excel` generan el resumen de cuenta para mandarle al cliente: el mismo saldo + línea de tiempo de arriba, en un documento (`ObtenerResumenCuentaData` reutiliza `ObtenerSaldoCliente`/`ObtenerMovimientosCuentaCorriente`, no recalcula nada de nuevo — ver `shared/infra/documents/resumen-cuenta-{pdf,excel}.generator.ts`).
+
+| Método | Ruta | Auth | Descripción |
+|---|---|---|---|
+| GET | `/api/cuenta-corriente/:clienteId/saldo` | JWT + empresa + admin/contable | Saldo vencido/por vencer/total/a favor de un cliente |
+| GET | `/api/cuenta-corriente/:clienteId/movimientos` | JWT + empresa + admin/contable | Línea de tiempo de boletas, cobros y cargos, con saldo corriente |
+| GET | `/api/cuenta-corriente/:clienteId/resumen/pdf` | JWT + empresa + admin/contable | Resumen de cuenta (saldo + movimientos) en PDF |
+| GET | `/api/cuenta-corriente/:clienteId/resumen/excel` | JWT + empresa + admin/contable | Igual, en Excel (.xlsx) |
 
 ## Setup
 

@@ -10,6 +10,8 @@ import { WslspClient } from "@/shared/infra/afip/wslsp.client";
 import { BoletaPdfGenerator } from "@/shared/infra/documents/boleta-pdf.generator";
 import { ReporteDiarioPdfGenerator } from "@/shared/infra/documents/reporte-diario-pdf.generator";
 import { ReporteDiarioExcelGenerator } from "@/shared/infra/documents/reporte-diario-excel.generator";
+import { ResumenCuentaPdfGenerator } from "@/shared/infra/documents/resumen-cuenta-pdf.generator";
+import { ResumenCuentaExcelGenerator } from "@/shared/infra/documents/resumen-cuenta-excel.generator";
 import { registerEmpresasModule } from "@/modules/empresas/empresas.module";
 import { registerUsersModule } from "@/modules/users/users.module";
 import { registerListasPreciosModule } from "@/modules/listas-precios/listas-precios.module";
@@ -21,6 +23,10 @@ import { registerComprasModule } from "@/modules/compras/compras.module";
 import { registerResultadoFaenaModule } from "@/modules/resultado-faena/resultado-faena.module";
 import { registerLiquidacionCompraModule } from "@/modules/liquidacion-compra/liquidacion-compra.module";
 import { registerPlanificacionCabezasModule } from "@/modules/planificacion-cabezas/planificacion-cabezas.module";
+import { registerChequesModule } from "@/modules/cheques/cheques.module";
+import { registerCargosCuentaCorrienteModule } from "@/modules/cargos-cuenta-corriente/cargos-cuenta-corriente.module";
+import { registerCobrosModule } from "@/modules/cobros/cobros.module";
+import { registerCuentaCorrienteModule } from "@/modules/cuenta-corriente/cuenta-corriente.module";
 
 /**
  * Contenedor central de inyección de dependencias.
@@ -86,6 +92,23 @@ export class DI {
     // `clientes`) y VentaRepository (bindeado en `ventas`) — va después de
     // ambos.
     registerPlanificacionCabezasModule(this.container);
+    // `cheques` no depende de otros módulos (solo DBConnection) — se podría
+    // registrar en cualquier punto, va acá porque `cobros` lo necesita.
+    registerChequesModule(this.container);
+    // `cargos-cuenta-corriente` inyecta ClienteRepository (bindeado en
+    // `clientes`) y referencia la tabla `cheques` en su schema — va después
+    // de `cheques`. `cobros` lo necesita para confirmar recargo/comisión.
+    registerCargosCuentaCorrienteModule(this.container);
+    // `cobros` inyecta ClienteRepository (bindeado en `clientes`),
+    // BoletaRepository (bindeado en `boletas`), VentaRepository (bindeado en
+    // `ventas`), ChequeRepository (bindeado en `cheques`), y
+    // CargoCuentaCorrienteRepository (bindeado en `cargos-cuenta-corriente`,
+    // ambos arriba) — va después de todos.
+    registerCobrosModule(this.container);
+    // `cuenta-corriente` no tiene repositorio propio — agrega clientes +
+    // boletas + ventas + cobros + cargos al vuelo (ver `ObtenerSaldoCliente`)
+    // — va después de todos.
+    registerCuentaCorrienteModule(this.container);
     // Cuando agregues un módulo nuevo (ej. granjas, sanidad, planificación):
     // registerNuevoModulo(this.container);
   }
@@ -114,5 +137,7 @@ export class DI {
     this.container.bind(DI_TYPES.BoletaPdfGenerator).to(BoletaPdfGenerator);
     this.container.bind(DI_TYPES.ReporteDiarioPdfGenerator).to(ReporteDiarioPdfGenerator);
     this.container.bind(DI_TYPES.ReporteDiarioExcelGenerator).to(ReporteDiarioExcelGenerator);
+    this.container.bind(DI_TYPES.ResumenCuentaPdfGenerator).to(ResumenCuentaPdfGenerator);
+    this.container.bind(DI_TYPES.ResumenCuentaExcelGenerator).to(ResumenCuentaExcelGenerator);
   }
 }

@@ -110,4 +110,26 @@ export function registerVentasOpenApi(): void {
       404: { description: "No existe o no pertenece a la empresa activa" },
     },
   });
+
+  registry.registerPath({
+    method: "patch",
+    path: "/ventas/precio-lote",
+    tags: ["Ventas"],
+    summary:
+      "Aplica el mismo precio por kg a varias ventas de una vez (ej. todas las de una " +
+      "categoría/presentación dentro de una boleta) — evita cargar precio venta por venta. Admin o contable.",
+    security: [{ bearerAuth: [] }],
+    request: {
+      headers: empresaIdHeaderSchema,
+      body: { content: { "application/json": { schema: validation.setPrecioLote.body } } },
+    },
+    responses: {
+      200: {
+        description: "Precio cargado en todas las ventas del lote",
+        content: { "application/json": { schema: apiResponseSchema(z.array(ventaSchema)) } },
+      },
+      403: { description: "No sos admin/contable de la empresa activa" },
+      404: { description: "Alguna de las ventas no existe (o no es de esta empresa)" },
+    },
+  });
 }

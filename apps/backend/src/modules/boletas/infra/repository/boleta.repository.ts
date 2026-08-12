@@ -43,6 +43,16 @@ export class BoletaRepositoryDrizzle implements BoletaRepository {
     return rows.map((row) => this.toDomain(row));
   }
 
+  async listByCliente(clienteId: string, empresaId: string): Promise<Boleta[]> {
+    const rows = await this.orm.db
+      .select()
+      .from(boletas)
+      .where(
+        and(eq(boletas.clienteId, clienteId), eq(boletas.empresaId, empresaId), isNull(boletas.deletedAt)),
+      );
+    return rows.map((row) => this.toDomain(row));
+  }
+
   async create(input: CreateBoletaInput): Promise<Boleta> {
     const [row] = await this.orm.db
       .insert(boletas)
@@ -50,6 +60,7 @@ export class BoletaRepositoryDrizzle implements BoletaRepository {
         empresaId: input.empresaId,
         clienteId: input.clienteId,
         fecha: input.fecha,
+        fechaVencimiento: input.fechaVencimiento,
         numero: input.numero ?? null,
         comentarios: input.comentarios ?? null,
       })
@@ -66,6 +77,7 @@ export class BoletaRepositoryDrizzle implements BoletaRepository {
       empresaId: row.empresaId,
       clienteId: row.clienteId,
       fecha: row.fecha,
+      fechaVencimiento: row.fechaVencimiento,
       numero: row.numero,
       comentarios: row.comentarios,
       activo: row.activo,

@@ -16,6 +16,8 @@ export const DI_TYPES = {
   BoletaPdfGenerator: Symbol.for("BoletaPdfGenerator"),
   ReporteDiarioPdfGenerator: Symbol.for("ReporteDiarioPdfGenerator"),
   ReporteDiarioExcelGenerator: Symbol.for("ReporteDiarioExcelGenerator"),
+  ResumenCuentaPdfGenerator: Symbol.for("ResumenCuentaPdfGenerator"),
+  ResumenCuentaExcelGenerator: Symbol.for("ResumenCuentaExcelGenerator"),
 
   // ── Module: empresas ───────────────────────────
   EmpresaValidation: Symbol.for("EmpresaValidation"),
@@ -114,6 +116,7 @@ export const DI_TYPES = {
   ListVentas: Symbol.for("ListVentas"),
   GetVenta: Symbol.for("GetVenta"),
   SetPrecioVenta: Symbol.for("SetPrecioVenta"),
+  SetPrecioVentasLote: Symbol.for("SetPrecioVentasLote"),
   VentaController: Symbol.for("VentaController"),
 
   // ── Module: planificacion-cabezas ────────────────
@@ -122,4 +125,41 @@ export const DI_TYPES = {
   UpsertPlanificacionCabezas: Symbol.for("UpsertPlanificacionCabezas"),
   ListPlanificacionCabezas: Symbol.for("ListPlanificacionCabezas"),
   PlanificacionCabezasController: Symbol.for("PlanificacionCabezasController"),
+
+  // ── Module: cheques ───────────────────────────────
+  ChequeValidation: Symbol.for("ChequeValidation"),
+  ChequeRepository: Symbol.for("ChequeRepository"),
+  ListCheques: Symbol.for("ListCheques"),
+  GetCheque: Symbol.for("GetCheque"),
+  ActualizarEstadoCheque: Symbol.for("ActualizarEstadoCheque"),
+  ChequeController: Symbol.for("ChequeController"),
+
+  // ── Module: cargos-cuenta-corriente ───────────────
+  CargoCuentaCorrienteValidation: Symbol.for("CargoCuentaCorrienteValidation"),
+  CargoCuentaCorrienteRepository: Symbol.for("CargoCuentaCorrienteRepository"),
+  CreateCargoCuentaCorriente: Symbol.for("CreateCargoCuentaCorriente"),
+  ListCargosCuentaCorriente: Symbol.for("ListCargosCuentaCorriente"),
+  CargoCuentaCorrienteController: Symbol.for("CargoCuentaCorrienteController"),
+
+  // ── Module: cobros ────────────────────────────────
+  CobroValidation: Symbol.for("CobroValidation"),
+  CobroRepository: Symbol.for("CobroRepository"),
+  CreateCobro: Symbol.for("CreateCobro"),
+  ListCobros: Symbol.for("ListCobros"),
+  GetCobro: Symbol.for("GetCobro"),
+  AplicarCobroFifo: Symbol.for("AplicarCobroFifo"),
+  SugerirRecargoCheque: Symbol.for("SugerirRecargoCheque"),
+  ConfirmarRecargoCheque: Symbol.for("ConfirmarRecargoCheque"),
+  SugerirReversionChequeRechazado: Symbol.for("SugerirReversionChequeRechazado"),
+  ConfirmarRechazoCheque: Symbol.for("ConfirmarRechazoCheque"),
+  CobroController: Symbol.for("CobroController"),
+
+  // ── Module: cuenta-corriente ──────────────────────
+  CuentaCorrienteValidation: Symbol.for("CuentaCorrienteValidation"),
+  ObtenerSaldoCliente: Symbol.for("ObtenerSaldoCliente"),
+  ObtenerMovimientosCuentaCorriente: Symbol.for("ObtenerMovimientosCuentaCorriente"),
+  ObtenerResumenCuentaData: Symbol.for("ObtenerResumenCuentaData"),
+  GenerarResumenCuentaPdf: Symbol.for("GenerarResumenCuentaPdf"),
+  GenerarResumenCuentaExcel: Symbol.for("GenerarResumenCuentaExcel"),
+  CuentaCorrienteController: Symbol.for("CuentaCorrienteController"),
 } as const;

@@ -2,13 +2,15 @@ import { inject, injectable } from "inversify";
 
 import { DI_TYPES } from "@/shared/infra/di/types";
 import { ApiError, Code } from "@/shared/infra/http/api.responses";
-import { Boleta } from "@/modules/boletas/domain/boleta";
+import { Boleta, calcularFechaVencimiento } from "@/modules/boletas/domain/boleta";
 import { BoletaRepository, CreateBoletaInput } from "@/modules/boletas/domain/boleta.repository";
 import { Venta } from "@/modules/ventas/domain/venta";
 import { VentaRepository } from "@/modules/ventas/domain/venta.repository";
 import { FormaVenta } from "@/modules/ventas/domain/forma-venta";
 import { CategoriaVenta } from "@/modules/ventas/domain/categoria-venta";
 import { CompraRepository } from "@/modules/compras/domain/compra.repository";
+import { ClienteRepository } from "@/modules/clientes/domain/cliente.repository";
+import { diasPlazoPagoEfectivo } from "@/modules/clientes/domain/cliente";
 import { ClienteFinalRepository } from "@/modules/clientes/domain/cliente-final.repository";
 
 export interface CreateBoletaItemUseCaseInput {
@@ -25,7 +27,7 @@ export interface CreateBoletaItemUseCaseInput {
   comentarios?: string;
 }
 
-export type CreateBoletaUseCaseInput = CreateBoletaInput & {
+export type CreateBoletaUseCaseInput = Omit<CreateBoletaInput, "fechaVencimiento"> & {
   /**
    * Ítems de la boleta (cada garrón/media res/corte que se le entrega al
    * cliente). Puede venir vacío — una boleta se puede crear "en blanco" y
@@ -34,6 +36,8 @@ export type CreateBoletaUseCaseInput = CreateBoletaInput & {
    */
   items?: CreateBoletaItemUseCaseInput[];
 };
+// `fechaVencimiento` NO viene del caller (HTTP) — el use-case la calcula acá
+// mismo a partir de `Cliente.diasPlazoPago` antes de llamar al repositorio.
 
 export interface BoletaConVentas extends Boleta {
   ventas: Venta[];
@@ -58,11 +62,16 @@ export class CreateBoleta {
     @inject(DI_TYPES.BoletaRepository) private readonly boletaRepository: BoletaRepository,
     @inject(DI_TYPES.VentaRepository) private readonly ventaRepository: VentaRepository,
     @inject(DI_TYPES.CompraRepository) private readonly compraRepository: CompraRepository,
+    @inject(DI_TYPES.ClienteRepository) private readonly clienteRepository: ClienteRepository,
     @inject(DI_TYPES.ClienteFinalRepository) private readonly clienteFinalRepository: ClienteFinalRepository,
   ) {}
 
   async execute(input: CreateBoletaUseCaseInput): Promise<BoletaConVentas> {
     const items = input.items ?? [];
+    const cliente = await this.clienteRepository.getById(input.clienteId, input.empresaId);
+    if (!cliente) {
+      throw new ApiError("El cliente no existe (o no es de esta empresa)", Code.BAD_REQUEST);
+    }
     await this.validarCompras(items, input.empresaId);
     await this.validarClientesFinales(items, input.empresaId, input.clienteId);
 
@@ -70,6 +79,7 @@ export class CreateBoleta {
       empresaId: input.empresaId,
       clienteId: input.clienteId,
       fecha: input.fecha,
+      fechaVencimiento: calcularFechaVencimiento(input.fecha, diasPlazoPagoEfectivo(cliente)),
       numero: input.numero,
       comentarios: input.comentarios,
     });

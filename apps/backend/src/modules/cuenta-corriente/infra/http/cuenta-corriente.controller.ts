@@ -1,0 +1,99 @@
+import { inject, injectable } from "inversify";
+
+import { DI_TYPES } from "@/shared/infra/di/types";
+import { ApiError, ApiResponse, Code, FileResponse } from "@/shared/infra/http/api.responses";
+import { ExpressAdapter } from "@/shared/infra/http/http-server";
+import { RoleGroups } from "@/modules/users/domain/role-groups";
+import { CuentaCorrienteValidation } from "@/modules/cuenta-corriente/infra/http/validation";
+import { ObtenerSaldoCliente } from "@/modules/cuenta-corriente/use-cases/obtener-saldo-cliente.use-case";
+import { ObtenerMovimientosCuentaCorriente } from "@/modules/cuenta-corriente/use-cases/obtener-movimientos-cuenta-corriente.use-case";
+import { GenerarResumenCuentaPdf } from "@/modules/cuenta-corriente/use-cases/generar-resumen-cuenta-pdf.use-case";
+import { GenerarResumenCuentaExcel } from "@/modules/cuenta-corriente/use-cases/generar-resumen-cuenta-excel.use-case";
+
+@injectable()
+export class CuentaCorrienteController {
+  constructor(
+    @inject(DI_TYPES.HttpServer) private readonly httpServer: ExpressAdapter,
+    @inject(DI_TYPES.CuentaCorrienteValidation) private readonly validation: CuentaCorrienteValidation,
+    @inject(DI_TYPES.ObtenerSaldoCliente) private readonly obtenerSaldoCliente: ObtenerSaldoCliente,
+    @inject(DI_TYPES.ObtenerMovimientosCuentaCorriente)
+    private readonly obtenerMovimientosCuentaCorriente: ObtenerMovimientosCuentaCorriente,
+    @inject(DI_TYPES.GenerarResumenCuentaPdf) private readonly generarResumenCuentaPdf: GenerarResumenCuentaPdf,
+    @inject(DI_TYPES.GenerarResumenCuentaExcel)
+    private readonly generarResumenCuentaExcel: GenerarResumenCuentaExcel,
+  ) {
+    this.registerRoutes();
+  }
+
+  private registerRoutes(): void {
+    // Visibilidad de saldos/movimientos — admin y contable (mismo grupo que cobros/cheques).
+    this.httpServer.register({
+      method: "get",
+      url: "/cuenta-corriente/:clienteId/saldo",
+      auth: "jwt-empresa",
+      roles: RoleGroups.AdminAndContable,
+      validation: this.validation.saldo,
+      handler: async ({ params, auth }) => {
+        if (!auth?.empresaId) throw new ApiError("Unauthorized", Code.UNAUTHORIZED);
+        const data = await this.obtenerSaldoCliente.execute({
+          clienteId: params.clienteId,
+          empresaId: auth.empresaId,
+        });
+        return new ApiResponse({ data, message: "Saldo obtenido correctamente", status: Code.OK });
+      },
+    });
+
+    this.httpServer.register({
+      method: "get",
+      url: "/cuenta-corriente/:clienteId/movimientos",
+      auth: "jwt-empresa",
+      roles: RoleGroups.AdminAndContable,
+      validation: this.validation.movimientos,
+      handler: async ({ params, auth }) => {
+        if (!auth?.empresaId) throw new ApiError("Unauthorized", Code.UNAUTHORIZED);
+        const data = await this.obtenerMovimientosCuentaCorriente.execute({
+          clienteId: params.clienteId,
+          empresaId: auth.empresaId,
+        });
+        return new ApiResponse({ data, message: "Movimientos obtenidos correctamente", status: Code.OK });
+      },
+    });
+
+    this.httpServer.register({
+      method: "get",
+      url: "/cuenta-corriente/:clienteId/resumen/pdf",
+      auth: "jwt-empresa",
+      roles: RoleGroups.AdminAndContable,
+      validation: this.validation.resumenPdf,
+      handler: async ({ params, auth }) => {
+        if (!auth?.empresaId) throw new ApiError("Unauthorized", Code.UNAUTHORIZED);
+        const { buffer, filename } = await this.generarResumenCuentaPdf.execute({
+          clienteId: params.clienteId,
+          empresaId: auth.empresaId,
+        });
+        return new FileResponse(buffer, filename, "application/pdf", "inline");
+      },
+    });
+
+    this.httpServer.register({
+      method: "get",
+      url: "/cuenta-corriente/:clienteId/resumen/excel",
+      auth: "jwt-empresa",
+      roles: RoleGroups.AdminAndContable,
+      validation: this.validation.resumenExcel,
+      handler: async ({ params, auth }) => {
+        if (!auth?.empresaId) throw new ApiError("Unauthorized", Code.UNAUTHORIZED);
+        const { buffer, filename } = await this.generarResumenCuentaExcel.execute({
+          clienteId: params.clienteId,
+          empresaId: auth.empresaId,
+        });
+        return new FileResponse(
+          buffer,
+          filename,
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "attachment",
+        );
+      },
+    });
+  }
+}

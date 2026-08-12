@@ -55,6 +55,11 @@ const setPrecioBody = z.object({
   precioKg: z.coerce.number().positive("precioKg tiene que ser mayor a 0"),
 });
 
+const setPrecioLoteBody = z.object({
+  ventaIds: z.array(z.string().uuid("Id inválido")).min(1, "Tenés que indicar al menos una venta"),
+  precioKg: z.coerce.number().positive("precioKg tiene que ser mayor a 0"),
+});
+
 @injectable()
 export class VentaValidation {
   create = { body: createBody };
@@ -71,4 +76,6 @@ export class VentaValidation {
     }),
     body: setPrecioBody,
   };
+
+  setPrecioLote = { body: setPrecioLoteBody };
 }

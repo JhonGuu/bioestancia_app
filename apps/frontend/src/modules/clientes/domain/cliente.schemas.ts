@@ -25,6 +25,14 @@ export const createClienteSchema = z
       message: "Elegí una condición fiscal",
     }),
     esRevendedor: z.boolean(),
+    diasPlazoPago: z
+      .string()
+      .optional()
+      .or(z.literal(""))
+      .refine(
+        (v) => !v || (!isNaN(Number(v)) && Number.isInteger(Number(v)) && Number(v) >= 0 && Number(v) <= 365),
+        "Tiene que ser un número entero entre 0 y 365",
+      ),
   })
   .refine((data) => (data.nombre && data.apellido) || data.razonSocial, {
     message: "Indicá nombre y apellido (persona física) o razón social (persona jurídica)",

@@ -9,6 +9,8 @@ export interface Boleta {
   empresaId: string;
   clienteId: string;
   fecha: string;
+  /** Fecha límite de pago (cuenta corriente) — `null` solo en boletas cargadas antes de este campo. */
+  fechaVencimiento: string | null;
   numero: string | null;
   comentarios: string | null;
   activo: boolean;

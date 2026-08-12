@@ -10,6 +10,7 @@ import {
   ShoppingCart,
   Truck,
   Users,
+  Wallet,
 } from "lucide-react";
 
 import { useAuth } from "@/modules/auth/context/auth-context";
@@ -32,6 +33,12 @@ const NAV_ITEMS = [
     label: "Boletas",
     icon: Receipt,
     roles: [Roles.ADMIN, Roles.CONTABLE, Roles.OPERARIO],
+  },
+  {
+    to: "/app/ventas" as const,
+    label: "Ventas",
+    icon: Wallet,
+    roles: [Roles.ADMIN, Roles.CONTABLE],
   },
   { to: "/app/clientes" as const, label: "Clientes", icon: Users, roles: [Roles.ADMIN, Roles.CONTABLE] },
   {
@@ -152,7 +159,11 @@ export function AppShell() {
 }
 
 function NavLinks({ rol, onNavigate }: { rol?: Roles; onNavigate?: () => void }) {
-  const items = NAV_ITEMS.filter((item) => !rol || item.roles.includes(rol));
+  // `item.roles` inferido por TS como distintas tuplas literales (cada
+  // entrada de NAV_ITEMS puede tener una combinación de roles distinta) —
+  // el cast a `Roles[]` evita que `.includes()` se tipe contra una sola de
+  // esas tuplas en vez de contra `Roles` en general.
+  const items = NAV_ITEMS.filter((item) => !rol || (item.roles as Roles[]).includes(rol));
 
   return (
     <ul className="space-y-1">

@@ -59,6 +59,7 @@ export class ClienteRepositoryDrizzle implements ClienteRepository {
         ubicacion: input.ubicacion ?? null,
         condicionFiscal: input.condicionFiscal,
         esRevendedor: input.esRevendedor ?? false,
+        diasPlazoPago: input.diasPlazoPago ?? null,
       })
       .returning();
     if (!row) {
@@ -84,6 +85,7 @@ export class ClienteRepositoryDrizzle implements ClienteRepository {
         ubicacion: input.ubicacion ?? null,
         condicionFiscal: input.condicionFiscal,
         esRevendedor: input.esRevendedor ?? false,
+        diasPlazoPago: input.diasPlazoPago ?? null,
         updatedAt: new Date(),
       })
       .where(and(eq(clientes.id, id), eq(clientes.empresaId, empresaId), isNull(clientes.deletedAt)))
@@ -122,6 +124,7 @@ export class ClienteRepositoryDrizzle implements ClienteRepository {
       ubicacion: row.ubicacion,
       condicionFiscal: row.condicionFiscal as CondicionFiscal,
       esRevendedor: row.esRevendedor,
+      diasPlazoPago: row.diasPlazoPago,
       activo: row.activo,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,

@@ -9,6 +9,7 @@ import { CreateVenta, CreateVentaUseCaseInput } from "@/modules/ventas/use-cases
 import { ListVentas } from "@/modules/ventas/use-cases/list-ventas.use-case";
 import { GetVenta } from "@/modules/ventas/use-cases/get-venta.use-case";
 import { SetPrecioVenta } from "@/modules/ventas/use-cases/set-precio-venta.use-case";
+import { SetPrecioVentasLote } from "@/modules/ventas/use-cases/set-precio-ventas-lote.use-case";
 
 @injectable()
 export class VentaController {
@@ -19,6 +20,7 @@ export class VentaController {
     @inject(DI_TYPES.ListVentas) private readonly listVentas: ListVentas,
     @inject(DI_TYPES.GetVenta) private readonly getVenta: GetVenta,
     @inject(DI_TYPES.SetPrecioVenta) private readonly setPrecioVenta: SetPrecioVenta,
+    @inject(DI_TYPES.SetPrecioVentasLote) private readonly setPrecioVentasLote: SetPrecioVentasLote,
   ) {
     this.registerRoutes();
   }
@@ -90,6 +92,27 @@ export class VentaController {
           empresaId: auth.empresaId,
           precioKg: (body as { precioKg: number }).precioKg,
         });
+        return new ApiResponse({
+          data,
+          message: "Precio cargado correctamente",
+          status: Code.OK,
+        });
+      },
+    });
+
+    // Admin + contable: aplica el mismo precio a varias ventas de un saque
+    // (ej. todas las de una categoría/presentación dentro de una boleta) en
+    // un solo request — ver `SetPrecioVentasLote`.
+    this.httpServer.register({
+      method: "patch",
+      url: "/ventas/precio-lote",
+      auth: "jwt-empresa",
+      roles: RoleGroups.AdminAndContable,
+      validation: this.validation.setPrecioLote,
+      handler: async ({ body, auth }) => {
+        if (!auth?.empresaId) throw new ApiError("Unauthorized", Code.UNAUTHORIZED);
+        const { ventaIds, precioKg } = body as { ventaIds: string[]; precioKg: number };
+        const data = await this.setPrecioVentasLote.execute({ empresaId: auth.empresaId, ventaIds, precioKg });
         return new ApiResponse({
           data,
           message: "Precio cargado correctamente",

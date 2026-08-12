@@ -12,6 +12,10 @@ import { registerComprasOpenApi } from "@/modules/compras/infra/http/compra.open
 import { registerResultadoFaenaOpenApi } from "@/modules/resultado-faena/infra/http/resultado-faena.openapi";
 import { registerLiquidacionCompraOpenApi } from "@/modules/liquidacion-compra/infra/http/liquidacion-compra.openapi";
 import { registerPlanificacionCabezasOpenApi } from "@/modules/planificacion-cabezas/infra/http/planificacion-cabezas.openapi";
+import { registerChequesOpenApi } from "@/modules/cheques/infra/http/cheque.openapi";
+import { registerCargosCuentaCorrienteOpenApi } from "@/modules/cargos-cuenta-corriente/infra/http/cargo-cuenta-corriente.openapi";
+import { registerCobrosOpenApi } from "@/modules/cobros/infra/http/cobro.openapi";
+import { registerCuentaCorrienteOpenApi } from "@/modules/cuenta-corriente/infra/http/cuenta-corriente.openapi";
 
 let pathsRegistered = false;
 
@@ -35,6 +39,10 @@ export function generateOpenApiDocument() {
     registerResultadoFaenaOpenApi();
     registerLiquidacionCompraOpenApi();
     registerPlanificacionCabezasOpenApi();
+    registerChequesOpenApi();
+    registerCargosCuentaCorrienteOpenApi();
+    registerCobrosOpenApi();
+    registerCuentaCorrienteOpenApi();
     pathsRegistered = true;
   }
 

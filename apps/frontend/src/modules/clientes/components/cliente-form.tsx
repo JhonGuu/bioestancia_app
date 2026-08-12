@@ -27,6 +27,7 @@ import {
 import {
   CONDICION_FISCAL_LABELS,
   CondicionFiscal,
+  DIAS_PLAZO_PAGO_DEFAULT,
   type Cliente,
 } from "@/modules/clientes/domain/cliente.types";
 
@@ -65,6 +66,10 @@ export function ClienteForm({ onSubmit, isSubmitting, cliente }: ClienteFormProp
       ubicacion: cliente?.ubicacion ?? "",
       condicionFiscal: cliente?.condicionFiscal ?? CondicionFiscal.CONSUMIDOR_FINAL,
       esRevendedor: cliente?.esRevendedor ?? false,
+      diasPlazoPago:
+        cliente?.diasPlazoPago !== undefined && cliente?.diasPlazoPago !== null
+          ? String(cliente.diasPlazoPago)
+          : "",
     },
   });
 
@@ -238,6 +243,20 @@ export function ClienteForm({ onSubmit, isSubmitting, cliente }: ClienteFormProp
             )}
           />
         </div>
+
+        <FormField
+          control={form.control}
+          name="diasPlazoPago"
+          render={({ field }) => (
+            <FormItem className="max-w-xs">
+              <FormLabel>Días de plazo para pagar</FormLabel>
+              <FormControl>
+                <Input type="number" placeholder={`Default: ${DIAS_PLAZO_PAGO_DEFAULT}`} {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <FormField
           control={form.control}

@@ -42,10 +42,15 @@ export interface Cliente {
   condicionFiscal: CondicionFiscal;
   /** Ver `boleta-form.tsx`: habilita la carga de reventa (Novillo) y el catálogo de sus destinos propios. */
   esRevendedor: boolean;
+  /** Días de plazo para pagar una boleta (cuenta corriente). `null` = usa el default global (7). */
+  diasPlazoPago: number | null;
   activo: boolean;
   createdAt: string;
   updatedAt: string;
 }
+
+/** Mismo default que el backend (`DIAS_PLAZO_PAGO_DEFAULT` en `domain/cliente.ts`). */
+export const DIAS_PLAZO_PAGO_DEFAULT = 7;
 
 /** Nombre para mostrar: razón social si es persona jurídica, nombre+apellido si es física. */
 export function nombreCliente(cliente: Cliente): string {

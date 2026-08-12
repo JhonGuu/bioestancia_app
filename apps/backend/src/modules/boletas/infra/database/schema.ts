@@ -19,6 +19,8 @@ export const boletas = pgTable("boletas", {
     .notNull()
     .references(() => clientes.id, { onDelete: "restrict" }),
   fecha: timestamp("fecha").notNull(),
+  /** Nullable solo por boletas cargadas antes de este campo — ver `domain/boleta.ts`. */
+  fechaVencimiento: timestamp("fecha_vencimiento"),
   numero: varchar("numero", { length: 50 }),
   comentarios: varchar("comentarios", { length: 255 }),
   activo: boolean("activo").notNull().default(true),
