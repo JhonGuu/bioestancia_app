@@ -16,10 +16,20 @@ const actualizarEstadoBody = z
   .object({
     estado: z.nativeEnum(EstadoCheque),
     motivoRechazo: z.string().max(255).optional(),
+    endosadoA: z.string().max(150).optional(),
+    fechaEndoso: z.coerce.date().optional(),
   })
   .refine((data) => data.estado !== EstadoCheque.RECHAZADO || Boolean(data.motivoRechazo), {
     message: "Indicá el motivo del rechazo",
     path: ["motivoRechazo"],
+  })
+  .refine((data) => data.estado !== EstadoCheque.ENDOSADO_A_TERCEROS || Boolean(data.endosadoA), {
+    message: "Indicá a quién se endosó",
+    path: ["endosadoA"],
+  })
+  .refine((data) => data.estado !== EstadoCheque.ENDOSADO_A_TERCEROS || Boolean(data.fechaEndoso), {
+    message: "Indicá cuándo se endosó",
+    path: ["fechaEndoso"],
   });
 
 @injectable()

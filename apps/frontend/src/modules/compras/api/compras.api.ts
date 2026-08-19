@@ -3,7 +3,7 @@ import type {
   CreateCompraFormValues,
   UpdateCompraFormValues,
 } from "@/modules/compras/domain/compra.schemas";
-import type { Compra, CompraConCategorias } from "@/modules/compras/domain/compra.types";
+import type { Compra, CompraConCategorias, StockTropa } from "@/modules/compras/domain/compra.types";
 
 export const comprasApi = {
   list(): Promise<Compra[]> {
@@ -15,10 +15,11 @@ export const comprasApi = {
   },
 
   create(input: CreateCompraFormValues): Promise<CompraConCategorias> {
-    const { letra, porcentajeDesbaste, comentarios, categorias, ...rest } = input;
+    const { letra, precioCompraKg, porcentajeDesbaste, comentarios, categorias, ...rest } = input;
     const payload = {
       ...rest,
       letra: letra || undefined,
+      precioCompraKg: precioCompraKg || undefined,
       porcentajeDesbaste: porcentajeDesbaste || undefined,
       comentarios: comentarios || undefined,
       categorias: categorias.map((c) => ({
@@ -32,10 +33,11 @@ export const comprasApi = {
 
   /** Edita la compra completa (proveedor, especie, datos generales y categorías). Rechazado si ya está cerrada. */
   update(id: string, input: UpdateCompraFormValues): Promise<CompraConCategorias> {
-    const { letra, porcentajeDesbaste, comentarios, categorias, ...rest } = input;
+    const { letra, precioCompraKg, porcentajeDesbaste, comentarios, categorias, ...rest } = input;
     const payload = {
       ...rest,
       letra: letra || undefined,
+      precioCompraKg: precioCompraKg || undefined,
       porcentajeDesbaste: porcentajeDesbaste || undefined,
       comentarios: comentarios || undefined,
       categorias: categorias.map((c) => ({
@@ -56,5 +58,10 @@ export const comprasApi = {
   /** Deshace el cierre — para corregir algo y volver a cerrar después. */
   reabrir(id: string): Promise<Compra> {
     return unwrap(httpClient.post(`/compras/${id}/reabrir`));
+  },
+
+  /** Stock teórico (compradas − vendidas) de cada tropa ABIERTA de la empresa activa. */
+  stockTropas(): Promise<StockTropa[]> {
+    return unwrap(httpClient.get("/compras/stock"));
   },
 };

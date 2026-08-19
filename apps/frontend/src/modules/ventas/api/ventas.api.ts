@@ -1,5 +1,13 @@
 import { httpClient, unwrap } from "@/shared/api/http-client";
+import type { CategoriaVenta } from "@/modules/ventas/domain/categoria-venta";
 import type { Venta } from "@/modules/ventas/domain/venta.types";
+
+export interface UpdateVentaItemInput {
+  garron?: number | null;
+  kg?: number;
+  categoria?: CategoriaVenta | null;
+  comentarios?: string | null;
+}
 
 export const ventasApi = {
   list(): Promise<Venta[]> {
@@ -18,5 +26,15 @@ export const ventasApi = {
   /** Aplica el mismo precio a varias ventas de una vez (ej. todas las de una categoría dentro de una boleta). */
   setPrecioLote(ventaIds: string[], precioKg: number): Promise<Venta[]> {
     return unwrap(httpClient.patch("/ventas/precio-lote", { ventaIds, precioKg }));
+  },
+
+  /** Corrige garrón/kg/categoría/comentarios de una línea ya cargada — para arreglar una carga mal hecha. */
+  updateItem(id: string, input: UpdateVentaItemInput): Promise<Venta> {
+    return unwrap(httpClient.patch(`/ventas/${id}`, input));
+  },
+
+  /** Borra (soft-delete) una línea de venta. */
+  delete(id: string): Promise<void> {
+    return unwrap(httpClient.delete(`/ventas/${id}`));
   },
 };

@@ -2,6 +2,7 @@ import { boolean, integer, numeric, pgTable, timestamp, unique, uuid, varchar } 
 
 import { empresas } from "@/modules/empresas/infra/database/schema";
 import { compras } from "@/modules/compras/infra/database/schema";
+import { frigorificos } from "@/modules/frigorificos/infra/database/schema";
 
 /**
  * Resultado de faena (ver `domain/resultado-faena.ts`). 1 a 1 con `compras`
@@ -20,6 +21,11 @@ export const resultadoFaena = pgTable(
     compraId: uuid("compra_id")
       .notNull()
       .references(() => compras.id, { onDelete: "cascade" }),
+    // Nullable: resultados de faena ya cargados no tienen frigorífico
+    // asociado — se completa a mano en los nuevos. `onDelete: "set null"`:
+    // si se borra el frigorífico del catálogo, el documento histórico
+    // sigue existiendo, solo pierde la referencia.
+    frigorificoId: uuid("frigorifico_id").references(() => frigorificos.id, { onDelete: "set null" }),
     fechaFaena: timestamp("fecha_faena").notNull(),
     numero: varchar("numero", { length: 50 }),
     numeroAutorizacion: varchar("numero_autorizacion", { length: 50 }),

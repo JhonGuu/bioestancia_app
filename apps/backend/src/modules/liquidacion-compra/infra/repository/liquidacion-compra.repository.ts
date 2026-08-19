@@ -44,6 +44,14 @@ export class LiquidacionCompraRepositoryDrizzle implements LiquidacionCompraRepo
     return row ? this.toDomain(row) : null;
   }
 
+  async list(empresaId: string): Promise<LiquidacionCompra[]> {
+    const rows = await this.orm.db
+      .select()
+      .from(liquidacionCompra)
+      .where(and(eq(liquidacionCompra.empresaId, empresaId), isNull(liquidacionCompra.deletedAt)));
+    return rows.map((row) => this.toDomain(row));
+  }
+
   async create(input: CreateLiquidacionCompraInput): Promise<LiquidacionCompra> {
     const [row] = await this.orm.db
       .insert(liquidacionCompra)

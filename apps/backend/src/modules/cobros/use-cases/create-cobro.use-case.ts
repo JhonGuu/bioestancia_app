@@ -18,6 +18,9 @@ export interface CreateLineaCobroUseCaseInput {
   titularCheque?: string;
   fechaEmisionCheque?: Date;
   fechaPagoCheque?: Date;
+  /** Opcionales, solo tienen sentido con TRANSFERENCIA_BANCO/BILLETERA_VIRTUAL. */
+  bancoOBilletera?: string;
+  remitente?: string;
 }
 
 export interface CreateCobroUseCaseInput {
@@ -86,7 +89,13 @@ export class CreateCobro {
         });
         lineasConCheque.push({ medioPago: linea.medioPago, monto: linea.monto, chequeId: cheque.id });
       } else {
-        lineasConCheque.push({ medioPago: linea.medioPago, monto: linea.monto, chequeId: null });
+        lineasConCheque.push({
+          medioPago: linea.medioPago,
+          monto: linea.monto,
+          chequeId: null,
+          bancoOBilletera: linea.bancoOBilletera ?? null,
+          remitente: linea.remitente ?? null,
+        });
       }
     }
 

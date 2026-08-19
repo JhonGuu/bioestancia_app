@@ -3,7 +3,6 @@ import { Container } from "inversify";
 import { DI_TYPES } from "@/shared/infra/di/types";
 import { CobroController } from "@/modules/cobros/infra/http/cobro.controller";
 import { CobroValidation } from "@/modules/cobros/infra/http/validation";
-import { CobroRepositoryDrizzle } from "@/modules/cobros/infra/repository/cobro.repository";
 import { CreateCobro } from "@/modules/cobros/use-cases/create-cobro.use-case";
 import { ListCobros } from "@/modules/cobros/use-cases/list-cobros.use-case";
 import { GetCobro } from "@/modules/cobros/use-cases/get-cobro.use-case";
@@ -21,10 +20,13 @@ import { ConfirmarRechazoCheque } from "@/modules/cobros/use-cases/confirmar-rec
  * boletas/ventas para calcular el saldo pendiente, y los 4 use-cases de
  * recargo/rechazo de cheque leen y crean cargos. Debe registrarse DESPUÉS
  * de los cinco en `di.ts`.
+ *
+ * `CobroRepository` NO se bindea acá — se bindea suelto en `di.ts` antes de
+ * `boletas`/`ventas` (ver comentario ahí) porque esos módulos también lo
+ * necesitan.
  */
 export function registerCobrosModule(container: Container): void {
   container.bind(DI_TYPES.CobroValidation).to(CobroValidation);
-  container.bind(DI_TYPES.CobroRepository).to(CobroRepositoryDrizzle);
   container.bind(DI_TYPES.AplicarCobroFifo).to(AplicarCobroFifo);
   container.bind(DI_TYPES.CreateCobro).to(CreateCobro);
   container.bind(DI_TYPES.ListCobros).to(ListCobros);

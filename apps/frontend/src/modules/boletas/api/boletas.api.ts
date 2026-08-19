@@ -3,6 +3,7 @@ import { filenameFromContentDisposition } from "@/shared/lib/download-blob";
 import type { CreateBoletaFormValues } from "@/modules/boletas/domain/boleta.schemas";
 import type { Boleta, BoletaConVentas } from "@/modules/boletas/domain/boleta.types";
 import { CategoriaReventa } from "@/modules/ventas/domain/categoria-venta";
+import { FormaVenta } from "@/modules/ventas/domain/venta.types";
 
 export interface ArchivoDescargado {
   blob: Blob;
@@ -36,13 +37,22 @@ export const boletasApi = {
       clienteFinalId: item.clienteFinalId || undefined,
       kg: item.kg,
     }));
+    // El operario tipea la magnitud en positivo (ver `CompensacionesCard`);
+    // una compensación siempre resta, así que se manda ya en negativo acá —
+    // un solo lugar que lo hace, no hay que confiar en que cada línea
+    // individual tenga el signo correcto.
+    const itemsDeCompensaciones = input.compensaciones.map((item) => ({
+      formaVenta: FormaVenta.COMPENSACION_KG,
+      kg: -Math.abs(item.kg),
+      comentarios: item.comentarios || undefined,
+    }));
 
     const payload = {
       clienteId: input.clienteId,
       fecha: input.fecha,
       numero: input.numero || undefined,
       comentarios: input.comentarios || undefined,
-      items: [...itemsDeTropas, ...itemsDeNovillo],
+      items: [...itemsDeTropas, ...itemsDeNovillo, ...itemsDeCompensaciones],
     };
     return unwrap(httpClient.post("/boletas", payload));
   },
@@ -78,5 +88,18 @@ export const boletasApi = {
       blob: response.data,
       filename: filenameFromContentDisposition(response.headers, `reporte-diario-${fecha}.xlsx`),
     };
+  },
+
+  /** Corrige fecha/número/comentarios de una boleta ya cargada — para arreglar una carga mal hecha. */
+  update(
+    id: string,
+    input: { fecha?: string; numero?: string | null; comentarios?: string | null },
+  ): Promise<Boleta> {
+    return unwrap(httpClient.patch(`/boletas/${id}`, input));
+  },
+
+  /** Borra (soft-delete) la boleta entera y sus ventas. */
+  delete(id: string): Promise<void> {
+    return unwrap(httpClient.delete(`/boletas/${id}`));
   },
 };

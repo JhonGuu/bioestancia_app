@@ -5,6 +5,13 @@
 export interface AuthenticatedIdentity {
   id: string;
   isActive: boolean;
+  /**
+   * Si está en `true`, el usuario tiene que cambiar su contraseña antes de
+   * poder operar cualquier ruta `jwt-empresa` (ver `HttpServer.buildAuthMiddleware`).
+   * Las rutas `jwt` puras (`/account/me`, `/account/change-password`, etc.)
+   * siguen permitidas para que el usuario pueda completar el cambio.
+   */
+  mustChangePassword: boolean;
 }
 
 /**

@@ -39,7 +39,7 @@ export function BoletasList({
                 <div className="min-w-0">
                   <p className="truncate font-medium">{cliente ? nombreCliente(cliente) : "—"}</p>
                   <p className="text-muted-foreground text-sm">
-                    {new Date(boleta.fecha).toLocaleDateString("es-AR")}
+                    {new Date(boleta.fecha).toLocaleDateString("es-AR", { timeZone: "UTC" })}
                     {boleta.numero ? ` · N° ${boleta.numero}` : ""}
                   </p>
                 </div>

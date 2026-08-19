@@ -3,6 +3,7 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 
 import { useClientes } from "@/modules/clientes/hooks/use-clientes";
 import { ClientesCuentaCorrienteList } from "@/modules/cuenta-corriente/components/clientes-cuenta-corriente-list";
+import { useSaldosClientes } from "@/modules/cuenta-corriente/hooks/use-saldos-clientes";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -12,6 +13,7 @@ export const Route = createFileRoute("/_authenticated/app/ventas/cuenta-corrient
 
 function CuentaCorrientePage() {
   const clientesQuery = useClientes();
+  const saldosQuery = useSaldosClientes();
 
   return (
     <div className="space-y-4">
@@ -39,7 +41,7 @@ function CuentaCorrientePage() {
           ) : clientesQuery.error ? (
             <p className="text-destructive py-8 text-center text-sm">{clientesQuery.error.message}</p>
           ) : (
-            <ClientesCuentaCorrienteList clientes={clientesQuery.data ?? []} />
+            <ClientesCuentaCorrienteList clientes={clientesQuery.data ?? []} saldos={saldosQuery.data} />
           )}
         </CardContent>
       </Card>

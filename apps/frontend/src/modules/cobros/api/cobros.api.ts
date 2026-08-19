@@ -1,7 +1,7 @@
 import { httpClient, unwrap } from "@/shared/api/http-client";
 import type { CreateCobroFormValues } from "@/modules/cobros/domain/cobro.schemas";
 import type { CobroConLineas } from "@/modules/cobros/domain/cobro.types";
-import { esMedioPagoCheque } from "@/modules/cobros/domain/cobro.types";
+import { esMedioPagoCheque, esMedioPagoTransferencia } from "@/modules/cobros/domain/cobro.types";
 
 export const cobrosApi = {
   list(clienteId?: string): Promise<CobroConLineas[]> {
@@ -29,6 +29,12 @@ export const cobrosApi = {
               titularCheque: linea.titularCheque || undefined,
               fechaEmisionCheque: linea.fechaEmisionCheque || undefined,
               fechaPagoCheque: linea.fechaPagoCheque || undefined,
+            }
+          : {}),
+        ...(esMedioPagoTransferencia(linea.medioPago)
+          ? {
+              bancoOBilletera: linea.bancoOBilletera || undefined,
+              remitente: linea.remitente || undefined,
             }
           : {}),
       })),

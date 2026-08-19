@@ -33,6 +33,24 @@ export const createClienteSchema = z
         (v) => !v || (!isNaN(Number(v)) && Number.isInteger(Number(v)) && Number(v) >= 0 && Number(v) <= 365),
         "Tiene que ser un número entero entre 0 y 365",
       ),
+    // Descuento fijo de kg por cabeza en las boletas de este cliente (ej. "0.8") — vacío = sin descuento.
+    descuentoKgPorCabeza: z
+      .string()
+      .optional()
+      .or(z.literal(""))
+      .refine(
+        (v) => !v || (!isNaN(Number(v)) && Number(v) >= 0 && Number(v) <= 999.99),
+        "Tiene que ser un número mayor o igual a 0",
+      ),
+    // Meta de cabezas/semana para acceder a un descuento (ej. "100") — vacío = sin meta.
+    metaCabezasSemanales: z
+      .string()
+      .optional()
+      .or(z.literal(""))
+      .refine(
+        (v) => !v || (!isNaN(Number(v)) && Number.isInteger(Number(v)) && Number(v) >= 1 && Number(v) <= 100000),
+        "Tiene que ser un número entero mayor a 0",
+      ),
   })
   .refine((data) => (data.nombre && data.apellido) || data.razonSocial, {
     message: "Indicá nombre y apellido (persona física) o razón social (persona jurídica)",

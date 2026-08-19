@@ -9,6 +9,9 @@ import { UsersAuthProvider } from "@/modules/users/infra/users-auth-provider";
 import { GetMyAccount } from "@/modules/users/use-cases/get-my-account.use-case";
 import { GetMyEmpresas } from "@/modules/users/use-cases/get-my-empresas.use-case";
 import { GrantEmpresaAccess } from "@/modules/users/use-cases/grant-empresa-access.use-case";
+import { ListEmpresaUsers } from "@/modules/users/use-cases/list-empresa-users.use-case";
+import { SetUserActive } from "@/modules/users/use-cases/set-user-active.use-case";
+import { ChangePassword } from "@/modules/users/use-cases/change-password.use-case";
 import { SignIn } from "@/modules/users/use-cases/sign-in.use-case";
 import { SignUp } from "@/modules/users/use-cases/sign-up.use-case";
 
@@ -41,6 +44,9 @@ export function registerUsersModule(container: Container): void {
   container.bind(DI_TYPES.GetMyAccount).to(GetMyAccount);
   container.bind(DI_TYPES.GetMyEmpresas).to(GetMyEmpresas);
   container.bind(DI_TYPES.GrantEmpresaAccess).to(GrantEmpresaAccess);
+  container.bind(DI_TYPES.ListEmpresaUsers).to(ListEmpresaUsers);
+  container.bind(DI_TYPES.SetUserActive).to(SetUserActive);
+  container.bind(DI_TYPES.ChangePassword).to(ChangePassword);
 
   // Controller (instanciado eagerly para que registre rutas en el HttpServer)
   container.bind(DI_TYPES.UserController).to(UserController);

@@ -15,13 +15,29 @@ const createBody = z
     garron: z.coerce.number().int().positive().optional(),
     formaVenta: z.nativeEnum(FormaVenta),
     categoria: categoriaVentaSchema.optional(),
-    kg: z.coerce.number().positive("kg tiene que ser mayor a 0"),
+    // Solo "compensación de kg" puede ir en negativo, y siempre lo es (ej.
+    // descuento por un animal que vino golpeado/en mal estado, o el ajuste
+    // fijo por cabeza de ciertos clientes) — el resto de las ventas son un
+    // animal físico real, no puede pesar 0 o menos.
+    kg: z.coerce.number(),
     // Opcional: el operario carga la venta sin precio (flujo de boletas) —
     // lo completa después admin/contable con PATCH /ventas/:id/precio.
     precioKg: z.coerce.number().positive("precioKg tiene que ser mayor a 0").optional(),
     fecha: z.coerce.date(),
     clienteFinalId: z.string().uuid("clienteFinalId inválido").optional(),
     comentarios: z.string().max(255).optional(),
+  })
+  .refine((data) => data.formaVenta === FormaVenta.COMPENSACION_KG || data.kg > 0, {
+    message: "kg tiene que ser mayor a 0 (excepto en compensación de kg, que siempre es negativa)",
+    path: ["kg"],
+  })
+  // Una compensación SIEMPRE resta — no existe el caso "agregado" (kg
+  // positivo). El operario tipea la magnitud en positivo, el frontend la
+  // manda ya en negativo (ver `boletas.api.ts`); esto es la última barrera
+  // defensiva del lado del servidor.
+  .refine((data) => data.formaVenta !== FormaVenta.COMPENSACION_KG || data.kg < 0, {
+    message: "La compensación tiene que ser negativa",
+    path: ["kg"],
   })
   // Regla de negocio: toda venta de un animal físico (todo menos
   // "compensación de kg") necesita categoría. Una compensación es un ajuste
@@ -60,6 +76,16 @@ const setPrecioLoteBody = z.object({
   precioKg: z.coerce.number().positive("precioKg tiene que ser mayor a 0"),
 });
 
+// Corrige UNA línea ya cargada (garrón/kg/categoría/comentarios) — no toca
+// precioKg (eso es setPrecio, tarea de administración/contable). Todos los
+// campos opcionales: el caller manda solo lo que cambió.
+const updateItemBody = z.object({
+  garron: z.coerce.number().int().positive().nullable().optional(),
+  kg: z.coerce.number().optional(),
+  categoria: categoriaVentaSchema.nullable().optional(),
+  comentarios: z.string().max(255).nullable().optional(),
+});
+
 @injectable()
 export class VentaValidation {
   create = { body: createBody };
@@ -78,4 +104,17 @@ export class VentaValidation {
   };
 
   setPrecioLote = { body: setPrecioLoteBody };
+
+  updateItem = {
+    params: z.object({
+      id: z.string().uuid("Id inválido"),
+    }),
+    body: updateItemBody,
+  };
+
+  delete = {
+    params: z.object({
+      id: z.string().uuid("Id inválido"),
+    }),
+  };
 }

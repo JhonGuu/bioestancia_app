@@ -65,6 +65,7 @@ export class UserRepositoryDrizzle implements UserRepository {
         firstName: input.firstName,
         lastName: input.lastName,
         phoneNumber: input.phoneNumber,
+        mustChangePassword: input.mustChangePassword ?? false,
       })
       .returning();
     if (!row) {
@@ -77,6 +78,20 @@ export class UserRepositoryDrizzle implements UserRepository {
     await this.orm.db
       .update(users)
       .set({ lastLoginAt: new Date() })
+      .where(eq(users.id, userId));
+  }
+
+  async setActive(userId: string, isActive: boolean): Promise<void> {
+    await this.orm.db
+      .update(users)
+      .set({ isActive, updatedAt: new Date() })
+      .where(eq(users.id, userId));
+  }
+
+  async updatePassword(userId: string, passwordHash: string): Promise<void> {
+    await this.orm.db
+      .update(users)
+      .set({ passwordHash, mustChangePassword: false, updatedAt: new Date() })
       .where(eq(users.id, userId));
   }
 
@@ -94,6 +109,7 @@ export class UserRepositoryDrizzle implements UserRepository {
       lastName: row.lastName,
       phoneNumber: row.phoneNumber,
       isActive: row.isActive,
+      mustChangePassword: row.mustChangePassword,
       createdAt: row.createdAt,
     };
   }

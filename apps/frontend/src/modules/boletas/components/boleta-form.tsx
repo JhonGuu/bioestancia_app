@@ -47,13 +47,14 @@ import { FormaVenta, FORMA_VENTA_LABELS } from "@/modules/ventas/domain/venta.ty
 import { CategoriaPorcino } from "@/modules/compras/domain/compra.types";
 import type { Compra } from "@/modules/compras/domain/compra.types";
 import { useClientes } from "@/modules/clientes/hooks/use-clientes";
-import { nombreCliente } from "@/modules/clientes/domain/cliente.types";
+import { nombreCliente, type Cliente } from "@/modules/clientes/domain/cliente.types";
 import { useClientesFinales } from "@/modules/clientes/hooks/use-clientes-finales";
 import { useCreateClienteFinal } from "@/modules/clientes/hooks/use-create-cliente-final";
 import type { ClienteFinal } from "@/modules/clientes/domain/cliente-final.types";
 import { useCompras } from "@/modules/compras/hooks/use-compras";
 import { useBoletas } from "@/modules/boletas/hooks/use-boletas";
 import { sugerirProximoNumero } from "@/modules/boletas/domain/sugerir-numero";
+import { hoyISO } from "@/shared/lib/date";
 
 type FormInput = z.input<typeof createBoletaSchema>;
 type FormOutput = z.output<typeof createBoletaSchema>;
@@ -69,13 +70,30 @@ type PresentacionTropa = typeof FormaVenta.CABEZA | typeof FormaVenta.MEDIA_RES 
 /** Novillo no tiene "pulpa" como opción hoy — reventa siempre entera o por mitad. */
 type PresentacionNovillo = typeof FormaVenta.CABEZA | typeof FormaVenta.MEDIA_RES;
 
-function hoyISO(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
 /** "Porcina Capón" → "Capón" — más corto y legible en una tarjeta chica. */
 function categoriaCorta(categoria: string): string {
   return categoria.replace(/^Porcina\s+/, "");
+}
+
+/**
+ * Cuenta las cabezas de la boleta hasta el momento — usada solo para
+ * sugerir el descuento fijo por cabeza del cliente (`CompensacionesCard`),
+ * no afecta lo que se manda al backend. Heurística simple: `cabeza`/reventa
+ * entera cuenta 1, `media_res` cuenta 0.5 (es la mitad de un animal), `pulpa`
+ * no suma (es un corte, no una cabeza).
+ */
+function contarCabezas(
+  tropas: { items: { formaVenta: FormaVenta }[] }[],
+  novillo: { formaVenta: FormaVenta }[],
+): number {
+  const contarItem = (formaVenta: FormaVenta) => {
+    if (formaVenta === FormaVenta.CABEZA) return 1;
+    if (formaVenta === FormaVenta.MEDIA_RES) return 0.5;
+    return 0;
+  };
+  const deTropas = tropas.flatMap((t) => t.items).reduce((acc, item) => acc + contarItem(item.formaVenta), 0);
+  const deNovillo = novillo.reduce((acc, item) => acc + contarItem(item.formaVenta), 0);
+  return deTropas + deNovillo;
 }
 
 interface BoletaFormProps {
@@ -120,6 +138,7 @@ export function BoletaForm({ onSubmit, isSubmitting }: BoletaFormProps) {
       comentarios: "",
       tropas: [],
       novillo: [],
+      compensaciones: [],
     },
   });
 
@@ -143,6 +162,14 @@ export function BoletaForm({ onSubmit, isSubmitting }: BoletaFormProps) {
 
   const tropasField = useFieldArray({ control: form.control, name: "tropas" });
   const novilloField = useFieldArray({ control: form.control, name: "novillo" });
+  const compensacionesField = useFieldArray({ control: form.control, name: "compensaciones" });
+
+  // Cabezas actuales de la boleta (para sugerir el descuento fijo por
+  // cabeza del cliente, si tiene uno configurado — ver `CompensacionesCard`).
+  // Media res cuenta como media cabeza; pulpa/novillo sin garrón no suman.
+  const tropasActuales = useWatch({ control: form.control, name: "tropas" });
+  const novilloActual = useWatch({ control: form.control, name: "novillo" });
+  const cabezasActuales = contarCabezas(tropasActuales, novilloActual);
 
   // Si se cambia a un cliente que no es revendedor, la card de Novillo
   // desaparece — limpiamos lo que se hubiera cargado para no mandar ítems de
@@ -275,6 +302,13 @@ export function BoletaForm({ onSubmit, isSubmitting }: BoletaFormProps) {
             clientesFinales={clientesFinalesQuery.data ?? []}
           />
         )}
+
+        <CompensacionesCard
+          control={form.control}
+          field={compensacionesField}
+          cliente={clienteSeleccionado}
+          cabezasActuales={cabezasActuales}
+        />
 
         <Button type="submit" size="lg" disabled={isSubmitting} className="w-full sm:w-fit">
           {isSubmitting ? "Guardando..." : "Guardar boleta"}
@@ -520,6 +554,129 @@ function TropaPickerSheet({
   );
 }
 
+/** `0.8` con 2 decimales fijos, sin ceros de más (`0.80` → `0.8`). */
+function formatearKg(valor: number): string {
+  return (Math.round(valor * 100) / 100).toString();
+}
+
+/**
+ * Ajustes de kg sin animal físico (descuentos por cerdo golpeado, o el
+ * descuento fijo por cabeza de ciertos clientes) — ver
+ * `compensacionItemSchema` en `boleta.schemas.ts`. Siempre resta: el
+ * operario tipea la magnitud en POSITIVO acá (menos tipeo, sin riesgo de
+ * cargarlo con el signo al revés) y `boletas.api.ts` la manda ya en negativo
+ * al backend.
+ *
+ * Si el cliente elegido tiene `descuentoKgPorCabeza` configurado (ver
+ * `cliente-form.tsx`), muestra un botón con el descuento sugerido
+ * (cabezas actuales × descuento del cliente) para agregarlo con un click —
+ * la línea queda editable/borrable como cualquier otra (por ejemplo para
+ * bajarlo a 0.5 o 0.4 en un caso puntual), no se fuerza ni se recalcula sola
+ * si después se agregan más animales.
+ */
+function CompensacionesCard({
+  control,
+  field,
+  cliente,
+  cabezasActuales,
+}: {
+  control: FormControlType;
+  field: ReturnType<typeof useFieldArray<FormInput, "compensaciones">>;
+  cliente?: Cliente;
+  cabezasActuales: number;
+}) {
+  const descuentoCliente = cliente?.descuentoKgPorCabeza;
+  const sugerencia =
+    descuentoCliente && cabezasActuales > 0 ? Math.round(cabezasActuales * descuentoCliente * 100) / 100 : null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Compensación de kg</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <p className="text-muted-foreground text-xs">
+          Descuento sin animal asociado (ej. un cerdo que vino golpeado) — cargá el kg en positivo, se
+          descuenta solo.
+        </p>
+
+        {sugerencia !== null && (
+          <Button
+            type="button"
+            variant="outline"
+            className="w-fit"
+            onClick={() => field.append({ kg: sugerencia, comentarios: "Descuento por cabeza del cliente" })}
+          >
+            <Plus className="size-4" />
+            Aplicar descuento del cliente: {formatearKg(sugerencia)} kg ({cabezasActuales} cabezas ×{" "}
+            {descuentoCliente}kg)
+          </Button>
+        )}
+
+        <div className="flex flex-col gap-2">
+          {field.fields.map((item, itemIndex) => (
+            <div key={item.id} className="flex flex-wrap items-end gap-2 rounded-md border p-2">
+              <FormField
+                control={control}
+                name={`compensaciones.${itemIndex}.kg`}
+                render={({ field: kgField }) => (
+                  <FormItem className="w-28">
+                    <FormLabel className="sr-only">Kg</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        inputMode="decimal"
+                        step="0.01"
+                        placeholder="Kg a descontar"
+                        {...kgField}
+                        value={kgField.value as string | number}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={control}
+                name={`compensaciones.${itemIndex}.comentarios`}
+                render={({ field: comentariosField }) => (
+                  <FormItem className="min-w-40 flex-1">
+                    <FormLabel className="sr-only">Motivo (opcional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Motivo (opcional)" {...comentariosField} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => field.remove(itemIndex)}
+                title="Quitar línea"
+              >
+                <Trash2 className="text-destructive size-4" />
+              </Button>
+            </div>
+          ))}
+        </div>
+
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-fit"
+          onClick={() => field.append({ kg: "", comentarios: "" })}
+        >
+          <Plus className="size-4" />
+          Agregar línea manual
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 function TropaPickerRow({ compra, onClick }: { compra: Compra; onClick: () => void }) {
   return (
     <button
@@ -529,7 +686,7 @@ function TropaPickerRow({ compra, onClick }: { compra: Compra; onClick: () => vo
     >
       <span className="font-medium">{tropaLabel(compra)}</span>
       <span className="text-muted-foreground text-xs">
-        {new Date(compra.fecha).toLocaleDateString("es-AR")}
+        {new Date(compra.fecha).toLocaleDateString("es-AR", { timeZone: "UTC" })}
       </span>
     </button>
   );

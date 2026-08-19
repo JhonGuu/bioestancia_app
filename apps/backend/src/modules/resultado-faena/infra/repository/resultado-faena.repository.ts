@@ -49,6 +49,7 @@ export class ResultadoFaenaRepositoryDrizzle implements ResultadoFaenaRepository
       .values({
         empresaId: input.empresaId,
         compraId: input.compraId,
+        frigorificoId: input.frigorificoId ?? null,
         fechaFaena: input.fechaFaena,
         numero: input.numero ?? null,
         numeroAutorizacion: input.numeroAutorizacion ?? null,
@@ -70,6 +71,7 @@ export class ResultadoFaenaRepositoryDrizzle implements ResultadoFaenaRepository
     return {
       id: row.id,
       compraId: row.compraId,
+      frigorificoId: row.frigorificoId,
       fechaFaena: row.fechaFaena,
       numero: row.numero,
       numeroAutorizacion: row.numeroAutorizacion,

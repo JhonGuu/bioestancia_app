@@ -28,3 +28,22 @@ export interface EmpresaAcceso {
   rubro: string;
   rol: Roles;
 }
+
+/**
+ * Un usuario con acceso a la empresa activa, junto con su rol ahí y sus
+ * datos básicos — lo que necesita la pantalla "Usuarios" para armar la
+ * tabla. Es la combinación de `User` (sin passwordHash) + `UsuarioEmpresa`.
+ */
+export interface UsuarioConAcceso {
+  usuarioId: string;
+  email: string;
+  username: string;
+  firstName: string;
+  lastName: string;
+  phoneNumber: string | null;
+  isActive: boolean;
+  mustChangePassword: boolean;
+  rol: Roles;
+  /** Desde cuándo tiene acceso a esta empresa puntual. */
+  accesoDesde: Date;
+}

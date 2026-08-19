@@ -39,4 +39,6 @@ export interface CreateChequeInput {
 export interface ActualizarEstadoChequeInput {
   estado: EstadoCheque;
   motivoRechazo?: string | null;
+  endosadoA?: string | null;
+  fechaEndoso?: Date | null;
 }

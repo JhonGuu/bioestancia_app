@@ -3,15 +3,22 @@ import { Link } from "@tanstack/react-router";
 import { Search } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
-import { nombreCliente, documentoCliente, type Cliente } from "@/modules/clientes/domain/cliente.types";
+import { nombreCliente, type Cliente } from "@/modules/clientes/domain/cliente.types";
+import type { SaldoCliente } from "@/modules/cuenta-corriente/domain/saldo-cliente.types";
 
 interface ClientesCuentaCorrienteListProps {
   clientes: Cliente[];
+  /** Saldo de cada cliente (ver `useSaldosClientes`) — `undefined` mientras carga. */
+  saldos?: SaldoCliente[];
 }
 
+const formatoMoneda = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS" });
+
 /** Elegí un cliente para ver su resumen de cuenta corriente completo. */
-export function ClientesCuentaCorrienteList({ clientes }: ClientesCuentaCorrienteListProps) {
+export function ClientesCuentaCorrienteList({ clientes, saldos }: ClientesCuentaCorrienteListProps) {
   const [busqueda, setBusqueda] = useState("");
+
+  const saldosPorCliente = new Map((saldos ?? []).map((s) => [s.clienteId, s]));
 
   const busquedaNormalizada = busqueda.trim().toLowerCase();
   const resultados = (busquedaNormalizada
@@ -36,17 +43,29 @@ export function ClientesCuentaCorrienteList({ clientes }: ClientesCuentaCorrient
       )}
 
       <div className="flex flex-col gap-2">
-        {resultados.map((cliente) => (
-          <Link
-            key={cliente.id}
-            to="/app/ventas/cuenta-corriente/$clienteId"
-            params={{ clienteId: cliente.id }}
-            className="hover:bg-accent flex items-center justify-between rounded-md border p-3"
-          >
-            <span className="font-medium">{nombreCliente(cliente)}</span>
-            <span className="text-muted-foreground text-xs">{documentoCliente(cliente)}</span>
-          </Link>
-        ))}
+        {resultados.map((cliente) => {
+          const saldo = saldosPorCliente.get(cliente.id);
+          return (
+            <Link
+              key={cliente.id}
+              to="/app/ventas/cuenta-corriente/$clienteId"
+              params={{ clienteId: cliente.id }}
+              className="hover:bg-accent flex items-center justify-between rounded-md border p-3"
+            >
+              <span className="font-medium">{nombreCliente(cliente)}</span>
+              {saldo && (
+                <div className="flex items-center gap-3 text-sm">
+                  {saldo.saldoVencido > 0.01 && (
+                    <span className="text-red-600 dark:text-red-400">
+                      Vencido: {formatoMoneda.format(saldo.saldoVencido)}
+                    </span>
+                  )}
+                  <span className="font-medium">Total: {formatoMoneda.format(saldo.saldoTotal)}</span>
+                </div>
+              )}
+            </Link>
+          );
+        })}
       </div>
     </div>
   );

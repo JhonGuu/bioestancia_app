@@ -23,6 +23,13 @@ export interface Empresa {
   telefono: string | null;
   /** Dirección — se muestra en el encabezado del PDF de boleta. */
   direccion: string | null;
+  /**
+   * Minutos de tolerancia para llegadas tarde — nivel más general de la
+   * cascada de tolerancia del módulo Personal (Empleado > Cargo > Empresa,
+   * ver `docs/plan-personal-asistencia.md` punto 3). Null = sin tolerancia
+   * configurada a nivel empresa (el cálculo de jornada trata eso como 0).
+   */
+  toleranciaTardanzaMinutos: number | null;
   rubro: Rubro;
   activa: boolean;
   createdAt: Date;

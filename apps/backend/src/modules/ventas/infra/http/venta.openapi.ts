@@ -132,4 +132,48 @@ export function registerVentasOpenApi(): void {
       404: { description: "Alguna de las ventas no existe (o no es de esta empresa)" },
     },
   });
+
+  registry.registerPath({
+    method: "patch",
+    path: "/ventas/{id}",
+    tags: ["Ventas"],
+    summary:
+      "Corrige garrón/kg/categoría/comentarios de una línea ya cargada — para arreglar una carga mal " +
+      "hecha. No toca precioKg (ver PATCH /ventas/{id}/precio). Si la venta ya tenía precio y cambia kg, " +
+      "recalcula el total, y si pertenece a una boleta con cobros ya aplicados, re-ajusta el exceso. " +
+      "Admin, contable u operario.",
+    security: [{ bearerAuth: [] }],
+    request: {
+      headers: empresaIdHeaderSchema,
+      params: z.object({ id: z.string().uuid() }),
+      body: { content: { "application/json": { schema: validation.updateItem.body } } },
+    },
+    responses: {
+      200: {
+        description: "Venta actualizada",
+        content: { "application/json": { schema: apiResponseSchema(ventaSchema) } },
+      },
+      403: { description: "No tenés acceso a la empresa activa" },
+      404: { description: "No existe o no pertenece a la empresa activa" },
+    },
+  });
+
+  registry.registerPath({
+    method: "delete",
+    path: "/ventas/{id}",
+    tags: ["Ventas"],
+    summary:
+      "Borra (soft-delete) una línea de venta — si pertenece a una boleta con cobros ya aplicados, " +
+      "re-ajusta el exceso (queda como saldo a favor del cliente). Admin, contable u operario.",
+    security: [{ bearerAuth: [] }],
+    request: {
+      headers: empresaIdHeaderSchema,
+      params: z.object({ id: z.string().uuid() }),
+    },
+    responses: {
+      200: { description: "Venta eliminada" },
+      403: { description: "No tenés acceso a la empresa activa" },
+      404: { description: "No existe o no pertenece a la empresa activa" },
+    },
+  });
 }

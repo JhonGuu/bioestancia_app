@@ -12,21 +12,31 @@ import { ReporteDiarioPdfGenerator } from "@/shared/infra/documents/reporte-diar
 import { ReporteDiarioExcelGenerator } from "@/shared/infra/documents/reporte-diario-excel.generator";
 import { ResumenCuentaPdfGenerator } from "@/shared/infra/documents/resumen-cuenta-pdf.generator";
 import { ResumenCuentaExcelGenerator } from "@/shared/infra/documents/resumen-cuenta-excel.generator";
+import { LocalFileStorage } from "@/shared/infra/storage/local-file-storage";
 import { registerEmpresasModule } from "@/modules/empresas/empresas.module";
 import { registerUsersModule } from "@/modules/users/users.module";
 import { registerListasPreciosModule } from "@/modules/listas-precios/listas-precios.module";
 import { registerClientesModule } from "@/modules/clientes/clientes.module";
 import { registerProveedoresModule } from "@/modules/proveedores/proveedores.module";
+import { registerFrigorificosModule } from "@/modules/frigorificos/frigorificos.module";
 import { registerBoletasModule } from "@/modules/boletas/boletas.module";
 import { registerVentasModule } from "@/modules/ventas/ventas.module";
 import { registerComprasModule } from "@/modules/compras/compras.module";
 import { registerResultadoFaenaModule } from "@/modules/resultado-faena/resultado-faena.module";
 import { registerLiquidacionCompraModule } from "@/modules/liquidacion-compra/liquidacion-compra.module";
+import { registerLiquidacionFaenaModule } from "@/modules/liquidacion-faena/liquidacion-faena.module";
+import { registerInformesComprasModule } from "@/modules/informes-compras/informes-compras.module";
 import { registerPlanificacionCabezasModule } from "@/modules/planificacion-cabezas/planificacion-cabezas.module";
 import { registerChequesModule } from "@/modules/cheques/cheques.module";
 import { registerCargosCuentaCorrienteModule } from "@/modules/cargos-cuenta-corriente/cargos-cuenta-corriente.module";
 import { registerCobrosModule } from "@/modules/cobros/cobros.module";
 import { registerCuentaCorrienteModule } from "@/modules/cuenta-corriente/cuenta-corriente.module";
+import { registerMetasSemanalesModule } from "@/modules/metas-semanales/metas-semanales.module";
+import { registerPorcentajeCobranzaModule } from "@/modules/porcentaje-cobranza/porcentaje-cobranza.module";
+import { registerPersonalModule } from "@/modules/personal/personal.module";
+import { registerInformeCobranzasModule } from "@/modules/informe-cobranzas/informe-cobranzas.module";
+import { registerCabezasModule } from "@/modules/cabezas/cabezas.module";
+import { CobroRepositoryDrizzle } from "@/modules/cobros/infra/repository/cobro.repository";
 
 /**
  * Contenedor central de inyección de dependencias.
@@ -73,21 +83,40 @@ export class DI {
     registerListasPreciosModule(this.container);
     registerClientesModule(this.container);
     registerProveedoresModule(this.container);
+    // `frigorificos` no depende de otros módulos (solo DBConnection) — se
+    // podría registrar en cualquier punto, va acá junto a los otros catálogos
+    // porque `resultado-faena` (más abajo) referencia `frigorificoId`.
+    registerFrigorificosModule(this.container);
+    // `CobroRepository` se bindea ACÁ (suelto, antes de `cobros` como módulo
+    // completo) porque `boletas`/`ventas` necesitan ajustar `AplicacionCobro`
+    // cuando se edita/borra una venta o boleta ya cobrada (ver
+    // `use-cases/ajustar-aplicaciones-boleta.ts` en `modules/cobros/domain`) —
+    // sin este bind temprano, `registerCobrosModule()` (que va después de
+    // `boletas`/`ventas` porque a su vez depende de sus repos) generaría una
+    // dependencia circular en el orden de registro. `CobroRepositoryDrizzle`
+    // solo necesita `DBConnection`, no otro repo — es seguro bindearlo acá.
+    this.container.bind(DI_TYPES.CobroRepository).to(CobroRepositoryDrizzle);
     // `ventas` antes que `compras`: `CerrarCompra` (dentro de compras) inyecta
     // `VentaRepository` para reconciliar cabezas al cerrar una compra. Si
     // `compras` se registrara primero, su `.get()` eager fallaría con
     // "No bindings found for service VentaRepository".
     registerVentasModule(this.container);
     registerComprasModule(this.container);
-    // `resultado-faena` y `liquidacion-compra` inyectan CompraRepository +
-    // CompraCategoriaRepository (bindeados en `compras`) — van después.
+    // `resultado-faena`, `liquidacion-compra` y `liquidacion-faena` inyectan
+    // CompraRepository + CompraCategoriaRepository (bindeados en `compras`)
+    // — van después. Los tres son independientes entre sí.
     registerResultadoFaenaModule(this.container);
     registerLiquidacionCompraModule(this.container);
+    registerLiquidacionFaenaModule(this.container);
     // `boletas` inyecta VentaRepository (bindeado en `ventas`) y
     // CompraRepository (bindeado en `compras`) desde que `CreateBoleta`
     // puede crear las ventas de sus ítems en el mismo request — va después
     // de ambos.
     registerBoletasModule(this.container);
+    // `informes-compras` compone CompraRepository + LiquidacionCompraRepository
+    // + LiquidacionFaenaRepository + VentaRepository al vuelo (sin tabla
+    // propia) — va después de que los cuatro ya estén bindeados.
+    registerInformesComprasModule(this.container);
     // `planificacion-cabezas` inyecta ClienteRepository (bindeado en
     // `clientes`) y VentaRepository (bindeado en `ventas`) — va después de
     // ambos.
@@ -109,6 +138,22 @@ export class DI {
     // boletas + ventas + cobros + cargos al vuelo (ver `ObtenerSaldoCliente`)
     // — va después de todos.
     registerCuentaCorrienteModule(this.container);
+    // `metas-semanales` no tiene repositorio propio — agrega clientes +
+    // ventas al vuelo, mismo criterio que `cuenta-corriente` — va después de ambos.
+    registerMetasSemanalesModule(this.container);
+    // `porcentaje-cobranza` no tiene repositorio propio — agrega clientes +
+    // boletas + ventas + cobros + cargos al vuelo, mismo criterio que
+    // `cuenta-corriente` — va después de todos esos.
+    registerPorcentajeCobranzaModule(this.container);
+    // `personal` (Cargo/Empleado/HorarioEmpleado) no depende de otros
+    // módulos de negocio (solo DBConnection + FileStorage, bindeado en
+    // `registerSharedInfra`) — puede ir en cualquier punto.
+    registerPersonalModule(this.container);
+    // `informe-cobranzas` no tiene repositorio propio — agrega empresas +
+    // clientes + cobros + cheques al vuelo, mismo criterio que
+    // `cuenta-corriente` — va después de todos esos.
+    registerInformeCobranzasModule(this.container);
+    registerCabezasModule(this.container);
     // Cuando agregues un módulo nuevo (ej. granjas, sanidad, planificación):
     // registerNuevoModulo(this.container);
   }
@@ -139,5 +184,9 @@ export class DI {
     this.container.bind(DI_TYPES.ReporteDiarioExcelGenerator).to(ReporteDiarioExcelGenerator);
     this.container.bind(DI_TYPES.ResumenCuentaPdfGenerator).to(ResumenCuentaPdfGenerator);
     this.container.bind(DI_TYPES.ResumenCuentaExcelGenerator).to(ResumenCuentaExcelGenerator);
+
+    // Almacenamiento de archivos subidos (ej. copia de DNI del legajo de
+    // Empleado) — implementación en disco local, ver `LocalFileStorage`.
+    this.container.bind(DI_TYPES.FileStorage).to(LocalFileStorage);
   }
 }

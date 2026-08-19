@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Loader2, Plus } from "lucide-react";
+import { ArrowLeft, FileBarChart, Loader2, Plus } from "lucide-react";
 
 import { useCobros } from "@/modules/cobros/hooks/use-cobros";
 import { useClientes } from "@/modules/clientes/hooks/use-clientes";
@@ -33,12 +33,21 @@ function CobrosPage() {
             Pagos cargados de clientes — se aplican a boletas pendientes automáticamente (más antigua primero).
           </p>
         </div>
-        <Button asChild>
-          <Link to="/app/ventas/cobros/nuevo">
-            <Plus className="size-4" />
-            Nuevo cobro
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <Link to="/app/ventas/cobros/informe">
+              <FileBarChart className="size-4" />
+              <span className="hidden sm:inline">Informe de cobranzas</span>
+              <span className="sm:hidden">Informe</span>
+            </Link>
+          </Button>
+          <Button asChild>
+            <Link to="/app/ventas/cobros/nuevo">
+              <Plus className="size-4" />
+              Nuevo cobro
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <Card>

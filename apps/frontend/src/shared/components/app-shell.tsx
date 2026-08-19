@@ -3,12 +3,14 @@ import { Link, Outlet, useNavigate } from "@tanstack/react-router";
 import {
   Building2,
   CalendarClock,
+  Contact,
   LogOut,
   Menu,
   Receipt,
   Settings,
   ShoppingCart,
   Truck,
+  UserCog,
   Users,
   Wallet,
 } from "lucide-react";
@@ -60,9 +62,21 @@ const NAV_ITEMS = [
     roles: [Roles.ADMIN, Roles.CONTABLE],
   },
   {
+    to: "/app/personal" as const,
+    label: "Personal",
+    icon: Contact,
+    roles: [Roles.ADMIN, Roles.CONTABLE],
+  },
+  {
     to: "/app/empresa" as const,
     label: "Datos de la empresa",
     icon: Settings,
+    roles: [Roles.ADMIN],
+  },
+  {
+    to: "/app/usuarios" as const,
+    label: "Usuarios",
+    icon: UserCog,
     roles: [Roles.ADMIN],
   },
 ];
@@ -123,7 +137,7 @@ export function AppShell() {
 
           <div className="flex min-w-0 items-center gap-2 font-semibold">
             {brandCompany ? (
-              <BrandLogo company={brandCompany} className="h-60 w-60 shrink-0" />
+              <BrandLogo company={brandCompany} className="shrink-0" />
             ) : (
               <>
                 <Building2 className="size-5 shrink-0" />
@@ -150,7 +164,12 @@ export function AppShell() {
           <NavLinks rol={auth.empresaActiva?.rol} />
         </nav>
 
-        <main className="flex-1 p-4 md:p-6">
+        {/* `min-w-0`: sin esto, un ítem flex no se achica por debajo del ancho
+            intrínseco de su contenido (default `min-width: auto`) — una tabla
+            ancha adentro (ej. porcentaje-cobranza) empujaba TODO el layout
+            (sidebar incluido) en vez de scrollear dentro de su propio
+            contenedor `overflow-auto`. */}
+        <main className="min-w-0 flex-1 p-4 md:p-6">
           <Outlet />
         </main>
       </div>

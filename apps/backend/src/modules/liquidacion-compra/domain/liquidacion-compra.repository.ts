@@ -6,6 +6,9 @@ export interface LiquidacionCompraRepository {
   /** Una compra tiene a lo sumo una liquidación (relación 1 a 1). */
   getByCompraId(compraId: string, empresaId: string): Promise<LiquidacionCompra | null>;
 
+  /** Todas las liquidaciones de la empresa — la usa `informes-compras` para no hacer N+1 por tropa. */
+  list(empresaId: string): Promise<LiquidacionCompra[]>;
+
   create(input: CreateLiquidacionCompraInput): Promise<LiquidacionCompra>;
 
   /**

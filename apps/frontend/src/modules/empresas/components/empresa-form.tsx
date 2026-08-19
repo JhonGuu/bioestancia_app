@@ -3,7 +3,15 @@ import { zodResolver } from "@hookform/resolvers/zod";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import {
   updateEmpresaSchema,
   type UpdateEmpresaFormValues,
@@ -29,6 +37,8 @@ export function EmpresaForm({ empresa, onSubmit, isSubmitting }: EmpresaFormProp
       cuit: empresa.cuit ?? "",
       telefono: empresa.telefono ?? "",
       direccion: empresa.direccion ?? "",
+      toleranciaTardanzaMinutos:
+        empresa.toleranciaTardanzaMinutos != null ? String(empresa.toleranciaTardanzaMinutos) : "",
     },
   });
 
@@ -40,7 +50,7 @@ export function EmpresaForm({ empresa, onSubmit, isSubmitting }: EmpresaFormProp
           <span className="text-sm font-medium">{empresa.razonSocial}</span>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField
             control={form.control}
             name="cuit"
@@ -78,6 +88,31 @@ export function EmpresaForm({ empresa, onSubmit, isSubmitting }: EmpresaFormProp
               <FormControl>
                 <Input placeholder="Ruta 5 Km 120, Tandil, Buenos Aires" {...field} />
               </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="toleranciaTardanzaMinutos"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Tolerancia de tardanza general (minutos)</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  min={0}
+                  max={180}
+                  placeholder="Ej. 10"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </FormControl>
+              <FormDescription>
+                Se usa para el cálculo de asistencia cuando el cargo o el empleado no tienen una
+                tolerancia propia configurada.
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}

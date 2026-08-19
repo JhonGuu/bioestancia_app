@@ -21,6 +21,12 @@ export interface SignUpInput {
   firstName: string;
   lastName: string;
   phoneNumber?: string;
+  /**
+   * Default `false`. Se usa `true` cuando el admin crea el usuario con una
+   * contraseña temporal generada por el sistema (ver `POST /account/users`),
+   * para forzar que la cambie en su primer login.
+   */
+  mustChangePassword?: boolean;
 }
 
 @injectable()
@@ -56,6 +62,7 @@ export class SignUp {
       firstName: input.firstName,
       lastName: input.lastName,
       phoneNumber: input.phoneNumber ?? null,
+      mustChangePassword: input.mustChangePassword ?? false,
     });
 
     this.logger.info({ userId: created.id }, "User signed up");

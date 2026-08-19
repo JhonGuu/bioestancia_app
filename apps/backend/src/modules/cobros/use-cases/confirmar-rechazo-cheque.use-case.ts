@@ -13,12 +13,22 @@ import { calcularMontoComisionRechazo } from "@/modules/cobros/domain/calcular-c
 export interface ConfirmarRechazoChequeInput {
   chequeId: string;
   empresaId: string;
-  /** Permite ajustar el monto sugerido (7% del cheque) antes de confirmar. Si no viene, se usa el sugerido. */
+  /**
+   * Permite ajustar el monto sugerido (7% del cheque) antes de confirmar. Si
+   * no viene, se usa el sugerido. `0` (o `undefined` con `sinComision:
+   * true`) omite la comisión — pensado para cuando el cliente cancela el
+   * cheque el mismo día y no corresponde cargarle nada.
+   */
   comision?: number;
+  /** El cliente canceló el cheque el mismo día — no aplicar la comisión del 7%, aunque no se haya mandado `comision`. */
+  sinComision?: boolean;
 }
 
 export interface ResultadoConfirmarRechazoCheque {
-  cargo: CargoCuentaCorriente;
+  /** Cargo de la comisión del 7% — `null` si se omitió (`sinComision`/`comision: 0`). */
+  cargoComision: CargoCuentaCorriente | null;
+  /** Línea informativa "Cheque rechazo Nº: X" — siempre se crea, con comisión o sin ella. */
+  cargoRechazo: CargoCuentaCorriente;
   /** Cuánto se pudo revertir realmente de lo aplicado a boletas (puede ser menor al monto del cheque si ya no quedaba tanto aplicado). */
   montoRevertido: number;
 }
@@ -57,9 +67,13 @@ export class ConfirmarRechazoCheque {
       throw new ApiError("El cheque no está marcado como rechazado", Code.BAD_REQUEST);
     }
 
+    // Marcador de idempotencia: CHEQUE_RECHAZADO se crea siempre (con
+    // comisión o sin ella), a diferencia de COMISION_RECHAZO que ahora es
+    // opcional — por eso el chequeo de "ya confirmado" tiene que mirar este
+    // tipo, no el de la comisión.
     const existente = await this.cargoCuentaCorrienteRepository.getByChequeYTipo(
       input.chequeId,
-      TipoCargo.COMISION_RECHAZO,
+      TipoCargo.CHEQUE_RECHAZADO,
       input.empresaId,
     );
     if (existente) {
@@ -68,22 +82,31 @@ export class ConfirmarRechazoCheque {
 
     const montoRevertido = await this.revertirAplicaciones(cheque.clienteId, input.empresaId, cheque.monto);
 
-    const comision = input.comision ?? calcularMontoComisionRechazo(cheque.monto);
-    if (comision <= 0) {
-      throw new ApiError("El monto de la comisión tiene que ser mayor a cero", Code.BAD_REQUEST);
-    }
-
-    const cargo = await this.cargoCuentaCorrienteRepository.create({
+    const cargoRechazo = await this.cargoCuentaCorrienteRepository.create({
       empresaId: input.empresaId,
       clienteId: cheque.clienteId,
-      tipo: TipoCargo.COMISION_RECHAZO,
-      monto: comision,
+      tipo: TipoCargo.CHEQUE_RECHAZADO,
+      monto: montoRevertido,
       chequeId: cheque.id,
-      motivo: `Comisión por cheque Nº ${cheque.numero} rechazado`,
+      motivo: `Cheque rechazo Nº: ${cheque.numero}`,
       fecha: new Date(),
     });
 
-    return { cargo, montoRevertido };
+    let cargoComision: CargoCuentaCorriente | null = null;
+    const comision = input.sinComision ? 0 : (input.comision ?? calcularMontoComisionRechazo(cheque.monto));
+    if (comision > 0) {
+      cargoComision = await this.cargoCuentaCorrienteRepository.create({
+        empresaId: input.empresaId,
+        clienteId: cheque.clienteId,
+        tipo: TipoCargo.COMISION_RECHAZO,
+        monto: comision,
+        chequeId: cheque.id,
+        motivo: `Comisión cheque rechazado Nº: ${cheque.numero}`,
+        fecha: new Date(),
+      });
+    }
+
+    return { cargoComision, cargoRechazo, montoRevertido };
   }
 
   /** Deshace, más reciente primero, hasta `monto` de lo aplicado a boletas de este cliente. Devuelve cuánto pudo revertir. */

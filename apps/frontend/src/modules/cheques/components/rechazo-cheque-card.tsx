@@ -26,6 +26,7 @@ export function RechazoChequeCard({ chequeId, estado }: RechazoChequeCardProps) 
   const sugerenciaQuery = useSugerenciaRechazoCheque(chequeId, estado);
   const confirmar = useConfirmarRechazoCheque();
   const [comision, setComision] = useState("");
+  const [sinComision, setSinComision] = useState(false);
 
   useEffect(() => {
     if (sugerenciaQuery.data && !sugerenciaQuery.data.yaConfirmado) {
@@ -50,17 +51,26 @@ export function RechazoChequeCard({ chequeId, estado }: RechazoChequeCardProps) 
   const sugerencia = sugerenciaQuery.data;
 
   function handleConfirmar() {
-    const comisionNumero = Number(comision);
-    if (!comision || Number.isNaN(comisionNumero) || comisionNumero <= 0) {
-      toast.error("Ingresá una comisión válida");
+    if (sinComision) {
+      confirmarConValores(undefined, true);
       return;
     }
+    const comisionNumero = Number(comision);
+    if (!comision || Number.isNaN(comisionNumero) || comisionNumero <= 0) {
+      toast.error("Ingresá una comisión válida (o tildá \"sin comisión\")");
+      return;
+    }
+    confirmarConValores(comisionNumero, false);
+  }
+
+  function confirmarConValores(comisionNumero: number | undefined, sinComisionFlag: boolean) {
     confirmar.mutate(
-      { chequeId, comision: comisionNumero },
+      { chequeId, comision: comisionNumero, sinComision: sinComisionFlag },
       {
         onSuccess: (resultado) => {
           toast.success(
-            `Rechazo confirmado — se revirtieron ${formatoMoneda.format(resultado.montoRevertido)} de boletas`,
+            `Rechazo confirmado — se revirtieron ${formatoMoneda.format(resultado.montoRevertido)} de boletas` +
+              (resultado.cargoComision ? "" : " (sin comisión)"),
           );
         },
         onError: (err) => {
@@ -86,23 +96,34 @@ export function RechazoChequeCard({ chequeId, estado }: RechazoChequeCardProps) 
             Rechazo ya confirmado
           </Badge>
         ) : (
-          <div className="flex flex-wrap items-end gap-2">
-            <div className="space-y-1">
-              <label className="text-muted-foreground text-xs font-medium">
-                Comisión ({sugerencia.porcentajeComision * 100}% sugerida)
-              </label>
-              <Input
-                type="number"
-                inputMode="decimal"
-                step="0.01"
-                className="w-32"
-                value={comision}
-                onChange={(e) => setComision(e.target.value)}
-              />
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="space-y-1">
+                <label className="text-muted-foreground text-xs font-medium">
+                  Comisión ({sugerencia.porcentajeComision * 100}% sugerida)
+                </label>
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  step="0.01"
+                  className="w-32"
+                  value={comision}
+                  disabled={sinComision}
+                  onChange={(e) => setComision(e.target.value)}
+                />
+              </div>
+              <Button size="sm" variant="destructive" onClick={handleConfirmar} disabled={confirmar.isPending}>
+                {confirmar.isPending ? "Guardando..." : "Confirmar rechazo"}
+              </Button>
             </div>
-            <Button size="sm" variant="destructive" onClick={handleConfirmar} disabled={confirmar.isPending}>
-              {confirmar.isPending ? "Guardando..." : "Confirmar rechazo"}
-            </Button>
+            <label className="flex items-center gap-2 text-xs">
+              <input
+                type="checkbox"
+                checked={sinComision}
+                onChange={(e) => setSinComision(e.target.checked)}
+              />
+              El cliente canceló el cheque el mismo día — no aplicar comisión
+            </label>
           </div>
         )}
       </CardContent>

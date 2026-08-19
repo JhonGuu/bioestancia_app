@@ -13,9 +13,22 @@ const itemBody = z
     garron: z.coerce.number().int().positive().optional(),
     formaVenta: z.nativeEnum(FormaVenta),
     categoria: categoriaVentaSchema.optional(),
-    kg: z.coerce.number().positive("kg tiene que ser mayor a 0"),
+    // Solo "compensación de kg" puede ir en negativo (y siempre lo es) — ver ventas/infra/http/validation.ts.
+    kg: z.coerce.number(),
     clienteFinalId: z.string().uuid("clienteFinalId inválido").optional(),
     comentarios: z.string().max(255).optional(),
+  })
+  .refine((data) => data.formaVenta === FormaVenta.COMPENSACION_KG || data.kg > 0, {
+    message: "kg tiene que ser mayor a 0 (excepto en compensación de kg, que siempre es negativa)",
+    path: ["kg"],
+  })
+  // Una compensación SIEMPRE resta — no existe el caso "agregado" (kg
+  // positivo). El operario tipea la magnitud en positivo, el frontend la
+  // manda ya en negativo (ver `boletas.api.ts`); esto es la última barrera
+  // defensiva del lado del servidor.
+  .refine((data) => data.formaVenta !== FormaVenta.COMPENSACION_KG || data.kg < 0, {
+    message: "La compensación tiene que ser negativa",
+    path: ["kg"],
   })
   // Mismas reglas que /ventas (ver infra/http/validation.ts de ese módulo):
   // categoría siempre excepto compensación; compraId excepto compensación o
@@ -63,6 +76,14 @@ const reporteDiarioQuery = z.object({
   fecha: z.coerce.date(),
 });
 
+// Corrige fecha/número/comentarios de una boleta ya cargada — para arreglar
+// una carga mal hecha. Todos opcionales: el caller manda solo lo que cambió.
+const updateBody = z.object({
+  fecha: z.coerce.date().optional(),
+  numero: z.string().max(50).nullable().optional(),
+  comentarios: z.string().max(255).nullable().optional(),
+});
+
 @injectable()
 export class BoletaValidation {
   create = { body: createBody };
@@ -72,4 +93,8 @@ export class BoletaValidation {
   pdf = { params: idParams };
 
   reporteDiario = { query: reporteDiarioQuery };
+
+  update = { params: idParams, body: updateBody };
+
+  delete = { params: idParams };
 }

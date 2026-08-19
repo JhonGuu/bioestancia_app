@@ -36,6 +36,8 @@ export interface User {
   lastName: string;
   phoneNumber: string | null;
   isActive: boolean;
+  /** Si está en `true`, hay que cambiar la contraseña antes de operar la app (ver `ForcedChangePasswordScreen`). */
+  mustChangePassword: boolean;
   createdAt: string;
 }
 
@@ -55,4 +57,9 @@ export interface SignInInput {
 export interface SignInOutput {
   token: string;
   empresas: EmpresaAcceso[];
+}
+
+export interface ChangePasswordInput {
+  currentPassword: string;
+  newPassword: string;
 }

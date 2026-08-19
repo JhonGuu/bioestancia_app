@@ -1,4 +1,7 @@
 import type { Boleta } from "@/modules/boletas/domain/boleta.types";
+import { hoyISO } from "@/shared/lib/date";
+
+export { hoyISO };
 
 /**
  * Objeto `as const` en vez de `enum` (ver comentario en `auth.types.ts`).
@@ -20,20 +23,20 @@ export const PERIODO_FILTRO_LABELS: Record<PeriodoFiltro, string> = {
   [PeriodoFiltro.TODAS]: "Todas",
 };
 
-/** Fecha de hoy en formato "YYYY-MM-DD", calendario UTC (ver comentario abajo). */
-export function hoyISO(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
 /**
  * Todas las comparaciones de fecha acá usan los getters UTC (`getUTCFullYear`,
- * etc.), no los locales — a propósito, para ser consistentes con cómo el
- * resto del módulo boletas maneja `fecha`: tanto `hoyISO()` (acá y en
- * `boleta-form.tsx`) como lo que devuelve un `<input type="date">` son
- * calendario UTC ("YYYY-MM-DD" sin hora), y `Boleta.fecha` viaja igual desde
- * el backend. Si se mezclaran getters locales acá, en cualquier huso horario
- * distinto de UTC (como Argentina, UTC-3) una boleta cargada "hoy" podría
- * filtrarse como si fuera de ayer.
+ * etc.), no los locales — a propósito, para ser consistentes con cómo viaja
+ * `Boleta.fecha` desde el backend: un `<input type="date">` da "YYYY-MM-DD"
+ * (calendario, sin hora), que al mandarse al backend se guarda como
+ * medianoche UTC de ESE día — así que para comparar/filtrar hay que leer esa
+ * fecha con los getters UTC, no los locales (si no, en cualquier huso horario
+ * distinto de UTC, como Argentina, una boleta cargada "hoy" podría filtrarse
+ * como si fuera de ayer).
+ *
+ * OJO, esto es distinto de `hoyISO()` (ver `@/shared/lib/date`): esa función
+ * calcula qué día calendario ES HOY, y para eso sí tiene que usar la hora
+ * LOCAL del que está mirando la pantalla (si usara getters UTC, en Argentina
+ * de noche mostraría el día de mañana).
  */
 function mismoDiaUTC(a: Date, b: Date): boolean {
   return (

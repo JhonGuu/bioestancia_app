@@ -24,6 +24,21 @@ export interface BoletaRepository {
   listByCliente(clienteId: string, empresaId: string): Promise<Boleta[]>;
 
   create(input: CreateBoletaInput): Promise<Boleta>;
+
+  /**
+   * Corrige fecha/número/comentarios de una boleta ya cargada — pensado para
+   * arreglar una carga mal hecha (ver `use-cases/update-boleta.use-case.ts`).
+   * `fechaVencimiento` se recalcula en el use-case si `fecha` cambia.
+   */
+  update(id: string, empresaId: string, input: UpdateBoletaInput): Promise<Boleta>;
+
+  /**
+   * Soft-delete: marca `activo=false`, no borra la fila (mismo criterio que
+   * `ClienteRepository.delete`) — las `ventas` de esta boleta se desactivan
+   * aparte (ver `use-cases/delete-boleta.use-case.ts`). Tira NOT_FOUND si no
+   * existe (o no es de esta empresa).
+   */
+  delete(id: string, empresaId: string): Promise<void>;
 }
 
 export interface CreateBoletaInput {
@@ -34,4 +49,11 @@ export interface CreateBoletaInput {
   fechaVencimiento: Date;
   numero?: string;
   comentarios?: string;
+}
+
+export interface UpdateBoletaInput {
+  fecha?: Date;
+  fechaVencimiento?: Date | null;
+  numero?: string | null;
+  comentarios?: string | null;
 }

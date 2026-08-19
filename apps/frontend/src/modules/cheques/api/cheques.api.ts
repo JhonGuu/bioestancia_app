@@ -21,8 +21,12 @@ export const chequesApi = {
     return unwrap(httpClient.get(`/cheques/${id}`));
   },
 
-  actualizarEstado(id: string, estado: EstadoCheque, motivoRechazo?: string): Promise<Cheque> {
-    return unwrap(httpClient.patch(`/cheques/${id}/estado`, { estado, motivoRechazo }));
+  actualizarEstado(
+    id: string,
+    estado: EstadoCheque,
+    extra?: { motivoRechazo?: string; endosadoA?: string; fechaEndoso?: string },
+  ): Promise<Cheque> {
+    return unwrap(httpClient.patch(`/cheques/${id}/estado`, { estado, ...extra }));
   },
 
   // Las 4 acciones de recargo/rechazo viven bajo /cobros en el backend (ver comentario en cargo-cheque.types.ts).
@@ -38,7 +42,11 @@ export const chequesApi = {
     return unwrap(httpClient.get(`/cobros/cheques/${chequeId}/sugerencia-rechazo`));
   },
 
-  confirmarRechazo(chequeId: string, comision?: number): Promise<ResultadoConfirmarRechazoCheque> {
-    return unwrap(httpClient.post(`/cobros/cheques/${chequeId}/confirmar-rechazo`, { comision }));
+  confirmarRechazo(
+    chequeId: string,
+    comision?: number,
+    sinComision?: boolean,
+  ): Promise<ResultadoConfirmarRechazoCheque> {
+    return unwrap(httpClient.post(`/cobros/cheques/${chequeId}/confirmar-rechazo`, { comision, sinComision }));
   },
 };

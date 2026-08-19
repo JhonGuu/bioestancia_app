@@ -16,7 +16,21 @@ const userSchema = z.object({
   lastName: z.string(),
   phoneNumber: z.string().nullable(),
   isActive: z.boolean(),
+  mustChangePassword: z.boolean(),
   createdAt: z.string().datetime(),
+});
+
+const usuarioConAccesoSchema = z.object({
+  usuarioId: z.string().uuid(),
+  email: z.string().email(),
+  username: z.string(),
+  firstName: z.string(),
+  lastName: z.string(),
+  phoneNumber: z.string().nullable(),
+  isActive: z.boolean(),
+  mustChangePassword: z.boolean(),
+  rol: z.string(),
+  accesoDesde: z.string().datetime(),
 });
 
 const empresaAccesoSchema = z.object({
@@ -114,7 +128,7 @@ export function registerUsersOpenApi(): void {
     path: "/account/users",
     tags: ["Usuarios y accesos (admin)"],
     summary:
-      "Crea un usuario NUEVO y le otorga acceso a la empresa activa (X-Empresa-Id) con un rol. Solo admin de esa empresa.",
+      "Crea un usuario NUEVO y le otorga acceso a la empresa activa (X-Empresa-Id) con un rol. Solo admin de esa empresa. La contraseña la genera el sistema y se devuelve una sola vez.",
     security: [{ bearerAuth: [] }],
     request: {
       headers: empresaIdHeaderSchema,
@@ -125,7 +139,13 @@ export function registerUsersOpenApi(): void {
         description: "Usuario creado y acceso otorgado",
         content: {
           "application/json": {
-            schema: apiResponseSchema(z.object({ user: userSchema, acceso: usuarioEmpresaSchema })),
+            schema: apiResponseSchema(
+              z.object({
+                user: userSchema,
+                acceso: usuarioEmpresaSchema,
+                temporaryPassword: z.string(),
+              }),
+            ),
           },
         },
       },
@@ -135,11 +155,47 @@ export function registerUsersOpenApi(): void {
   });
 
   registry.registerPath({
+    method: "get",
+    path: "/account/users",
+    tags: ["Usuarios y accesos (admin)"],
+    summary: "Lista los usuarios con acceso a la empresa activa (X-Empresa-Id), con su rol. Solo admin.",
+    security: [{ bearerAuth: [] }],
+    request: { headers: empresaIdHeaderSchema },
+    responses: {
+      200: {
+        description: "OK",
+        content: { "application/json": { schema: apiResponseSchema(z.array(usuarioConAccesoSchema)) } },
+      },
+      403: { description: "No sos admin de la empresa activa" },
+    },
+  });
+
+  registry.registerPath({
+    method: "patch",
+    path: "/account/users/{userId}/estado",
+    tags: ["Usuarios y accesos (admin)"],
+    summary:
+      "Activa o desactiva un usuario con acceso a la empresa activa (X-Empresa-Id). Solo admin. No podés desactivarte a vos mismo.",
+    security: [{ bearerAuth: [] }],
+    request: {
+      headers: empresaIdHeaderSchema,
+      params: z.object({ userId: z.string().uuid() }),
+      body: { content: { "application/json": { schema: z.object({ isActive: z.boolean() }) } } },
+    },
+    responses: {
+      200: { description: "Estado actualizado" },
+      400: { description: "No podés desactivarte a vos mismo" },
+      403: { description: "No sos admin de la empresa activa" },
+      404: { description: "Ese usuario no tiene acceso a esta empresa" },
+    },
+  });
+
+  registry.registerPath({
     method: "post",
     path: "/account/access",
     tags: ["Usuarios y accesos (admin)"],
     summary:
-      "Otorga acceso a la empresa activa (X-Empresa-Id) a un usuario que YA EXISTE, buscado por email. Solo admin de esa empresa.",
+      "Otorga acceso a la empresa activa (X-Empresa-Id) a un usuario que YA EXISTE, buscado por email. También se usa para editar el rol de un usuario que ya tiene acceso. Solo admin de esa empresa.",
     security: [{ bearerAuth: [] }],
     request: {
       headers: empresaIdHeaderSchema,
@@ -147,11 +203,27 @@ export function registerUsersOpenApi(): void {
     },
     responses: {
       201: {
-        description: "Acceso otorgado",
+        description: "Acceso otorgado (o rol actualizado, si ya tenía acceso)",
         content: { "application/json": { schema: apiResponseSchema(usuarioEmpresaSchema) } },
       },
       403: { description: "No sos admin de la empresa activa" },
       404: { description: "No existe un usuario con ese email" },
+    },
+  });
+
+  registry.registerPath({
+    method: "post",
+    path: "/account/change-password",
+    tags: ["Auth"],
+    summary:
+      "Cambia la contraseña del usuario autenticado. Requerido antes de operar cualquier ruta de empresa si mustChangePassword está en true.",
+    security: [{ bearerAuth: [] }],
+    request: {
+      body: { content: { "application/json": { schema: validation.changePassword.body } } },
+    },
+    responses: {
+      200: { description: "Contraseña actualizada" },
+      401: { description: "La contraseña actual no es correcta" },
     },
   });
 }

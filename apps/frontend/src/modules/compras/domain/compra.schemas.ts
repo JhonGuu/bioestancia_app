@@ -1,6 +1,12 @@
 import { z } from "zod";
 
 import { CategoriaPorcino, EspecieAnimal, RazaPorcino } from "@/modules/compras/domain/compra.types";
+import {
+  DTE_MENSAJE_FORMATO,
+  DTE_REGEX,
+  REMITO_MENSAJE_FORMATO,
+  REMITO_REGEX,
+} from "@/modules/compras/domain/formato-documentos";
 
 /**
  * Espejo de `CompraValidation.create` en el backend
@@ -25,8 +31,14 @@ export const createCompraSchema = z.object({
   especie: z.nativeEnum(EspecieAnimal, { message: "Elegí una especie" }),
   letra: z.string().min(1).max(5).optional().or(z.literal("")),
   fecha: z.string().min(1, "La fecha es obligatoria"),
-  dte: z.string().min(1, "DTE requerido").max(50),
-  remito: z.string().min(1, "Remito requerido").max(50),
+  dte: z.string().min(1, "DTE requerido").regex(DTE_REGEX, DTE_MENSAJE_FORMATO),
+  remito: z.string().min(1, "Remito requerido").regex(REMITO_REGEX, REMITO_MENSAJE_FORMATO),
+  // $/kg en pie negociado con el proveedor para esta tropa — opcional.
+  precioCompraKg: z
+    .string()
+    .optional()
+    .or(z.literal(""))
+    .refine((v) => !v || (!isNaN(Number(v)) && Number(v) > 0), "Tiene que ser un número mayor a 0"),
   porcentajeDesbaste: z
     .string()
     .optional()
@@ -64,8 +76,13 @@ export const updateCompraSchema = z.object({
   numero: z.string().min(1, "Número requerido").max(50),
   letra: z.string().min(1).max(5).optional().or(z.literal("")),
   fecha: z.string().min(1, "La fecha es obligatoria"),
-  dte: z.string().min(1, "DTE requerido").max(50),
-  remito: z.string().min(1, "Remito requerido").max(50),
+  dte: z.string().min(1, "DTE requerido").regex(DTE_REGEX, DTE_MENSAJE_FORMATO),
+  remito: z.string().min(1, "Remito requerido").regex(REMITO_REGEX, REMITO_MENSAJE_FORMATO),
+  precioCompraKg: z
+    .string()
+    .optional()
+    .or(z.literal(""))
+    .refine((v) => !v || (!isNaN(Number(v)) && Number(v) > 0), "Tiene que ser un número mayor a 0"),
   porcentajeDesbaste: z
     .string()
     .optional()

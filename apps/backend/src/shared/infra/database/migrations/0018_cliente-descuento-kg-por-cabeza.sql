@@ -1,0 +1,1 @@
+ALTER TABLE "clientes" ADD COLUMN "descuento_kg_por_cabeza" numeric(6, 2);

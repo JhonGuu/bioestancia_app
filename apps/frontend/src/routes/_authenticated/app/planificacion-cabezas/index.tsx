@@ -12,6 +12,8 @@ import { usePlanificacionCabezas } from "@/modules/planificacion-cabezas/hooks/u
 import { useUpsertPlanificacionCabezas } from "@/modules/planificacion-cabezas/hooks/use-upsert-planificacion-cabezas";
 import { PlanificacionCabezasTable } from "@/modules/planificacion-cabezas/components/planificacion-cabezas-table";
 import { PlanificacionCabezasResumenMensual } from "@/modules/planificacion-cabezas/components/planificacion-cabezas-resumen-mensual";
+import { useStockTropas } from "@/modules/compras/hooks/use-stock-tropas";
+import { StockTropasResumenCard } from "@/modules/compras/components/stock-tropas-resumen-card";
 import {
   etiquetaPeriodoActual,
   etiquetaRango,
@@ -69,6 +71,7 @@ function PlanificacionCabezasPage() {
   }, [rango]);
 
   const clientesQuery = useClientes();
+  const stockTropasQuery = useStockTropas();
   const filasQuery = usePlanificacionCabezas(formatoISO(rango.desde), formatoISO(rango.hasta));
   const filasAnteriorQuery = usePlanificacionCabezas(
     formatoISO(rangoAnt.desde),
@@ -168,6 +171,10 @@ function PlanificacionCabezasPage() {
           saber cuánto pedirle a los proveedores.
         </p>
       </div>
+
+      {!stockTropasQuery.isPending && !stockTropasQuery.error && (
+        <StockTropasResumenCard tropas={stockTropasQuery.data ?? []} />
+      )}
 
       <Card>
         <CardContent className="space-y-4">

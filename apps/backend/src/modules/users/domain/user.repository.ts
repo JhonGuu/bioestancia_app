@@ -25,6 +25,16 @@ export interface UserRepository {
 
   /** Actualiza el campo `last_login_at` con `now()`. Lo llama el use-case de SignIn. */
   updateLastLogin(userId: string): Promise<void>;
+
+  /** Activa o desactiva el usuario (login bloqueado si `isActive: false`). */
+  setActive(userId: string, isActive: boolean): Promise<void>;
+
+  /**
+   * Actualiza el hash de contraseña y apaga `mustChangePassword`. Lo llama
+   * `ChangePassword` — cambiar la contraseña siempre limpia el flag, sea un
+   * cambio forzado (primer login) o voluntario.
+   */
+  updatePassword(userId: string, passwordHash: string): Promise<void>;
 }
 
 /**
@@ -38,4 +48,6 @@ export interface CreateUserInput {
   firstName: string;
   lastName: string;
   phoneNumber: string | null;
+  /** Default `false`. Ver `User.mustChangePassword`. */
+  mustChangePassword?: boolean;
 }

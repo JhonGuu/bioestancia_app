@@ -60,6 +60,11 @@ export class ClienteRepositoryDrizzle implements ClienteRepository {
         condicionFiscal: input.condicionFiscal,
         esRevendedor: input.esRevendedor ?? false,
         diasPlazoPago: input.diasPlazoPago ?? null,
+        descuentoKgPorCabeza:
+          input.descuentoKgPorCabeza !== undefined && input.descuentoKgPorCabeza !== null
+            ? String(input.descuentoKgPorCabeza)
+            : null,
+        metaCabezasSemanales: input.metaCabezasSemanales ?? null,
       })
       .returning();
     if (!row) {
@@ -86,6 +91,11 @@ export class ClienteRepositoryDrizzle implements ClienteRepository {
         condicionFiscal: input.condicionFiscal,
         esRevendedor: input.esRevendedor ?? false,
         diasPlazoPago: input.diasPlazoPago ?? null,
+        descuentoKgPorCabeza:
+          input.descuentoKgPorCabeza !== undefined && input.descuentoKgPorCabeza !== null
+            ? String(input.descuentoKgPorCabeza)
+            : null,
+        metaCabezasSemanales: input.metaCabezasSemanales ?? null,
         updatedAt: new Date(),
       })
       .where(and(eq(clientes.id, id), eq(clientes.empresaId, empresaId), isNull(clientes.deletedAt)))
@@ -125,6 +135,8 @@ export class ClienteRepositoryDrizzle implements ClienteRepository {
       condicionFiscal: row.condicionFiscal as CondicionFiscal,
       esRevendedor: row.esRevendedor,
       diasPlazoPago: row.diasPlazoPago,
+      descuentoKgPorCabeza: row.descuentoKgPorCabeza !== null ? Number(row.descuentoKgPorCabeza) : null,
+      metaCabezasSemanales: row.metaCabezasSemanales,
       activo: row.activo,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,

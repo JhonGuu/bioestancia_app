@@ -3,21 +3,29 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useActualizarEstadoCheque } from "@/modules/cheques/hooks/use-actualizar-estado-cheque";
 import { EstadoCheque, ESTADO_CHEQUE_LABELS } from "@/modules/cheques/domain/cheque.types";
 import type { Cheque } from "@/modules/cheques/domain/cheque.types";
 import { ApiError } from "@/shared/api/api-response";
+import { hoyISO } from "@/shared/lib/date";
 
 interface CambiarEstadoChequeFormProps {
   cheque: Cheque;
 }
 
-/** Cambia el estado del cheque — pide motivo obligatorio solo cuando el nuevo estado es RECHAZADO. */
+/**
+ * Cambia el estado del cheque — pide motivo obligatorio solo cuando el nuevo
+ * estado es RECHAZADO, y a quién/cuándo se endosó solo cuando es
+ * ENDOSADO_A_TERCEROS.
+ */
 export function CambiarEstadoChequeForm({ cheque }: CambiarEstadoChequeFormProps) {
   const [estado, setEstado] = useState<EstadoCheque>(cheque.estado);
   const [motivoRechazo, setMotivoRechazo] = useState(cheque.motivoRechazo ?? "");
+  const [endosadoA, setEndosadoA] = useState(cheque.endosadoA ?? "");
+  const [fechaEndoso, setFechaEndoso] = useState(cheque.fechaEndoso?.slice(0, 10) ?? hoyISO());
   const actualizarEstado = useActualizarEstadoCheque();
 
   const huboCambio = estado !== cheque.estado;
@@ -27,11 +35,17 @@ export function CambiarEstadoChequeForm({ cheque }: CambiarEstadoChequeFormProps
       toast.error("Indicá el motivo del rechazo");
       return;
     }
+    if (estado === EstadoCheque.ENDOSADO_A_TERCEROS && (!endosadoA.trim() || !fechaEndoso)) {
+      toast.error("Indicá a quién y cuándo se endosó");
+      return;
+    }
     actualizarEstado.mutate(
       {
         id: cheque.id,
         estado,
         motivoRechazo: estado === EstadoCheque.RECHAZADO ? motivoRechazo.trim() : undefined,
+        endosadoA: estado === EstadoCheque.ENDOSADO_A_TERCEROS ? endosadoA.trim() : undefined,
+        fechaEndoso: estado === EstadoCheque.ENDOSADO_A_TERCEROS ? fechaEndoso : undefined,
       },
       {
         onSuccess: () => toast.success("Estado actualizado"),
@@ -73,6 +87,23 @@ export function CambiarEstadoChequeForm({ cheque }: CambiarEstadoChequeFormProps
               rows={2}
               placeholder="Ej. Falta de fondos"
             />
+          </div>
+        )}
+
+        {estado === EstadoCheque.ENDOSADO_A_TERCEROS && (
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="flex-1 space-y-1">
+              <label className="text-sm font-medium">Endosado a</label>
+              <Input
+                value={endosadoA}
+                onChange={(e) => setEndosadoA(e.target.value)}
+                placeholder="A quién se endosó"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Fecha de endoso</label>
+              <Input type="date" value={fechaEndoso} onChange={(e) => setFechaEndoso(e.target.value)} />
+            </div>
           </div>
         )}
 

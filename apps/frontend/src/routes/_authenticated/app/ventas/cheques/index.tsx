@@ -5,6 +5,7 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 import { useCheques } from "@/modules/cheques/hooks/use-cheques";
 import { useClientes } from "@/modules/clientes/hooks/use-clientes";
 import { ChequesTable } from "@/modules/cheques/components/cheques-table";
+import { ChequesResumenCarteraCard } from "@/modules/cheques/components/cheques-resumen-cartera-card";
 import { EstadoCheque, ESTADO_CHEQUE_LABELS } from "@/modules/cheques/domain/cheque.types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,8 @@ function ChequesPage() {
   const [estadoFiltro, setEstadoFiltro] = useState<EstadoCheque | typeof TODOS>(TODOS);
 
   const chequesQuery = useCheques(estadoFiltro === TODOS ? undefined : { estado: estadoFiltro });
+  // Independiente del filtro de la tabla — el resumen siempre muestra la cartera completa.
+  const carteraQuery = useCheques({ estado: EstadoCheque.EN_CARTERA });
   const clientesQuery = useClientes();
 
   const cargando = chequesQuery.isPending || clientesQuery.isPending;
@@ -55,6 +58,10 @@ function ChequesPage() {
           </SelectContent>
         </Select>
       </div>
+
+      {!carteraQuery.isPending && !carteraQuery.error && (
+        <ChequesResumenCarteraCard chequesEnCartera={carteraQuery.data ?? []} />
+      )}
 
       <Card>
         <CardContent>

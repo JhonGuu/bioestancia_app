@@ -13,8 +13,15 @@ export function useConfirmarRechazoCheque() {
   const { empresaActiva } = useAuth();
 
   return useMutation({
-    mutationFn: ({ chequeId, comision }: { chequeId: string; comision?: number }) =>
-      chequesApi.confirmarRechazo(chequeId, comision),
+    mutationFn: ({
+      chequeId,
+      comision,
+      sinComision,
+    }: {
+      chequeId: string;
+      comision?: number;
+      sinComision?: boolean;
+    }) => chequesApi.confirmarRechazo(chequeId, comision, sinComision),
     onSuccess: (_resultado, variables) => {
       void queryClient.invalidateQueries({ queryKey: ["cheques", empresaActiva?.empresaId] });
       void queryClient.invalidateQueries({

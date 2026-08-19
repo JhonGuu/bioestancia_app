@@ -21,6 +21,7 @@ export class EmpresaValidation {
       cuit: z.string().max(20).nullable().optional(),
       telefono: z.string().max(50).nullable().optional(),
       direccion: z.string().max(255).nullable().optional(),
+      toleranciaTardanzaMinutos: z.number().int().min(0).max(180).nullable().optional(),
     }),
   };
 }

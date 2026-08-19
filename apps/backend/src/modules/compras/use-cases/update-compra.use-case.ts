@@ -28,6 +28,8 @@ export interface UpdateCompraUseCaseInput {
   fecha?: Date;
   dte?: string;
   remito?: string;
+  /** $/kg en pie negociado con el proveedor para esta tropa (sin IVA) — ver `domain/compra.ts`. */
+  precioCompraKg?: number | null;
   porcentajeDesbaste?: number;
   /** Kg vivo de báscula de la tropa entera — si cambia, se recalcula `pesoNeto`. */
   pesoBruto?: number;
@@ -90,6 +92,7 @@ export class UpdateCompra {
       fecha: input.fecha,
       dte: input.dte,
       remito: input.remito,
+      precioCompraKg: input.precioCompraKg,
       porcentajeDesbaste: input.porcentajeDesbaste,
       pesoBruto: input.pesoBruto,
       pesoNeto,

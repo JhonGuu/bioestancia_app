@@ -2,6 +2,7 @@ import express, {
   Express,
   NextFunction,
   Request,
+  RequestHandler,
   Response,
 } from "express";
 import cors from "cors";
@@ -47,6 +48,8 @@ export interface HandlerInput {
   headers: Record<string, string | string[] | undefined>;
   /** Si el endpoint requiere JWT, acá viene el usuario autenticado. */
   auth?: AuthContext;
+  /** Solo presente en rutas que declaran `middlewares` con multer (subida de archivos, ver `RegisterRouteParams.middlewares`). */
+  file?: Express.Multer.File;
 }
 
 export interface ValidationSchemas {
@@ -67,6 +70,13 @@ export interface RegisterRouteParams {
    * - Con valores: el rol del usuario en esa empresa tiene que estar en la lista, sino 403.
    */
   roles?: string[];
+  /**
+   * Middlewares de Express adicionales, aplicados ANTES de la validación y
+   * autenticación — pensado para `multer` (subida de archivos vía
+   * `multipart/form-data`, que `express.json()` no puede parsear). El archivo
+   * subido queda disponible en el handler como `input.file`.
+   */
+  middlewares?: RequestHandler[];
   handler: (input: HandlerInput) => Promise<ApiResponse | unknown>;
 }
 
@@ -85,7 +95,7 @@ export class ExpressAdapter {
   }
 
   register(params: RegisterRouteParams): void {
-    const { method, url, validation, auth = "public", roles, handler } = params;
+    const { method, url, validation, auth = "public", roles, middlewares, handler } = params;
 
     const validationMiddleware = this.buildValidationMiddleware(validation);
     const authMiddleware = this.buildAuthMiddleware(auth, roles);
@@ -102,6 +112,7 @@ export class ExpressAdapter {
           query: req.query as Record<string, unknown>,
           headers: req.headers,
           auth: (req as Request & { auth?: AuthContext }).auth,
+          file: (req as Request & { file?: Express.Multer.File }).file,
         });
 
         if (result instanceof ApiResponse) {
@@ -125,6 +136,7 @@ export class ExpressAdapter {
 
     this.app[method](
       `/api${url}`,
+      ...(middlewares ?? []),
       validationMiddleware,
       authMiddleware,
       routeHandler,
@@ -247,7 +259,20 @@ export class ExpressAdapter {
         return;
       }
 
-      // auth === "jwt-empresa"
+      // auth === "jwt-empresa": las rutas de negocio quedan bloqueadas hasta
+      // que el usuario cambie su contraseña temporal (ver ChangePassword).
+      // Las rutas "jwt" puras (me, change-password) no pasan por acá, así que
+      // el usuario siempre puede completar el cambio.
+      if (identity.mustChangePassword) {
+        next(
+          new ApiError(
+            "Tenés que cambiar tu contraseña antes de continuar",
+            Code.FORBIDDEN,
+          ),
+        );
+        return;
+      }
+
       const empresaIdHeader = req.headers["x-empresa-id"];
       const empresaId = Array.isArray(empresaIdHeader) ? empresaIdHeader[0] : empresaIdHeader;
       if (!empresaId) {

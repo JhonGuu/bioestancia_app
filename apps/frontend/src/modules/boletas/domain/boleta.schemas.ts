@@ -44,6 +44,20 @@ const novilloItemSchema = z.object({
   kg: z.coerce.number().positive("Tiene que ser mayor a 0"),
 });
 
+/**
+ * Ajuste de kg sin animal físico asociado (`FormaVenta.COMPENSACION_KG`) —
+ * un descuento (ej. por un cerdo que vino golpeado, o el descuento fijo por
+ * cabeza de ciertos clientes). Siempre resta — no existe el caso "agregado".
+ * El operario tipea la magnitud en positivo (menos tipeo, cero riesgo de
+ * cargarlo con el signo al revés); `boletas.api.ts` la manda ya en negativo
+ * al backend. No lleva tropa/categoría/garrón, por eso es su propia sección
+ * aparte de `tropas`/`novillo`.
+ */
+const compensacionItemSchema = z.object({
+  kg: z.coerce.number().positive("Tiene que ser mayor a 0"),
+  comentarios: z.string().max(255).optional().or(z.literal("")),
+});
+
 export const createBoletaSchema = z
   .object({
     clienteId: z.string().uuid("Elegí un cliente"),
@@ -52,13 +66,19 @@ export const createBoletaSchema = z
     comentarios: z.string().max(255).optional().or(z.literal("")),
     tropas: z.array(tropaGrupoSchema),
     novillo: z.array(novilloItemSchema),
+    compensaciones: z.array(compensacionItemSchema),
   })
-  .refine((data) => data.tropas.some((t) => t.items.length > 0) || data.novillo.length > 0, {
-    message: "Agregá al menos un ítem (de alguna tropa, o de Novillo)",
-    path: ["tropas"],
-  });
+  .refine(
+    (data) =>
+      data.tropas.some((t) => t.items.length > 0) || data.novillo.length > 0 || data.compensaciones.length > 0,
+    {
+      message: "Agregá al menos un ítem (de alguna tropa, de Novillo, o una compensación)",
+      path: ["tropas"],
+    },
+  );
 
 export type CreateBoletaFormValues = z.infer<typeof createBoletaSchema>;
 export type TropaGrupoFormValues = z.infer<typeof tropaGrupoSchema>;
 export type TropaItemFormValues = z.infer<typeof tropaItemSchema>;
 export type NovilloItemFormValues = z.infer<typeof novilloItemSchema>;
+export type CompensacionItemFormValues = z.infer<typeof compensacionItemSchema>;

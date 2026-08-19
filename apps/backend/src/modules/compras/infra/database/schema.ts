@@ -67,6 +67,8 @@ export const compras = pgTable("compras", {
   fecha: timestamp("fecha").notNull(),
   dte: varchar("dte", { length: 50 }).notNull(),
   remito: varchar("remito", { length: 50 }).notNull(),
+  // $/kg en pie negociado con el proveedor para esta tropa — ver domain/compra.ts.
+  precioCompraKg: numeric("precio_compra_kg", { precision: 12, scale: 2 }),
   porcentajeDesbaste: numeric("porcentaje_desbaste", { precision: 5, scale: 2 }).notNull(),
   pesoBruto: numeric("peso_bruto", { precision: 10, scale: 2 }).notNull(),
   pesoNeto: numeric("peso_neto", { precision: 10, scale: 2 }).notNull(),
@@ -107,11 +109,16 @@ export const compraCategorias = pgTable("compra_categorias", {
   destinoComercial: varchar("destino_comercial", { length: 10 }),
   cuartosDelantero: integer("cuartos_delantero"),
   cuartosTrasero: integer("cuartos_trasero"),
+  comisosCabezas: integer("comisos_cabezas"),
+  comisosKg: numeric("comisos_kg", { precision: 10, scale: 2 }),
   // Fase 3: liquidación de compra.
   precioKg: numeric("precio_kg", { precision: 12, scale: 2 }),
   importeBruto: numeric("importe_bruto", { precision: 14, scale: 2 }),
   porcentajeIva: numeric("porcentaje_iva", { precision: 5, scale: 2 }),
   importeIva: numeric("importe_iva", { precision: 14, scale: 2 }),
+  // Fase 4: liquidación de faena (lo que cobra el FRIGORÍFICO por faenar).
+  canonFaenaPorAnimal: numeric("canon_faena_por_animal", { precision: 12, scale: 2 }),
+  canonFaenaSubtotal: numeric("canon_faena_subtotal", { precision: 14, scale: 2 }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

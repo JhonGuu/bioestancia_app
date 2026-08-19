@@ -16,16 +16,18 @@ export interface CreateResultadoFaenaCategoriaUseCaseInput {
   destinoComercial?: string;
   cuartosDelantero?: number;
   cuartosTrasero?: number;
+  /** Decomiso sanitario atribuido a ESTA categoría — 0 si no se manda. */
+  comisosCabezas?: number;
+  comisosKg?: number;
 }
 
 export interface CreateResultadoFaenaUseCaseInput {
   empresaId: string;
   compraId: string;
+  frigorificoId?: string;
   fechaFaena: Date;
   numero?: string;
   numeroAutorizacion?: string;
-  comisosKg?: number;
-  comisosCabezas?: number;
   comentarios?: string;
   categorias: CreateResultadoFaenaCategoriaUseCaseInput[];
 }
@@ -78,6 +80,12 @@ export class CreateResultadoFaena {
     const kgVivoTotal = Math.round(input.categorias.reduce((acc, c) => acc + c.kgVivoFaena, 0) * 100) / 100;
     const kgCarneTotal = Math.round(input.categorias.reduce((acc, c) => acc + c.kgCarne, 0) * 100) / 100;
     const rendimiento = Math.round((kgCarneTotal / kgVivoTotal) * 100 * 100) / 100;
+    // Comisos del header: NO se reciben del cliente HTTP — se calculan sumando
+    // el decomiso de cada línea (mismo criterio que kgVivoTotal/kgCarneTotal),
+    // porque el frigorífico siempre atribuye el decomiso a una categoría
+    // puntual, nunca a la tropa en general.
+    const comisosCabezasTotal = input.categorias.reduce((acc, c) => acc + (c.comisosCabezas ?? 0), 0);
+    const comisosKgTotal = Math.round(input.categorias.reduce((acc, c) => acc + (c.comisosKg ?? 0), 0) * 100) / 100;
 
     const categoriasActualizadas: CompraCategoria[] = [];
     for (const linea of input.categorias) {
@@ -88,6 +96,8 @@ export class CreateResultadoFaena {
         destinoComercial: linea.destinoComercial ?? null,
         cuartosDelantero: linea.cuartosDelantero ?? null,
         cuartosTrasero: linea.cuartosTrasero ?? null,
+        comisosCabezas: linea.comisosCabezas ?? 0,
+        comisosKg: linea.comisosKg ?? 0,
       });
       categoriasActualizadas.push(actualizada);
     }
@@ -95,13 +105,14 @@ export class CreateResultadoFaena {
     const resultado = await this.resultadoFaenaRepository.create({
       empresaId: input.empresaId,
       compraId: input.compraId,
+      frigorificoId: input.frigorificoId,
       fechaFaena: input.fechaFaena,
       numero: input.numero,
       numeroAutorizacion: input.numeroAutorizacion,
       kgVivoTotal,
       kgCarneTotal,
-      comisosKg: input.comisosKg ?? 0,
-      comisosCabezas: input.comisosCabezas ?? 0,
+      comisosKg: comisosKgTotal,
+      comisosCabezas: comisosCabezasTotal,
       rendimiento,
       comentarios: input.comentarios,
     });

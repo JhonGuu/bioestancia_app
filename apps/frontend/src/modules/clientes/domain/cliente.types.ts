@@ -44,6 +44,10 @@ export interface Cliente {
   esRevendedor: boolean;
   /** Días de plazo para pagar una boleta (cuenta corriente). `null` = usa el default global (7). */
   diasPlazoPago: number | null;
+  /** Descuento fijo de kg por cabeza en las boletas de este cliente (ej. 0.8). `null` = sin descuento. */
+  descuentoKgPorCabeza: number | null;
+  /** Meta de cabezas/semana (lunes a domingo) para acceder a un descuento — no se compensa entre semanas. `null` = sin meta. */
+  metaCabezasSemanales: number | null;
   activo: boolean;
   createdAt: string;
   updatedAt: string;

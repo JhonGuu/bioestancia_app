@@ -156,4 +156,47 @@ export function registerBoletasOpenApi(): void {
       404: { description: "No existe o no pertenece a la empresa activa" },
     },
   });
+
+  registry.registerPath({
+    method: "patch",
+    path: "/boletas/{id}",
+    tags: ["Boletas"],
+    summary:
+      "Corrige fecha/número/comentarios de una boleta ya cargada — para arreglar una carga mal hecha. " +
+      "Si cambia la fecha, recalcula fechaVencimiento con el plazo de pago vigente del cliente. No toca " +
+      "las ventas de la boleta. Admin, contable u operario.",
+    security: [{ bearerAuth: [] }],
+    request: {
+      headers: empresaIdHeaderSchema,
+      params: z.object({ id: z.string().uuid() }),
+      body: { content: { "application/json": { schema: validation.update.body } } },
+    },
+    responses: {
+      200: {
+        description: "Boleta actualizada",
+        content: { "application/json": { schema: apiResponseSchema(boletaSchema) } },
+      },
+      403: { description: "No tenés acceso a la empresa activa" },
+      404: { description: "No existe o no pertenece a la empresa activa" },
+    },
+  });
+
+  registry.registerPath({
+    method: "delete",
+    path: "/boletas/{id}",
+    tags: ["Boletas"],
+    summary:
+      "Borra (soft-delete) una boleta completa y todas sus ventas — si tenían cobros ya aplicados " +
+      "(FIFO), los libera como saldo a favor del cliente. Admin, contable u operario.",
+    security: [{ bearerAuth: [] }],
+    request: {
+      headers: empresaIdHeaderSchema,
+      params: z.object({ id: z.string().uuid() }),
+    },
+    responses: {
+      200: { description: "Boleta eliminada" },
+      403: { description: "No tenés acceso a la empresa activa" },
+      404: { description: "No existe o no pertenece a la empresa activa" },
+    },
+  });
 }

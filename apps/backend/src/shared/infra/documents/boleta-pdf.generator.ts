@@ -3,20 +3,15 @@ import { injectable } from "inversify";
 
 import { Boleta } from "@/modules/boletas/domain/boleta";
 import { Venta } from "@/modules/ventas/domain/venta";
+import { FormaVenta } from "@/modules/ventas/domain/forma-venta";
 import { Cliente, nombreCliente } from "@/modules/clientes/domain/cliente";
 import { Empresa } from "@/modules/empresas/domain/empresa";
 import { Compra } from "@/modules/compras/domain/compra";
 import { detalleVenta } from "@/modules/ventas/domain/forma-venta-labels";
-import {
-  drawPdfTable,
-  type PdfTableColumn,
-} from "@/shared/infra/documents/pdf-table.util";
-import {
-  formatearFechaUTC,
-  formatearKg,
-  formatearMoneda,
-} from "@/shared/infra/documents/formato.util";
+import { drawPdfTable, type PdfTableColumn, type PdfTableRow } from "@/shared/infra/documents/pdf-table.util";
+import { formatearFechaUTC, formatearKg, formatearMoneda } from "@/shared/infra/documents/formato.util";
 import { logoParaEmpresa } from "@/shared/infra/documents/brand-logo.util";
+import { PDF_COLORS, brandColorParaEmpresa } from "@/shared/infra/documents/pdf-theme.util";
 
 export interface BoletaPdfInput {
   boleta: Boleta;
@@ -34,23 +29,23 @@ export interface BoletaPdfInput {
  * un cuadrado con "X" (indicador de recibo, ver `dividerX` más abajo).
  * Sector izquierdo: logo (`logoParaEmpresa`) + razón social + cuit + teléfono
  * + dirección, apilados. Sector derecho: aviso "Documento no válido como
- * factura", N° de boleta (grande, negrita) y fecha. Debajo del cuadro va
- * "Señor: <cliente>", y después la grilla N°/Letra/Garrón/Detalle/Cantidad
- * (Kg)/Importe ($) — una fila por venta. `Importe` queda vacío si esa venta
+ * factura", N° de boleta (grande, negrita, con el color de marca) y fecha.
+ * Debajo del cuadro va "Señor: <cliente>", y después la grilla
+ * N°/Garrón/Detalle/Cantidad (Kg)/Importe ($) — una fila por venta, con las
+ * filas de compensación de kg resaltadas (mismo color que en la cuenta
+ * corriente — ver `pdf-theme.util.ts`). `Importe` queda vacío si esa venta
  * todavía no tiene precio cargado (`Venta.total === null`), igual que en el
  * papel (se completa a mano después).
  *
- * La columna `Letra` muestra SOLO `Compra.letra` (nunca `Compra.numero`) —
- * es información de cara al cliente, y el número real de tropa es interno
- * (ver el comentario del campo `letra` en `modules/compras/domain/compra.ts`).
- * Si la tropa todavía no tiene letra asignada, o el ítem es una reventa sin
- * tropa propia (Novillo), la celda queda vacía.
+ * Sin columna "Letra": es un dato interno de la tropa que no se le muestra
+ * al cliente en este documento (`compras` sigue viniendo en `BoletaPdfInput`
+ * por si algún generador futuro la necesita, pero este no la usa).
  */
 @injectable()
 export class BoletaPdfGenerator {
   async generate(input: BoletaPdfInput): Promise<Buffer> {
-    const { boleta, ventas, cliente, empresa, compras } = input;
-    const comprasPorId = new Map(compras.map((c) => [c.id, c]));
+    const { boleta, ventas, cliente, empresa } = input;
+    const brandColor = brandColorParaEmpresa(empresa.razonSocial);
 
     const doc = new PDFDocument({ size: "A4", margin: 40 });
     const chunks: Buffer[] = [];
@@ -72,7 +67,11 @@ export class BoletaPdfGenerator {
     const padding = 12;
 
     const logo = logoParaEmpresa(empresa.razonSocial);
-    const logoWidth = 100;
+    // El isotipo de El Meridiano es una "chapa" más cuadrada (no un
+    // wordmark alargado como el de Bioestancia) — al mismo ancho se ve más
+    // chico, así que necesita más ancho para tener presencia similar.
+    const esElMeridiano = empresa.razonSocial.toLowerCase().includes("meridiano");
+    const logoWidth = esElMeridiano ? 135 : 100;
     const logoHeight = logo ? logoWidth / logo.aspectRatio : 0;
 
     // CUIT/teléfono/dirección son opcionales (`Empresa.telefono`/`direccion`,
@@ -91,15 +90,28 @@ export class BoletaPdfGenerator {
     const headerHeight =
       padding * 2 + Math.max(leftContentHeight, rightContentHeight, 60);
 
-    doc.roundedRect(headerX, headerY, headerWidth, headerHeight, 8).stroke();
+    doc.roundedRect(headerX, headerY, headerWidth, headerHeight, 8).lineWidth(1.2).strokeColor(brandColor).stroke();
 
-    // Cuadrado con "X" — el "indicador de recibo" que separa los dos sectores.
-    const dividerX = headerX + headerWidth * 0.56;
+    // Cuadrado con "X" — el "indicador de recibo" que separa los dos
+    // sectores, centrado en el recuadro (no corrido hacia el sector
+    // izquierdo). Dos líneas negras lo conectan con el borde superior e
+    // inferior del recuadro, como si lo estuvieran "colgando" del marco —
+    // terminan de marcar la división entre los dos sectores.
+    const dividerX = headerX + headerWidth / 2;
     const squareSize = 40;
-    const squareX = dividerX - squareSize / 1.5;
+    const squareX = dividerX - squareSize / 2;
     const squareY = headerY + headerHeight / 2 - squareSize / 2;
-    doc.rect(squareX, squareY, squareSize, squareSize).stroke();
     doc
+      .moveTo(dividerX, headerY)
+      .lineTo(dividerX, squareY)
+      .moveTo(dividerX, squareY + squareSize)
+      .lineTo(dividerX, headerY + headerHeight)
+      .strokeColor("black")
+      .lineWidth(1)
+      .stroke();
+    doc.rect(squareX, squareY, squareSize, squareSize).strokeColor(brandColor).lineWidth(1.2).stroke();
+    doc
+      .fillColor(brandColor)
       .font("Helvetica-Bold")
       .fontSize(50)
       .text("X", squareX, squareY + 3, { width: squareSize, align: "center" });
@@ -114,22 +126,24 @@ export class BoletaPdfGenerator {
       leftY += logoHeight + 6;
     }
     doc
+      .fillColor(PDF_COLORS.text)
       .font("Helvetica-Bold")
       .fontSize(10)
       .text(empresa.razonSocial, leftX, leftY, { width: leftWidth });
     leftY += 11;
-    doc.font("Helvetica").fontSize(8);
+    doc.fillColor(PDF_COLORS.textMuted).font("Helvetica").fontSize(8);
     for (const linea of infoLines) {
       doc.text(linea, leftX, leftY, { width: leftWidth });
       leftY += 11;
     }
 
-    // Sector derecho: aviso + N° de boleta (grande) + fecha.
+    // Sector derecho: aviso + N° de boleta (grande, color de marca) + fecha.
     const rightX = dividerX + squareSize / 2 + 8;
     const rightWidth = headerX + headerWidth - padding - rightX;
     let rightY = headerY + padding;
 
     doc
+      .fillColor(PDF_COLORS.textMuted)
       .font("Helvetica")
       .fontSize(8)
       .text("Documento no válido como factura", rightX, rightY, {
@@ -138,6 +152,7 @@ export class BoletaPdfGenerator {
       });
     rightY += 14;
     doc
+      .fillColor(brandColor)
       .font("Helvetica-Bold")
       .fontSize(14)
       .text(`N° ${boleta.numero ?? "—"}`, rightX, rightY, {
@@ -146,6 +161,7 @@ export class BoletaPdfGenerator {
       });
     rightY += 22;
     doc
+      .fillColor(PDF_COLORS.text)
       .font("Helvetica")
       .fontSize(10)
       .text(`Fecha: ${formatearFechaUTC(boleta.fecha)}`, rightX, rightY, {
@@ -156,6 +172,7 @@ export class BoletaPdfGenerator {
     // "Señor: <cliente>"
     let y = headerY + headerHeight + 20;
     doc
+      .fillColor(PDF_COLORS.text)
       .font("Helvetica")
       .fontSize(11)
       .text(`Señor: ${nombreCliente(cliente)}`, pageLeft, y);
@@ -163,25 +180,28 @@ export class BoletaPdfGenerator {
 
     const columns: PdfTableColumn[] = [
       { header: "N°", width: 25 },
-      { header: "Letra", width: 45 },
-      { header: "Garrón", width: 45 },
-      { header: "Detalle", width: 170 },
-      { header: "Cantidad (Kg)", width: 85, align: "right" },
-      { header: "Importe ($)", width: 95, align: "right" },
+      { header: "Garrón", width: 55 },
+      { header: "Detalle", width: 195 },
+      { header: "Cantidad (Kg)", width: 90, align: "right" },
+      { header: "Importe ($)", width: 100, align: "right" },
     ];
 
-    const rows = ventas.map((venta, index) => {
-      const compra = venta.compraId
-        ? comprasPorId.get(venta.compraId)
-        : undefined;
-      return [
-        String(index + 1),
-        compra?.letra ?? "",
-        venta.garron !== null ? String(venta.garron) : "",
-        detalleVenta(venta.formaVenta, venta.categoria),
-        formatearKg(venta.kg),
-        venta.total !== null ? formatearMoneda(venta.total) : "",
-      ];
+    let hayCompensacion = false;
+    const rows: PdfTableRow[] = ventas.map((venta, index) => {
+      const esCompensacion = venta.formaVenta === FormaVenta.COMPENSACION_KG;
+      if (esCompensacion) hayCompensacion = true;
+      return {
+        cells: [
+          String(index + 1),
+          venta.garron !== null ? String(venta.garron) : "",
+          detalleVenta(venta.formaVenta, venta.categoria),
+          formatearKg(venta.kg),
+          venta.total !== null ? formatearMoneda(venta.total) : "",
+        ],
+        background: esCompensacion ? PDF_COLORS.compensacionBg : undefined,
+        textColor: esCompensacion ? PDF_COLORS.compensacion : undefined,
+        accentColor: esCompensacion ? PDF_COLORS.compensacion : undefined,
+      };
     });
 
     y = drawPdfTable(doc, {
@@ -190,9 +210,17 @@ export class BoletaPdfGenerator {
       startX: pageLeft,
       startY: y,
       pageBottom,
+      headerAccentColor: brandColor,
     });
 
-    y += 10;
+    if (hayCompensacion) {
+      y += 4;
+      doc.font("Helvetica").fontSize(7.5).fillColor(PDF_COLORS.compensacion);
+      doc.rect(pageLeft, y + 1, 7, 7).fill(PDF_COLORS.compensacion);
+      doc.text("Compensación de kg", pageLeft + 11, y, { width: 200 });
+    }
+
+    y += 14;
     if (y + 40 > pageBottom) {
       doc.addPage();
       y = doc.page.margins.top;
@@ -203,6 +231,7 @@ export class BoletaPdfGenerator {
     const totalImporte = ventas.reduce((acc, v) => acc + (v.total ?? 0), 0);
 
     doc
+      .fillColor(PDF_COLORS.text)
       .font("Helvetica-Bold")
       .fontSize(10)
       .text(`Total: ${formatearKg(totalKg)} Kg`, pageLeft, y, {
@@ -212,6 +241,7 @@ export class BoletaPdfGenerator {
     y += 16;
     if (pendientesDePrecio > 0) {
       doc
+        .fillColor(PDF_COLORS.cargo)
         .font("Helvetica")
         .fontSize(9)
         .text(
@@ -222,6 +252,7 @@ export class BoletaPdfGenerator {
         );
     } else {
       doc
+        .fillColor(brandColor)
         .font("Helvetica-Bold")
         .fontSize(10)
         .text(`Importe: ${formatearMoneda(totalImporte)}`, pageLeft, y, {
@@ -233,6 +264,7 @@ export class BoletaPdfGenerator {
     if (boleta.comentarios) {
       y += 26;
       doc
+        .fillColor(PDF_COLORS.textMuted)
         .font("Helvetica-Oblique")
         .fontSize(9)
         .text(`Comentarios: ${boleta.comentarios}`, pageLeft, y, {

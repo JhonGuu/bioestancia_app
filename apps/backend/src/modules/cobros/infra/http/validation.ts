@@ -14,6 +14,9 @@ const lineaBody = z
     titularCheque: z.string().max(150).optional(),
     fechaEmisionCheque: z.coerce.date().optional(),
     fechaPagoCheque: z.coerce.date().optional(),
+    // Solo con TRANSFERENCIA_BANCO/BILLETERA_VIRTUAL — texto libre, no obligatorios.
+    bancoOBilletera: z.string().max(100).optional(),
+    remitente: z.string().max(150).optional(),
   })
   .refine(
     (data) =>
@@ -49,7 +52,9 @@ const confirmarRecargoBody = z.object({
 });
 
 const confirmarRechazoBody = z.object({
-  comision: z.coerce.number().positive("El monto tiene que ser mayor a 0").optional(),
+  comision: z.coerce.number().min(0, "El monto no puede ser negativo").optional(),
+  /** El cliente canceló el cheque el mismo día — omite la comisión aunque `comision` no venga. */
+  sinComision: z.coerce.boolean().optional(),
 });
 
 @injectable()

@@ -12,7 +12,7 @@ import {
   CreateCobroInput,
 } from "@/modules/cobros/domain/cobro.repository";
 import { LineaCobro } from "@/modules/cobros/domain/linea-cobro";
-import { AplicacionCobro } from "@/modules/cobros/domain/aplicacion-cobro";
+import { AplicacionCobro, AplicacionCobroConCliente } from "@/modules/cobros/domain/aplicacion-cobro";
 import { MedioPago } from "@/modules/cobros/domain/medio-pago";
 import { cobros, lineasCobro, aplicacionesCobro } from "@/modules/cobros/infra/database/schema";
 
@@ -70,6 +70,8 @@ export class CobroRepositoryDrizzle implements CobroRepository {
           medioPago: linea.medioPago,
           monto: String(linea.monto),
           chequeId: linea.chequeId,
+          bancoOBilletera: linea.bancoOBilletera ?? null,
+          remitente: linea.remitente ?? null,
         })),
       )
       .returning();
@@ -106,6 +108,15 @@ export class CobroRepositoryDrizzle implements CobroRepository {
         ),
       );
     return rows.map((r) => this.aplicacionToDomain(r.aplicacion));
+  }
+
+  async listAplicacionesActivasByEmpresa(empresaId: string): Promise<AplicacionCobroConCliente[]> {
+    const rows = await this.orm.db
+      .select({ aplicacion: aplicacionesCobro, clienteId: cobros.clienteId })
+      .from(aplicacionesCobro)
+      .innerJoin(cobros, eq(aplicacionesCobro.cobroId, cobros.id))
+      .where(and(eq(cobros.empresaId, empresaId), eq(cobros.activo, true), isNull(cobros.deletedAt)));
+    return rows.map((r) => ({ ...this.aplicacionToDomain(r.aplicacion), clienteId: r.clienteId }));
   }
 
   async getByChequeId(chequeId: string, empresaId: string): Promise<CobroConLineas | null> {
@@ -165,6 +176,8 @@ export class CobroRepositoryDrizzle implements CobroRepository {
       medioPago: row.medioPago as MedioPago,
       monto: Number(row.monto),
       chequeId: row.chequeId,
+      bancoOBilletera: row.bancoOBilletera,
+      remitente: row.remitente,
       createdAt: row.createdAt,
     };
   }

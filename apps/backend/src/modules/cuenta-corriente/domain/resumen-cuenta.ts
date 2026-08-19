@@ -16,7 +16,7 @@ export interface ResumenCuentaData {
   cliente: Cliente;
   empresa: Empresa;
   saldo: SaldoCliente;
-  /** Más reciente primero — mismo orden que devuelve `ObtenerMovimientosCuentaCorriente`. */
+  /** Más viejo primero — mismo orden que devuelve `ObtenerMovimientosCuentaCorriente`. */
   movimientos: MovimientoCuentaCorriente[];
   boletas: Boleta[];
   cargos: CargoCuentaCorriente[];

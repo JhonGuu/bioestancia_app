@@ -19,6 +19,10 @@ const baseBody = z.object({
   esRevendedor: z.boolean().optional(),
   // Días de plazo para pagar una boleta (cuenta corriente) — si no se manda, se usa el default global (7).
   diasPlazoPago: z.coerce.number().int().min(0).max(365).nullable().optional(),
+  // Descuento fijo de kg por cabeza en las boletas de este cliente (ej. 0.8) — null/sin mandar = sin descuento.
+  descuentoKgPorCabeza: z.coerce.number().min(0).max(999.99).nullable().optional(),
+  // Meta de cabezas/semana para acceder a un descuento — null/sin mandar = sin meta.
+  metaCabezasSemanales: z.coerce.number().int().min(1).max(100000).nullable().optional(),
 });
 
 /**

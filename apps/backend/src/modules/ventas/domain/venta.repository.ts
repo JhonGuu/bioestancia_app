@@ -57,6 +57,24 @@ export interface VentaRepository {
    * `use-cases/set-precio-venta.use-case.ts`). No toca ningún otro campo.
    */
   setPrecio(id: string, empresaId: string, input: SetPrecioInput): Promise<Venta>;
+
+  /**
+   * Corrige los campos de UNA línea (garrón/kg/categoría/comentarios) —
+   * pensado para arreglar una carga mal hecha (ver
+   * `use-cases/update-venta-item.use-case.ts`). No toca `precioKg` (eso lo
+   * hace `setPrecio`, tarea de administración/contable, no del operario).
+   * `total` SÍ se puede pisar acá — lo recalcula el use-case cuando cambia
+   * `kg` y la venta ya tenía precio cargado.
+   */
+  update(id: string, empresaId: string, input: UpdateVentaItemInput): Promise<Venta>;
+
+  /**
+   * Soft-delete: marca `activo=false`, no borra la fila (mismo criterio que
+   * `ClienteRepository.delete`) — así no se pierde el historial ni hay que
+   * tocar `AplicacionCobro`/reportes que ya referencian esta venta. Tira
+   * NOT_FOUND si no existe (o no es de esta empresa).
+   */
+  delete(id: string, empresaId: string): Promise<void>;
 }
 
 export interface CreateVentaInput {
@@ -83,4 +101,13 @@ export interface CreateVentaInput {
 export interface SetPrecioInput {
   precioKg: number;
   total: number;
+}
+
+export interface UpdateVentaItemInput {
+  garron?: number | null;
+  kg?: number;
+  categoria?: CategoriaVenta | null;
+  comentarios?: string | null;
+  /** Recalculado por el use-case si `kg` cambia y la venta ya tenía `precioKg`. */
+  total?: number | null;
 }

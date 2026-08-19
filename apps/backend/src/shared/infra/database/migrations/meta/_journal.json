@@ -127,6 +127,83 @@
       "when": 1786470819283,
       "tag": "0017_cargos-cuenta-corriente",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1786547361442,
+      "tag": "0018_cliente-descuento-kg-por-cabeza",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1786548195032,
+      "tag": "0019_cliente-meta-cabezas-semanales",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1786579630477,
+      "tag": "0020_cheques-endoso",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1786592659733,
+      "tag": "0021_add_frigorificos",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1786592838434,
+      "tag": "0022_precio_compra_y_frigorifico_en_faena",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1786624766392,
+      "tag": "0023_liquidacion_faena_y_canon",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1786638038083,
+      "tag": "0024_agregar_must_change_password",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1786639745986,
+      "tag": "0025_personal_cargos_empleados_horarios",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1786643975606,
+      "tag": "0026_personal_fichajes",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1786717592968,
+      "tag": "0027_cheque-rechazado-linea-y-lineas-cobro-detalle",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1786717592969,
+      "tag": "0028_agregar_comisos_por_categoria",
+      "breakpoints": true
     }
   ]
 }

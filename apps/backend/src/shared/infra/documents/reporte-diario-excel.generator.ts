@@ -116,6 +116,34 @@ export class ReporteDiarioExcelGenerator {
     sheet.getColumn(6).numFmt = "#,##0.00";
     sheet.getColumn(7).numFmt = '"$" #,##0.00';
 
+    // Stock teórico de cada tropa abierta (compradas − vendidas), en una
+    // hoja aparte — para chequear lo entregado contra lo que queda por
+    // repartir (ver `ObtenerStockTropas`). No se agrega la hoja si no hay
+    // tropas abiertas.
+    if (data.stockTropas.length > 0) {
+      const stockSheet = workbook.addWorksheet("Stock de tropas");
+      stockSheet.getColumn(1).width = 20;
+      stockSheet.getColumn(2).width = 16;
+      stockSheet.getColumn(3).width = 16;
+      stockSheet.getColumn(4).width = 16;
+
+      const stockHeaderRow = stockSheet.addRow(["Tropa", "Compradas", "Vendidas", "Restante"]);
+      stockHeaderRow.font = { bold: true };
+      stockHeaderRow.eachCell((cell) => {
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE5E5E5" } };
+        cell.border = { bottom: { style: "thin" } };
+      });
+
+      for (const tropa of data.stockTropas) {
+        stockSheet.addRow([
+          compraNumeroYLetra(tropa),
+          tropa.cabezasCompradas,
+          tropa.cabezasVendidas,
+          tropa.stockRestante,
+        ]);
+      }
+    }
+
     const buffer = await workbook.xlsx.writeBuffer();
     return Buffer.from(buffer);
   }

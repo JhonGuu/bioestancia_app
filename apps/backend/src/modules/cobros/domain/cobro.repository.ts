@@ -1,6 +1,6 @@
 import { Cobro } from "@/modules/cobros/domain/cobro";
 import { LineaCobro } from "@/modules/cobros/domain/linea-cobro";
-import { AplicacionCobro } from "@/modules/cobros/domain/aplicacion-cobro";
+import { AplicacionCobro, AplicacionCobroConCliente } from "@/modules/cobros/domain/aplicacion-cobro";
 import { MedioPago } from "@/modules/cobros/domain/medio-pago";
 
 /** Cobro + sus líneas — lo que devuelven `getById`/`list`/`create`. */
@@ -29,6 +29,14 @@ export interface CobroRepository {
   /** Todas las aplicaciones de cobros ACTIVOS de un cliente — insumo de `AplicarCobroFifo` y de la cuenta corriente. */
   listAplicacionesByCliente(clienteId: string, empresaId: string): Promise<AplicacionCobro[]>;
 
+  /**
+   * Todas las aplicaciones de cobros ACTIVOS de TODA la empresa (con el
+   * `clienteId` de cada una, vía join) — insumo de `ObtenerSaldosClientes`
+   * para calcular el saldo de todos los clientes sin hacer N consultas
+   * (una por cliente).
+   */
+  listAplicacionesActivasByEmpresa(empresaId: string): Promise<AplicacionCobroConCliente[]>;
+
   /** El cobro (con sus líneas) que contiene la línea con este `chequeId` — o `null` si ninguna línea lo referencia. */
   getByChequeId(chequeId: string, empresaId: string): Promise<CobroConLineas | null>;
 
@@ -45,6 +53,8 @@ export interface CreateLineaCobroInput {
   medioPago: MedioPago;
   monto: number;
   chequeId: string | null;
+  bancoOBilletera?: string | null;
+  remitente?: string | null;
 }
 
 export interface CreateCobroInput {

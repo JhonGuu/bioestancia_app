@@ -8,10 +8,18 @@ import { calcularMontoBoleta } from "@/modules/boletas/domain/calcular-monto-bol
 import { VentaRepository } from "@/modules/ventas/domain/venta.repository";
 import { CobroRepository } from "@/modules/cobros/domain/cobro.repository";
 import { CargoCuentaCorrienteRepository } from "@/modules/cargos-cuenta-corriente/domain/cargo-cuenta-corriente.repository";
+import { TipoCargo } from "@/modules/cargos-cuenta-corriente/domain/tipo-cargo";
+import { ChequeRepository } from "@/modules/cheques/domain/cheque.repository";
+import { Cheque } from "@/modules/cheques/domain/cheque";
 import {
   MovimientoCuentaCorriente,
   TipoMovimientoCuentaCorriente,
 } from "@/modules/cuenta-corriente/domain/movimiento-cuenta-corriente";
+import {
+  agruparVentasPorCategoria,
+  DetalleCategoriaVenta,
+} from "@/modules/ventas/domain/detalle-categoria-venta";
+import { construirDetalleLineas, DetalleLineaCobro } from "@/modules/cobros/domain/detalle-linea-cobro";
 
 export interface ObtenerMovimientosCuentaCorrienteInput {
   clienteId: string;
@@ -29,6 +37,12 @@ interface MovimientoBorrador {
   monto: number;
   saldoPendiente: number | null;
   fechaVencimiento: Date | null;
+  /** Solo en movimientos CARGO — para que `impactoEnSaldo` pueda tratar CHEQUE_RECHAZADO como informativo (0). */
+  cargoTipo: TipoCargo | null;
+  /** Solo en movimientos BOLETA — ver `agruparVentasPorCategoria`. */
+  detalleCategorias: DetalleCategoriaVenta[] | null;
+  /** Solo en movimientos COBRO — ver `construirDetalleLineas`. */
+  detalleLineas: DetalleLineaCobro[] | null;
   /**
    * Solo en movimientos COBRO: cuánto de ese cobro se aplicó de verdad a
    * boletas vía FIFO — puede ser menor que `monto` si sobró plata (queda
@@ -44,17 +58,27 @@ function redondear(valor: number): number {
   return Math.round(valor * 100) / 100;
 }
 
-/** Cuánto de este movimiento afecta el saldo corriente acumulado (boletas/cargos suman, cobros restan lo aplicado). */
+/**
+ * Cuánto de este movimiento afecta el saldo corriente acumulado (boletas/cargos
+ * suman, cobros restan lo aplicado) — con una excepción: CHEQUE_RECHAZADO es
+ * una línea puramente informativa ("Cheque rechazo Nº: X"), su efecto real en
+ * el saldo ya quedó reflejado antes, en la reducción silenciosa de
+ * `AplicacionCobro.monto` del cobro original (ver `ConfirmarRechazoCheque`) —
+ * sumarla de nuevo acá duplicaría la deuda.
+ */
 function impactoEnSaldo(borrador: MovimientoBorrador): number {
-  return borrador.tipo === TipoMovimientoCuentaCorriente.COBRO ? -borrador.montoAplicado : borrador.monto;
+  if (borrador.tipo === TipoMovimientoCuentaCorriente.COBRO) return -borrador.montoAplicado;
+  if (borrador.cargoTipo === TipoCargo.CHEQUE_RECHAZADO) return 0;
+  return borrador.monto;
 }
 
 /**
  * Arma el "resumen de cuenta" de un cliente: una línea de tiempo con las
  * boletas (deuda, ya facturadas), los cobros (pago), y los cargos (recargo
- * por cheque / comisión por rechazo, deuda), más reciente primero, con el
- * saldo corriente después de cada movimiento — mismo formato que la hoja de
- * cuenta corriente por cliente que ya usa la empresa.
+ * por cheque / comisión por rechazo, deuda), más viejo primero (orden de
+ * libro contable: se lee de arriba hacia abajo y la última fila es el saldo
+ * más actual), con el saldo corriente después de cada movimiento — mismo
+ * formato que la hoja de cuenta corriente por cliente que ya usa la empresa.
  *
  * El saldo corriente acumulado tiene que coincidir con
  * `ObtenerSaldoCliente.saldoTotal` en el último movimiento — por eso un
@@ -72,6 +96,7 @@ export class ObtenerMovimientosCuentaCorriente {
     @inject(DI_TYPES.CobroRepository) private readonly cobroRepository: CobroRepository,
     @inject(DI_TYPES.CargoCuentaCorrienteRepository)
     private readonly cargoCuentaCorrienteRepository: CargoCuentaCorrienteRepository,
+    @inject(DI_TYPES.ChequeRepository) private readonly chequeRepository: ChequeRepository,
   ) {}
 
   async execute(input: ObtenerMovimientosCuentaCorrienteInput): Promise<MovimientoCuentaCorriente[]> {
@@ -80,13 +105,15 @@ export class ObtenerMovimientosCuentaCorriente {
       throw new ApiError("El cliente no existe (o no es de esta empresa)", Code.BAD_REQUEST);
     }
 
-    const [boletas, ventas, aplicaciones, cobros, cargos] = await Promise.all([
+    const [boletas, ventas, aplicaciones, cobros, cargos, cheques] = await Promise.all([
       this.boletaRepository.listByCliente(input.clienteId, input.empresaId),
       this.ventaRepository.listByCliente(input.clienteId, input.empresaId),
       this.cobroRepository.listAplicacionesByCliente(input.clienteId, input.empresaId),
       this.cobroRepository.list(input.empresaId, input.clienteId),
       this.cargoCuentaCorrienteRepository.list(input.empresaId, input.clienteId),
+      this.chequeRepository.list(input.empresaId, { clienteId: input.clienteId }),
     ]);
+    const chequesPorId = new Map<string, Cheque>(cheques.map((c) => [c.id, c]));
 
     const ventasPorBoleta = new Map<string, typeof ventas>();
     for (const venta of ventas) {
@@ -123,6 +150,9 @@ export class ObtenerMovimientosCuentaCorriente {
         monto: redondear(monto),
         saldoPendiente: redondear(monto - aplicado),
         fechaVencimiento: boleta.fechaVencimiento,
+        cargoTipo: null,
+        detalleCategorias: agruparVentasPorCategoria(ventasBoleta),
+        detalleLineas: null,
         montoAplicado: 0,
       });
     }
@@ -140,6 +170,9 @@ export class ObtenerMovimientosCuentaCorriente {
         monto: redondear(montoCobro),
         saldoPendiente: null,
         fechaVencimiento: null,
+        cargoTipo: null,
+        detalleCategorias: null,
+        detalleLineas: construirDetalleLineas(cobro.lineas, chequesPorId),
         montoAplicado: redondear(aplicadoPorCobro.get(cobro.id) ?? 0),
       });
     }
@@ -156,6 +189,9 @@ export class ObtenerMovimientosCuentaCorriente {
         monto: redondear(cargo.monto),
         saldoPendiente: null,
         fechaVencimiento: null,
+        cargoTipo: cargo.tipo,
+        detalleCategorias: null,
+        detalleLineas: null,
         montoAplicado: 0,
       });
     }
@@ -178,11 +214,13 @@ export class ObtenerMovimientosCuentaCorriente {
         monto: b.monto,
         saldoPendiente: b.saldoPendiente,
         fechaVencimiento: b.fechaVencimiento,
+        detalleCategorias: b.detalleCategorias,
+        detalleLineas: b.detalleLineas,
         saldoCorriente: saldoAcumulado,
       };
     });
 
-    // Se devuelve más reciente primero (formato "resumen de cuenta").
-    return movimientos.reverse();
+    // Se devuelve más viejo primero (formato libro contable, ver comentario de la clase).
+    return movimientos;
   }
 }

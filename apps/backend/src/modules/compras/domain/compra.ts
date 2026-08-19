@@ -49,6 +49,16 @@ export interface Compra {
   dte: string;
   remito: string;
   porcentajeDesbaste: number;
+  /**
+   * $/kg en pie negociado con el proveedor para esta tropa (sin IVA) — el
+   * precio de referencia con el que se compró, cargado al mismo tiempo que
+   * la tropa. Nullable: compras históricas no lo tienen, y puede no
+   * conocerse todavía al momento de cargar la compra. Es un valor de
+   * REFERENCIA — el precio real que se termina facturando en la liquidación
+   * de compra vive por categoría en `CompraCategoria.precioKg` (puede
+   * ajustarse ahí, esta es solo la base con la que se pactó la tropa).
+   */
+  precioCompraKg: number | null;
   /** Kg vivo de báscula de la tropa entera (sin discriminar por categoría). */
   pesoBruto: number;
   /** `pesoBruto × (1 - porcentajeDesbaste / 100)`, calculado en el server. */

@@ -12,6 +12,7 @@ export interface ResultadoFaenaRepository {
 export interface CreateResultadoFaenaInput {
   empresaId: string;
   compraId: string;
+  frigorificoId?: string;
   fechaFaena: Date;
   numero?: string;
   numeroAutorizacion?: string;

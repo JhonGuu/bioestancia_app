@@ -58,6 +58,9 @@ export class EmpresaRepositoryDrizzle implements EmpresaRepository {
         ...(input.cuit !== undefined ? { cuit: input.cuit } : {}),
         ...(input.telefono !== undefined ? { telefono: input.telefono } : {}),
         ...(input.direccion !== undefined ? { direccion: input.direccion } : {}),
+        ...(input.toleranciaTardanzaMinutos !== undefined
+          ? { toleranciaTardanzaMinutos: input.toleranciaTardanzaMinutos }
+          : {}),
         updatedAt: new Date(),
       })
       .where(and(eq(empresas.id, id), isNull(empresas.deletedAt)))
@@ -75,6 +78,7 @@ export class EmpresaRepositoryDrizzle implements EmpresaRepository {
       cuit: row.cuit,
       telefono: row.telefono,
       direccion: row.direccion,
+      toleranciaTardanzaMinutos: row.toleranciaTardanzaMinutos,
       rubro: row.rubro as Rubro,
       activa: row.activa,
       createdAt: row.createdAt,

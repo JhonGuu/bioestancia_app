@@ -12,6 +12,7 @@ const empresaSchema = z.object({
   cuit: z.string().nullable(),
   telefono: z.string().nullable(),
   direccion: z.string().nullable(),
+  toleranciaTardanzaMinutos: z.number().int().nullable(),
   rubro: z.enum(["frigorifico", "revendedora"]),
   activa: z.boolean(),
   createdAt: z.string().datetime(),

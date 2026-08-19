@@ -62,12 +62,19 @@ export class ChequeController {
       validation: this.validation.actualizarEstado,
       handler: async ({ params, body, auth }) => {
         if (!auth?.empresaId) throw new ApiError("Unauthorized", Code.UNAUTHORIZED);
-        const { estado, motivoRechazo } = body as { estado: EstadoCheque; motivoRechazo?: string };
+        const { estado, motivoRechazo, endosadoA, fechaEndoso } = body as {
+          estado: EstadoCheque;
+          motivoRechazo?: string;
+          endosadoA?: string;
+          fechaEndoso?: Date;
+        };
         const data = await this.actualizarEstadoCheque.execute({
           id: params.id,
           empresaId: auth.empresaId,
           estado,
           motivoRechazo,
+          endosadoA,
+          fechaEndoso,
         });
         return new ApiResponse({ data, message: "Estado del cheque actualizado", status: Code.OK });
       },

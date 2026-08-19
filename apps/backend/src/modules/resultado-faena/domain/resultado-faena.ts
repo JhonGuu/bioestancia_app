@@ -20,6 +20,8 @@
 export interface ResultadoFaena {
   id: string;
   compraId: string;
+  /** Establecimiento faenador (ver `modules/frigorificos`). Nullable: no todo resultado de faena histórico lo tiene cargado. */
+  frigorificoId: string | null;
   fechaFaena: Date;
   numero: string | null;
   numeroAutorizacion: string | null;

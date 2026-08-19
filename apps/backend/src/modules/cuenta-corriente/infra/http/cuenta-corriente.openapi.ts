@@ -4,6 +4,7 @@ import { registry } from "@/shared/infra/openapi/registry";
 import { apiResponseSchema, empresaIdHeaderSchema } from "@/shared/infra/openapi/common";
 import { CuentaCorrienteValidation } from "@/modules/cuenta-corriente/infra/http/validation";
 import { TipoMovimientoCuentaCorriente } from "@/modules/cuenta-corriente/domain/movimiento-cuenta-corriente";
+import { MedioPago } from "@/modules/cobros/domain/medio-pago";
 
 const validation = new CuentaCorrienteValidation();
 
@@ -15,6 +16,22 @@ const saldoClienteSchema = z.object({
   saldoAFavor: z.number(),
 });
 
+const detalleCategoriaVentaSchema = z.object({
+  categoria: z.string(),
+  cabezas: z.number(),
+  kg: z.number(),
+  monto: z.number(),
+});
+
+const detalleLineaCobroSchema = z.object({
+  medioPago: z.nativeEnum(MedioPago),
+  monto: z.number(),
+  numeroCheque: z.string().nullable(),
+  bancoCheque: z.string().nullable(),
+  bancoOBilletera: z.string().nullable(),
+  remitente: z.string().nullable(),
+});
+
 const movimientoSchema = z.object({
   tipo: z.nativeEnum(TipoMovimientoCuentaCorriente),
   fecha: z.string().datetime(),
@@ -24,10 +41,30 @@ const movimientoSchema = z.object({
   monto: z.number(),
   saldoPendiente: z.number().nullable(),
   fechaVencimiento: z.string().datetime().nullable(),
+  detalleCategorias: z.array(detalleCategoriaVentaSchema).nullable(),
+  detalleLineas: z.array(detalleLineaCobroSchema).nullable(),
   saldoCorriente: z.number(),
 });
 
 export function registerCuentaCorrienteOpenApi(): void {
+  registry.registerPath({
+    method: "get",
+    path: "/cuenta-corriente/saldos",
+    tags: ["Cuenta corriente"],
+    summary:
+      "Saldo de cuenta corriente de TODOS los clientes de la empresa activa, de una — pensado para el " +
+      "listado rápido de cuenta corriente (evita una consulta por cliente). Admin o contable.",
+    security: [{ bearerAuth: [] }],
+    request: { headers: empresaIdHeaderSchema },
+    responses: {
+      200: {
+        description: "OK",
+        content: { "application/json": { schema: apiResponseSchema(z.array(saldoClienteSchema)) } },
+      },
+      403: { description: "No sos admin/contable de la empresa activa" },
+    },
+  });
+
   registry.registerPath({
     method: "get",
     path: "/cuenta-corriente/{clienteId}/saldo",
@@ -53,7 +90,7 @@ export function registerCuentaCorrienteOpenApi(): void {
     tags: ["Cuenta corriente"],
     summary:
       "Línea de tiempo de boletas, cobros, y cargos (recargo/comisión) de un cliente, con saldo corriente " +
-      "después de cada movimiento, más reciente primero. Admin o contable.",
+      "después de cada movimiento, más viejo primero (formato libro contable). Admin o contable.",
     security: [{ bearerAuth: [] }],
     request: { headers: empresaIdHeaderSchema, params: z.object({ clienteId: z.string().uuid() }) },
     responses: {

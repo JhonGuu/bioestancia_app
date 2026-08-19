@@ -4,7 +4,12 @@ import { inject, injectable } from "inversify";
 import { DI_TYPES } from "@/shared/infra/di/types";
 import { DrizzleAdapter } from "@/shared/infra/database/db-connection";
 import { ApiError, Code } from "@/shared/infra/http/api.responses";
-import { VentaRepository, CreateVentaInput, SetPrecioInput } from "@/modules/ventas/domain/venta.repository";
+import {
+  VentaRepository,
+  CreateVentaInput,
+  SetPrecioInput,
+  UpdateVentaItemInput,
+} from "@/modules/ventas/domain/venta.repository";
 import { Venta } from "@/modules/ventas/domain/venta";
 import { FormaVenta } from "@/modules/ventas/domain/forma-venta";
 import { CategoriaVenta } from "@/modules/ventas/domain/categoria-venta";
@@ -137,6 +142,36 @@ export class VentaRepositoryDrizzle implements VentaRepository {
       throw new ApiError("Venta no encontrada", Code.NOT_FOUND);
     }
     return this.toDomain(row);
+  }
+
+  async update(id: string, empresaId: string, input: UpdateVentaItemInput): Promise<Venta> {
+    const [row] = await this.orm.db
+      .update(ventas)
+      .set({
+        ...(input.garron !== undefined ? { garron: input.garron } : {}),
+        ...(input.kg !== undefined ? { kg: String(input.kg) } : {}),
+        ...(input.categoria !== undefined ? { categoria: input.categoria } : {}),
+        ...(input.comentarios !== undefined ? { comentarios: input.comentarios } : {}),
+        ...(input.total !== undefined ? { total: input.total !== null ? String(input.total) : null } : {}),
+        updatedAt: new Date(),
+      })
+      .where(and(eq(ventas.id, id), eq(ventas.empresaId, empresaId), isNull(ventas.deletedAt)))
+      .returning();
+    if (!row) {
+      throw new ApiError("Venta no encontrada", Code.NOT_FOUND);
+    }
+    return this.toDomain(row);
+  }
+
+  async delete(id: string, empresaId: string): Promise<void> {
+    const [row] = await this.orm.db
+      .update(ventas)
+      .set({ activo: false, deletedAt: new Date(), updatedAt: new Date() })
+      .where(and(eq(ventas.id, id), eq(ventas.empresaId, empresaId), isNull(ventas.deletedAt)))
+      .returning({ id: ventas.id });
+    if (!row) {
+      throw new ApiError("Venta no encontrada", Code.NOT_FOUND);
+    }
   }
 
   private toDomain(row: typeof ventas.$inferSelect): Venta {

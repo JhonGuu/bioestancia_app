@@ -18,6 +18,8 @@ const lineaCobroSchema = z
     titularCheque: z.string().max(150).optional().or(z.literal("")),
     fechaEmisionCheque: z.string().optional().or(z.literal("")),
     fechaPagoCheque: z.string().optional().or(z.literal("")),
+    bancoOBilletera: z.string().max(100).optional().or(z.literal("")),
+    remitente: z.string().max(150).optional().or(z.literal("")),
   })
   .refine(
     (data) =>

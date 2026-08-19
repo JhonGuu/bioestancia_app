@@ -10,8 +10,19 @@ export function useActualizarEstadoCheque() {
   const { empresaActiva } = useAuth();
 
   return useMutation({
-    mutationFn: ({ id, estado, motivoRechazo }: { id: string; estado: EstadoCheque; motivoRechazo?: string }) =>
-      chequesApi.actualizarEstado(id, estado, motivoRechazo),
+    mutationFn: ({
+      id,
+      estado,
+      motivoRechazo,
+      endosadoA,
+      fechaEndoso,
+    }: {
+      id: string;
+      estado: EstadoCheque;
+      motivoRechazo?: string;
+      endosadoA?: string;
+      fechaEndoso?: string;
+    }) => chequesApi.actualizarEstado(id, estado, { motivoRechazo, endosadoA, fechaEndoso }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["cheques", empresaActiva?.empresaId] });
     },

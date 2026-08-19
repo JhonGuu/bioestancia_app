@@ -22,6 +22,9 @@ export const empresasApi = {
         cuit: input.cuit || null,
         telefono: input.telefono || null,
         direccion: input.direccion || null,
+        toleranciaTardanzaMinutos: input.toleranciaTardanzaMinutos
+          ? Number(input.toleranciaTardanzaMinutos)
+          : null,
       }),
     );
   },

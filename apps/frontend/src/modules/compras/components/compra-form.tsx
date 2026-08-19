@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, Trash2 } from "lucide-react";
@@ -34,6 +35,14 @@ import {
 } from "@/modules/compras/domain/compra.types";
 import { useProveedores } from "@/modules/proveedores/hooks/use-proveedores";
 import { nombreProveedor } from "@/modules/proveedores/domain/proveedor.types";
+import { useCompras } from "@/modules/compras/hooks/use-compras";
+import { sugerirProximoNumeroTropa } from "@/modules/compras/domain/sugerir-numero-tropa";
+import {
+  DTE_PLACEHOLDER,
+  formatearDte,
+  formatearRemito,
+  REMITO_PLACEHOLDER,
+} from "@/modules/compras/domain/formato-documentos";
 
 // `categoria` es obligatoria (a diferencia de `raza`), así que arranca en un
 // valor real del catálogo en vez de "" — mismo criterio que `condicionFiscal`
@@ -53,6 +62,7 @@ interface CompraFormProps {
 
 export function CompraForm({ onSubmit, isSubmitting }: CompraFormProps) {
   const proveedoresQuery = useProveedores();
+  const comprasQuery = useCompras();
 
   // 3 parámetros de tipo: el form maneja el shape "input" (los numéricos
   // pueden ser string mientras se tipea), pero `onSubmit` recibe el shape
@@ -72,6 +82,7 @@ export function CompraForm({ onSubmit, isSubmitting }: CompraFormProps) {
       fecha: "",
       dte: "",
       remito: "",
+      precioCompraKg: "",
       porcentajeDesbaste: "",
       pesoBruto: "",
       comentarios: "",
@@ -81,10 +92,21 @@ export function CompraForm({ onSubmit, isSubmitting }: CompraFormProps) {
 
   const categoriasField = useFieldArray({ control: form.control, name: "categorias" });
 
+  // Sugiere el próximo número de tropa apenas se cargan las compras
+  // existentes — solo si todavía no se tocó el campo a mano. Se reinicia en
+  // "1" si la última compra es de un año anterior (ver sugerir-numero-tropa.ts).
+  useEffect(() => {
+    if (comprasQuery.data && !form.formState.dirtyFields.numero) {
+      const sugerido = sugerirProximoNumeroTropa(comprasQuery.data);
+      if (sugerido) form.setValue("numero", sugerido);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [comprasQuery.data]);
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-6">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField
             control={form.control}
             name="proveedorId"
@@ -135,7 +157,7 @@ export function CompraForm({ onSubmit, isSubmitting }: CompraFormProps) {
           />
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <FormField
             control={form.control}
             name="numero"
@@ -177,7 +199,7 @@ export function CompraForm({ onSubmit, isSubmitting }: CompraFormProps) {
           />
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <FormField
             control={form.control}
             name="dte"
@@ -185,7 +207,13 @@ export function CompraForm({ onSubmit, isSubmitting }: CompraFormProps) {
               <FormItem>
                 <FormLabel>DTE (SENASA)</FormLabel>
                 <FormControl>
-                  <Input {...field} />
+                  <Input
+                    {...field}
+                    onChange={(e) => field.onChange(formatearDte(e.target.value))}
+                    inputMode="numeric"
+                    placeholder={DTE_PLACEHOLDER}
+                    maxLength={11}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -198,7 +226,13 @@ export function CompraForm({ onSubmit, isSubmitting }: CompraFormProps) {
               <FormItem>
                 <FormLabel>Remito</FormLabel>
                 <FormControl>
-                  <Input {...field} />
+                  <Input
+                    {...field}
+                    onChange={(e) => field.onChange(formatearRemito(e.target.value))}
+                    inputMode="numeric"
+                    placeholder={REMITO_PLACEHOLDER}
+                    maxLength={11}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -224,26 +258,47 @@ export function CompraForm({ onSubmit, isSubmitting }: CompraFormProps) {
           />
         </div>
 
-        <FormField
-          control={form.control}
-          name="pesoBruto"
-          render={({ field }) => (
-            <FormItem className="max-w-xs">
-              <FormLabel>Peso bruto total (kg vivo de báscula)</FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min={0}
-                  placeholder="Peso de toda la tropa, sin discriminar por categoría"
-                  {...field}
-                  value={field.value as string | number}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid max-w-xl grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="pesoBruto"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Peso bruto total (kg vivo de báscula)</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min={0}
+                    placeholder="Peso de toda la tropa, sin discriminar por categoría"
+                    {...field}
+                    value={field.value as string | number}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="precioCompraKg"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>$/kg en pie (opcional)</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min={0}
+                    placeholder="Precio negociado con el proveedor, sin IVA"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         <FormField
           control={form.control}
@@ -276,7 +331,7 @@ export function CompraForm({ onSubmit, isSubmitting }: CompraFormProps) {
           </CardHeader>
           <CardContent className="space-y-4">
             {categoriasField.fields.map((item, index) => (
-              <div key={item.id} className="grid grid-cols-[2fr_2fr_1fr_auto] items-end gap-3">
+              <div key={item.id} className="grid grid-cols-1 gap-3 sm:grid-cols-[2fr_2fr_1fr_auto] sm:items-end">
                 <FormField
                   control={form.control}
                   name={`categorias.${index}.categoria`}

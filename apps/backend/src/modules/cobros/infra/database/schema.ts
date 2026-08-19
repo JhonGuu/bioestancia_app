@@ -42,6 +42,10 @@ export const lineasCobro = pgTable("lineas_cobro", {
   medioPago: medioPagoEnum("medio_pago").notNull(),
   monto: numeric("monto", { precision: 14, scale: 2 }).notNull(),
   chequeId: uuid("cheque_id").references(() => cheques.id, { onDelete: "restrict" }),
+  /** Solo con TRANSFERENCIA_BANCO/BILLETERA_VIRTUAL — texto libre (ej. "Mercado Pago", "Banco Nación"). */
+  bancoOBilletera: varchar("banco_o_billetera", { length: 100 }),
+  /** Solo con TRANSFERENCIA_BANCO/BILLETERA_VIRTUAL — quién hizo la transferencia (puede ser un tercero). */
+  remitente: varchar("remitente", { length: 150 }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

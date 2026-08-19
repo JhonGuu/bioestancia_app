@@ -21,3 +21,14 @@ export interface AplicacionCobro {
   monto: number;
   createdAt: Date;
 }
+
+/**
+ * `AplicacionCobro` con el `clienteId` del cobro que la generó (via join) —
+ * lo necesita `ObtenerSaldosClientes` para agrupar en memoria por cliente
+ * cuando trae las aplicaciones de TODA la empresa de una (ver
+ * `CobroRepository.listAplicacionesActivasByEmpresa`), a diferencia de
+ * `listAplicacionesByCliente` que ya viene filtrado por cliente y no lo necesita.
+ */
+export interface AplicacionCobroConCliente extends AplicacionCobro {
+  clienteId: string;
+}

@@ -133,15 +133,18 @@ export class CobroController {
       validation: this.validation.confirmarRechazoCheque,
       handler: async ({ params, body, auth }) => {
         if (!auth?.empresaId) throw new ApiError("Unauthorized", Code.UNAUTHORIZED);
-        const { comision } = body as { comision?: number };
+        const { comision, sinComision } = body as { comision?: number; sinComision?: boolean };
         const data = await this.confirmarRechazoCheque.execute({
           chequeId: params.chequeId,
           empresaId: auth.empresaId,
           comision,
+          sinComision,
         });
         return new ApiResponse({
           data,
-          message: "Rechazo confirmado: se revirtió lo aplicado y se cargó la comisión",
+          message: sinComision
+            ? "Rechazo confirmado: se revirtió lo aplicado, sin comisión"
+            : "Rechazo confirmado: se revirtió lo aplicado y se cargó la comisión",
           status: Code.CREATED,
         });
       },

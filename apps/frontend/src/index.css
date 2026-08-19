@@ -87,6 +87,16 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html,
+  body {
+    /* Ningún elemento angosto (celular) debería poder abrir scroll
+       horizontal de toda la página — eso es lo que arrastraba el header
+       (logo, menú) fuera de la vista en pantallas chicas. Las tablas
+       anchas (ver `components/ui/table.tsx`) ya scrollean en su propio
+       contenedor `overflow-x-auto`; si algo más se desborda, que quede
+       recortado en vez de habilitar scroll a nivel documento. */
+    overflow-x: hidden;
+  }
   body {
     @apply bg-background text-foreground;
   }

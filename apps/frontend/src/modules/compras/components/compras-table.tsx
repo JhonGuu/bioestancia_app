@@ -67,7 +67,7 @@ export function ComprasTable({ compras, proveedores, puedeEditar }: ComprasTable
               </Link>
             </TableCell>
             <TableCell>{nombrePorProveedorId.get(compra.proveedorId) ?? "—"}</TableCell>
-            <TableCell>{new Date(compra.fecha).toLocaleDateString("es-AR")}</TableCell>
+            <TableCell>{new Date(compra.fecha).toLocaleDateString("es-AR", { timeZone: "UTC" })}</TableCell>
             <TableCell>{ESPECIE_ANIMAL_LABELS[compra.especie]}</TableCell>
             <TableCell>
               <Badge variant={compra.cerrada ? "default" : "secondary"}>

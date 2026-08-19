@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { inject, injectable } from "inversify";
 
 import { DI_TYPES } from "@/shared/infra/di/types";
@@ -8,9 +8,13 @@ import {
   GrantAccessInput,
   UsuarioEmpresaRepository,
 } from "@/modules/users/domain/usuario-empresa.repository";
-import { EmpresaAcceso, UsuarioEmpresa } from "@/modules/users/domain/usuario-empresa";
+import {
+  EmpresaAcceso,
+  UsuarioConAcceso,
+  UsuarioEmpresa,
+} from "@/modules/users/domain/usuario-empresa";
 import { Roles } from "@/modules/users/domain/roles";
-import { usuarioEmpresas } from "@/modules/users/infra/database/schema";
+import { usuarioEmpresas, users } from "@/modules/users/infra/database/schema";
 import { empresas } from "@/modules/empresas/infra/database/schema";
 
 @injectable()
@@ -80,6 +84,28 @@ export class UsuarioEmpresaRepositoryDrizzle implements UsuarioEmpresaRepository
           eq(usuarioEmpresas.empresaId, empresaId),
         ),
       );
+  }
+
+  async listUsuariosForEmpresa(empresaId: string): Promise<UsuarioConAcceso[]> {
+    const rows = await this.orm.db
+      .select({
+        usuarioId: users.id,
+        email: users.email,
+        username: users.username,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        phoneNumber: users.phoneNumber,
+        isActive: users.isActive,
+        mustChangePassword: users.mustChangePassword,
+        rol: usuarioEmpresas.rol,
+        accesoDesde: usuarioEmpresas.createdAt,
+      })
+      .from(usuarioEmpresas)
+      .innerJoin(users, eq(users.id, usuarioEmpresas.usuarioId))
+      .where(and(eq(usuarioEmpresas.empresaId, empresaId), isNull(users.deletedAt)))
+      .orderBy(users.firstName, users.lastName);
+
+    return rows.map((row) => ({ ...row, rol: row.rol as Roles }));
   }
 
   private toDomain(row: typeof usuarioEmpresas.$inferSelect): UsuarioEmpresa {

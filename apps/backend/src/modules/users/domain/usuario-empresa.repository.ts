@@ -1,5 +1,9 @@
 import { Roles } from "@/modules/users/domain/roles";
-import { EmpresaAcceso, UsuarioEmpresa } from "@/modules/users/domain/usuario-empresa";
+import {
+  EmpresaAcceso,
+  UsuarioConAcceso,
+  UsuarioEmpresa,
+} from "@/modules/users/domain/usuario-empresa";
 
 /**
  * Interface del repositorio de accesos usuario↔empresa. Forma parte del DOMINIO.
@@ -29,6 +33,12 @@ export interface UsuarioEmpresaRepository {
 
   /** Revoca el acceso de un usuario a una empresa. No falla si no existía. */
   revokeAccess(usuarioId: string, empresaId: string): Promise<void>;
+
+  /**
+   * Lista los usuarios con acceso a una empresa puntual, con su rol y datos
+   * básicos. Lo usa la pantalla "Usuarios" (`GET /account/users`).
+   */
+  listUsuariosForEmpresa(empresaId: string): Promise<UsuarioConAcceso[]>;
 }
 
 export interface GrantAccessInput {

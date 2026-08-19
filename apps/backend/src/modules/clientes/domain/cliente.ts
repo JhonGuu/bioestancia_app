@@ -26,6 +26,27 @@ import { CondicionFiscal } from "@/modules/clientes/domain/condicion-fiscal";
  * `modules/cuenta-corriente`). Nullable: si no está cargado se usa
  * `DIAS_PLAZO_PAGO_DEFAULT` (ver más abajo) — mismo patrón que
  * `Proveedor.porcentajeDesbaste`.
+ *
+ * `descuentoKgPorCabeza`: descuento fijo de kg que se le resta a este
+ * cliente por cada cabeza de una boleta (ej. 0.8kg) — acuerdo comercial
+ * puntual, no todos los clientes lo tienen. Nullable: `null` (o `0`) significa
+ * que no se le aplica ningún descuento. Se usa para pre-cargar una línea de
+ * "compensación de kg" negativa al armar la boleta (ver
+ * `modules/boletas/components/boleta-form.tsx` en el frontend) — el operario
+ * la puede editar o borrar ese día si hace falta, no se fuerza.
+ *
+ * `metaCabezasSemanales`: objetivo de cabezas que este cliente tiene que
+ * comprar en una semana (lunes a domingo, semana ISO 8601 — ver
+ * `shared/domain/semana-iso.ts`) para acceder a un descuento en el precio de
+ * esa semana. Nullable: `null` = sin meta. NO se compensa entre semanas
+ * (comprar de más una semana no suma para la siguiente, ver
+ * `modules/metas-semanales/use-cases/obtener-progreso-metas-semanales.use-case.ts`)
+ * y depende de que el cliente respete sus días de despacho planificados
+ * (`modules/planificacion-cabezas`) — el cruce de cuánto lleva comprado esa
+ * semana se calcula al vuelo a partir de `ventas`, no se guarda acá.
+ * La aplicación del descuento en sí es MANUAL (herramienta "fijar precio en
+ * lote" que ya existe) — este campo solo alimenta la alerta/barra de
+ * progreso, no dispara nada solo.
  */
 export interface Cliente {
   id: string;
@@ -44,6 +65,8 @@ export interface Cliente {
   condicionFiscal: CondicionFiscal;
   esRevendedor: boolean;
   diasPlazoPago: number | null;
+  descuentoKgPorCabeza: number | null;
+  metaCabezasSemanales: number | null;
   activo: boolean;
   createdAt: Date;
   updatedAt: Date;

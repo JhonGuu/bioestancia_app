@@ -4,8 +4,8 @@ import { injectable } from "inversify";
 import { ResumenCuentaData } from "@/modules/cuenta-corriente/domain/resumen-cuenta";
 import { TipoMovimientoCuentaCorriente } from "@/modules/cuenta-corriente/domain/movimiento-cuenta-corriente";
 import { nombreCliente } from "@/modules/clientes/domain/cliente";
-import { TIPO_CARGO_LABELS } from "@/modules/cargos-cuenta-corriente/domain/tipo-cargo";
 import { formatearFechaUTC } from "@/shared/infra/documents/formato.util";
+import { construirLineasDetalleMovimiento } from "@/shared/infra/documents/detalle-movimiento-texto.util";
 
 const TIPO_MOVIMIENTO_LABELS: Record<TipoMovimientoCuentaCorriente, string> = {
   [TipoMovimientoCuentaCorriente.BOLETA]: "Boleta",
@@ -72,22 +72,28 @@ export class ResumenCuentaExcelGenerator {
     }
 
     for (const movimiento of movimientos) {
-      let detalle = "Cobro";
-      if (movimiento.tipo === TipoMovimientoCuentaCorriente.BOLETA && movimiento.boletaId) {
-        const boleta = boletasPorId.get(movimiento.boletaId);
-        detalle = `Boleta ${boleta?.numero ?? "s/n"}`;
-      } else if (movimiento.tipo === TipoMovimientoCuentaCorriente.CARGO && movimiento.cargoId) {
-        const cargo = cargosPorId.get(movimiento.cargoId);
-        detalle = cargo ? TIPO_CARGO_LABELS[cargo.tipo] : "Cargo";
-      }
+      const lineasDetalle = construirLineasDetalleMovimiento(movimiento, boletasPorId, cargosPorId);
       const signo = movimiento.tipo === TipoMovimientoCuentaCorriente.COBRO ? -1 : 1;
       const row = sheet.addRow([
         formatearFechaUTC(movimiento.fecha),
         TIPO_MOVIMIENTO_LABELS[movimiento.tipo],
-        detalle,
+        lineasDetalle.join("\n"),
         signo * movimiento.monto,
         movimiento.saldoCorriente,
       ]);
+      row.getCell(3).alignment = { wrapText: true, vertical: "top" };
+      // Estimación de renglones visuales: cada entrada de `lineasDetalle` es
+      // un `\n`, pero además puede envolver dentro del ancho de la columna
+      // (~30 caracteres) — se suma esa envoltura para no dejar el texto
+      // recortado en Excel/LibreOffice (que no recalculan el alto solos).
+      const CHARS_POR_LINEA = 32;
+      const totalSubrenglones = lineasDetalle.reduce(
+        (acc, linea) => acc + Math.max(1, Math.ceil(linea.length / CHARS_POR_LINEA)),
+        0,
+      );
+      if (totalSubrenglones > 1) {
+        row.height = totalSubrenglones * 14;
+      }
       row.getCell(4).numFmt = '"$" #,##0.00';
       row.getCell(5).numFmt = '"$" #,##0.00';
     }

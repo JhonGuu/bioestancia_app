@@ -19,6 +19,7 @@ const compraSchema = z.object({
   fecha: z.string().datetime(),
   dte: z.string(),
   remito: z.string(),
+  precioCompraKg: z.number().nullable(),
   porcentajeDesbaste: z.number(),
   pesoBruto: z.number(),
   pesoNeto: z.number(),
@@ -50,6 +51,8 @@ const compraCategoriaSchema = z.object({
   importeBruto: z.number().nullable(),
   porcentajeIva: z.number().nullable(),
   importeIva: z.number().nullable(),
+  canonFaenaPorAnimal: z.number().nullable(),
+  canonFaenaSubtotal: z.number().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
@@ -103,6 +106,33 @@ export function registerComprasOpenApi(): void {
       200: {
         description: "OK",
         content: { "application/json": { schema: apiResponseSchema(z.array(compraSchema)) } },
+      },
+    },
+  });
+
+  const stockTropaSchema = compraSchema.extend({
+    cabezasCompradas: z.number().int(),
+    cabezasVendidas: z.number().int(),
+    stockRestante: z.number().int(),
+    categorias: z.array(
+      z.object({ categoria: z.nativeEnum(CategoriaPorcino), cabezas: z.number().int() }),
+    ),
+  });
+
+  registry.registerPath({
+    method: "get",
+    path: "/compras/stock",
+    tags: ["Compras"],
+    summary:
+      "Stock teórico de cada tropa ABIERTA (no cerrada) de la empresa activa: cabezas compradas " +
+      "menos cabezas ya vendidas (garrones distintos, sin contar compensación de kg) — mismo " +
+      "criterio de reconciliación que /compras/{id}/cerrar. No incluye conteo real del operario.",
+    security: [{ bearerAuth: [] }],
+    request: { headers: empresaIdHeaderSchema },
+    responses: {
+      200: {
+        description: "OK",
+        content: { "application/json": { schema: apiResponseSchema(z.array(stockTropaSchema)) } },
       },
     },
   });

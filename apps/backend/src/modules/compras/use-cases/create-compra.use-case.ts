@@ -26,6 +26,8 @@ export interface CreateCompraUseCaseInput {
   fecha: Date;
   dte: string;
   remito: string;
+  /** $/kg en pie negociado con el proveedor para esta tropa (sin IVA) — ver `domain/compra.ts`. */
+  precioCompraKg?: number;
   /** Si no se manda, se usa el `porcentajeDesbaste` por defecto del proveedor. */
   porcentajeDesbaste?: number;
   /**
@@ -66,6 +68,7 @@ export class CreateCompra {
       fecha: input.fecha,
       dte: input.dte,
       remito: input.remito,
+      precioCompraKg: input.precioCompraKg,
       porcentajeDesbaste,
       pesoBruto: input.pesoBruto,
       pesoNeto,

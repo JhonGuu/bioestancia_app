@@ -21,6 +21,8 @@ const chequeSchema = z.object({
   estado: z.nativeEnum(EstadoCheque),
   fechaUltimoCambioEstado: z.string().datetime(),
   motivoRechazo: z.string().nullable(),
+  endosadoA: z.string().nullable(),
+  fechaEndoso: z.string().datetime().nullable(),
   comentarios: z.string().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
@@ -65,7 +67,8 @@ export function registerChequesOpenApi(): void {
     path: "/cheques/{id}/estado",
     tags: ["Cheques"],
     summary:
-      "Cambia el estado de un cheque (en cartera, depositado, acreditado, rechazado, endosado a terceros). Exige motivoRechazo si el estado es RECHAZADO. Admin o contable.",
+      "Cambia el estado de un cheque (en cartera, depositado, acreditado, rechazado, endosado a terceros). " +
+      "Exige motivoRechazo si el estado es RECHAZADO, y endosadoA+fechaEndoso si es ENDOSADO_A_TERCEROS. Admin o contable.",
     security: [{ bearerAuth: [] }],
     request: {
       headers: empresaIdHeaderSchema,

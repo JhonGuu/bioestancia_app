@@ -5,6 +5,15 @@ import { EspecieAnimal } from "@/modules/compras/domain/especie-animal";
 import { CategoriaPorcino } from "@/modules/compras/domain/categoria-porcino";
 import { RazaPorcino } from "@/modules/compras/domain/raza-porcino";
 
+// Espejo de `apps/frontend/src/modules/compras/domain/formato-documentos.ts`
+// — DTE y remito identifican unívocamente la tropa comprada, así que se
+// valida el formato exacto acá también (el frontend enmascara el input,
+// pero el backend es la última línea de defensa).
+const DTE_REGEX = /^\d{9}-\d$/;
+const REMITO_REGEX = /^\d{4}-\d{6}$/;
+const DTE_MENSAJE_FORMATO = "dte tiene que tener el formato 032369757-4";
+const REMITO_MENSAJE_FORMATO = "remito tiene que tener el formato 0001-008226";
+
 const categoriaBody = z.object({
   categoria: z.nativeEnum(CategoriaPorcino),
   raza: z.nativeEnum(RazaPorcino).optional(),
@@ -17,8 +26,10 @@ const createBody = z.object({
   especie: z.nativeEnum(EspecieAnimal).default(EspecieAnimal.PORCINO),
   letra: z.string().min(1).max(5).optional(),
   fecha: z.coerce.date(),
-  dte: z.string().min(1).max(50),
-  remito: z.string().min(1).max(50),
+  dte: z.string().regex(DTE_REGEX, DTE_MENSAJE_FORMATO),
+  remito: z.string().regex(REMITO_REGEX, REMITO_MENSAJE_FORMATO),
+  // $/kg en pie negociado con el proveedor para esta tropa (sin IVA) — opcional.
+  precioCompraKg: z.coerce.number().positive("precioCompraKg tiene que ser mayor a 0").optional(),
   // Opcional: si no se manda, se usa el porcentajeDesbaste por defecto del proveedor.
   porcentajeDesbaste: z.coerce.number().min(0).max(100).optional(),
   // Kg vivo de báscula de la tropa entera — no discriminado por categoría.
@@ -45,8 +56,10 @@ const updateBody = z.object({
   numero: z.string().min(1).max(50).optional(),
   letra: z.string().min(1).max(5).optional(),
   fecha: z.coerce.date().optional(),
-  dte: z.string().min(1).max(50).optional(),
-  remito: z.string().min(1).max(50).optional(),
+  dte: z.string().regex(DTE_REGEX, DTE_MENSAJE_FORMATO).optional(),
+  remito: z.string().regex(REMITO_REGEX, REMITO_MENSAJE_FORMATO).optional(),
+  // Nullable para poder borrar un precio ya cargado, no solo dejarlo vacío al no mandarlo.
+  precioCompraKg: z.coerce.number().positive("precioCompraKg tiene que ser mayor a 0").nullable().optional(),
   porcentajeDesbaste: z.coerce.number().min(0).max(100).optional(),
   pesoBruto: z.coerce.number().positive("pesoBruto tiene que ser mayor a 0").optional(),
   comentarios: z.string().max(255).optional(),

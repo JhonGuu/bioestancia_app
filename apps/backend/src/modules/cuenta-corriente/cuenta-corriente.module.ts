@@ -4,6 +4,7 @@ import { DI_TYPES } from "@/shared/infra/di/types";
 import { CuentaCorrienteController } from "@/modules/cuenta-corriente/infra/http/cuenta-corriente.controller";
 import { CuentaCorrienteValidation } from "@/modules/cuenta-corriente/infra/http/validation";
 import { ObtenerSaldoCliente } from "@/modules/cuenta-corriente/use-cases/obtener-saldo-cliente.use-case";
+import { ObtenerSaldosClientes } from "@/modules/cuenta-corriente/use-cases/obtener-saldos-clientes.use-case";
 import { ObtenerMovimientosCuentaCorriente } from "@/modules/cuenta-corriente/use-cases/obtener-movimientos-cuenta-corriente.use-case";
 import { ObtenerResumenCuentaData } from "@/modules/cuenta-corriente/use-cases/obtener-resumen-cuenta-data.use-case";
 import { GenerarResumenCuentaPdf } from "@/modules/cuenta-corriente/use-cases/generar-resumen-cuenta-pdf.use-case";
@@ -20,6 +21,7 @@ import { GenerarResumenCuentaExcel } from "@/modules/cuenta-corriente/use-cases/
 export function registerCuentaCorrienteModule(container: Container): void {
   container.bind(DI_TYPES.CuentaCorrienteValidation).to(CuentaCorrienteValidation);
   container.bind(DI_TYPES.ObtenerSaldoCliente).to(ObtenerSaldoCliente);
+  container.bind(DI_TYPES.ObtenerSaldosClientes).to(ObtenerSaldosClientes);
   container.bind(DI_TYPES.ObtenerMovimientosCuentaCorriente).to(ObtenerMovimientosCuentaCorriente);
   container.bind(DI_TYPES.ObtenerResumenCuentaData).to(ObtenerResumenCuentaData);
   container.bind(DI_TYPES.GenerarResumenCuentaPdf).to(GenerarResumenCuentaPdf);

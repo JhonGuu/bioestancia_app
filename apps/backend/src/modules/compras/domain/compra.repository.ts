@@ -48,6 +48,8 @@ export interface CreateCompraInput {
   fecha: Date;
   dte: string;
   remito: string;
+  /** $/kg en pie negociado para esta tropa — ver `domain/compra.ts`. */
+  precioCompraKg?: number;
   /**
    * Siempre llega resuelto acá (nunca undefined) — el use-case decide el
    * valor final (propio o el default del proveedor) antes de llamar a `create`.
@@ -77,6 +79,7 @@ export interface UpdateCompraData {
   fecha?: Date;
   dte?: string;
   remito?: string;
+  precioCompraKg?: number | null;
   porcentajeDesbaste?: number;
   pesoBruto?: number;
   /** Siempre llega recalculado acá si `pesoBruto` o `porcentajeDesbaste` cambiaron. */

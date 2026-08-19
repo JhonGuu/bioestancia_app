@@ -44,6 +44,8 @@ const compraCategoriaSchema = z.object({
   importeBruto: z.number().nullable(),
   porcentajeIva: z.number().nullable(),
   importeIva: z.number().nullable(),
+  canonFaenaPorAnimal: z.number().nullable(),
+  canonFaenaSubtotal: z.number().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });

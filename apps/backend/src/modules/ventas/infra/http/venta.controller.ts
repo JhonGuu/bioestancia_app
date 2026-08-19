@@ -10,6 +10,8 @@ import { ListVentas } from "@/modules/ventas/use-cases/list-ventas.use-case";
 import { GetVenta } from "@/modules/ventas/use-cases/get-venta.use-case";
 import { SetPrecioVenta } from "@/modules/ventas/use-cases/set-precio-venta.use-case";
 import { SetPrecioVentasLote } from "@/modules/ventas/use-cases/set-precio-ventas-lote.use-case";
+import { UpdateVentaItem, UpdateVentaItemInput } from "@/modules/ventas/use-cases/update-venta-item.use-case";
+import { DeleteVenta } from "@/modules/ventas/use-cases/delete-venta.use-case";
 
 @injectable()
 export class VentaController {
@@ -21,6 +23,8 @@ export class VentaController {
     @inject(DI_TYPES.GetVenta) private readonly getVenta: GetVenta,
     @inject(DI_TYPES.SetPrecioVenta) private readonly setPrecioVenta: SetPrecioVenta,
     @inject(DI_TYPES.SetPrecioVentasLote) private readonly setPrecioVentasLote: SetPrecioVentasLote,
+    @inject(DI_TYPES.UpdateVentaItem) private readonly updateVentaItem: UpdateVentaItem,
+    @inject(DI_TYPES.DeleteVenta) private readonly deleteVenta: DeleteVenta,
   ) {
     this.registerRoutes();
   }
@@ -116,6 +120,48 @@ export class VentaController {
         return new ApiResponse({
           data,
           message: "Precio cargado correctamente",
+          status: Code.OK,
+        });
+      },
+    });
+
+    // Operario/admin/contable: corrige garrón/kg/categoría/comentarios de
+    // una línea ya cargada — para arreglar una carga mal hecha. No toca
+    // precioKg (eso es PATCH /ventas/:id/precio).
+    this.httpServer.register({
+      method: "patch",
+      url: "/ventas/:id",
+      auth: "jwt-empresa",
+      roles: RoleGroups.BoletaLoaders,
+      validation: this.validation.updateItem,
+      handler: async ({ params, body, auth }) => {
+        if (!auth?.empresaId) throw new ApiError("Unauthorized", Code.UNAUTHORIZED);
+        const data = await this.updateVentaItem.execute({
+          id: params.id,
+          empresaId: auth.empresaId,
+          ...(body as Omit<UpdateVentaItemInput, "id" | "empresaId">),
+        });
+        return new ApiResponse({
+          data,
+          message: "Venta actualizada correctamente",
+          status: Code.OK,
+        });
+      },
+    });
+
+    // Operario/admin/contable: borra (soft-delete) una línea de venta.
+    this.httpServer.register({
+      method: "delete",
+      url: "/ventas/:id",
+      auth: "jwt-empresa",
+      roles: RoleGroups.BoletaLoaders,
+      validation: this.validation.delete,
+      handler: async ({ params, auth }) => {
+        if (!auth?.empresaId) throw new ApiError("Unauthorized", Code.UNAUTHORIZED);
+        await this.deleteVenta.execute({ id: params.id, empresaId: auth.empresaId });
+        return new ApiResponse({
+          data: null,
+          message: "Venta eliminada correctamente",
           status: Code.OK,
         });
       },

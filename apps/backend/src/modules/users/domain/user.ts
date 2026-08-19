@@ -13,6 +13,8 @@ export interface User {
   lastName: string;
   phoneNumber: string | null;
   isActive: boolean;
+  /** Ver columna homónima en `infra/database/schema.ts`. */
+  mustChangePassword: boolean;
   createdAt: Date;
 }
 

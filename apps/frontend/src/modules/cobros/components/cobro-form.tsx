@@ -10,20 +10,22 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { createCobroSchema, type CreateCobroFormValues } from "@/modules/cobros/domain/cobro.schemas";
-import { MedioPago, MEDIO_PAGO_LABELS, esMedioPagoCheque } from "@/modules/cobros/domain/cobro.types";
+import {
+  MedioPago,
+  MEDIO_PAGO_LABELS,
+  esMedioPagoCheque,
+  esMedioPagoTransferencia,
+} from "@/modules/cobros/domain/cobro.types";
 import { useClientes } from "@/modules/clientes/hooks/use-clientes";
 import { nombreCliente } from "@/modules/clientes/domain/cliente.types";
 import { useSaldoCliente } from "@/modules/cuenta-corriente/hooks/use-saldo-cliente";
+import { hoyISO } from "@/shared/lib/date";
 
 type FormInput = z.input<typeof createCobroSchema>;
 type FormOutput = z.output<typeof createCobroSchema>;
 type FormControlType = Control<FormInput, unknown, FormOutput>;
 
 const formatoMoneda = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS" });
-
-function hoyISO(): string {
-  return new Date().toISOString().slice(0, 10);
-}
 
 function lineaVacia() {
   return {
@@ -35,6 +37,8 @@ function lineaVacia() {
     titularCheque: "",
     fechaEmisionCheque: "",
     fechaPagoCheque: "",
+    bancoOBilletera: "",
+    remitente: "",
   };
 }
 
@@ -195,6 +199,7 @@ function LineaCobroRow({
 }) {
   const medioPago = useWatch({ control, name: `lineas.${index}.medioPago` });
   const esCheque = esMedioPagoCheque(medioPago);
+  const esTransferencia = esMedioPagoTransferencia(medioPago);
 
   return (
     <Card>
@@ -325,6 +330,37 @@ function LineaCobroRow({
                   <FormLabel>Titular (opcional)</FormLabel>
                   <FormControl>
                     <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        )}
+
+        {esTransferencia && (
+          <div className="bg-muted/50 grid grid-cols-1 gap-3 rounded-md p-3 sm:grid-cols-2">
+            <FormField
+              control={control}
+              name={`lineas.${index}.bancoOBilletera`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Banco o billetera virtual</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Ej. Banco Nación, Mercado Pago" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={control}
+              name={`lineas.${index}.remitente`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Transferencia de (opcional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Quién hizo la transferencia" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

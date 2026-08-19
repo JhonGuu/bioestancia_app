@@ -4,7 +4,7 @@ import { inject, injectable } from "inversify";
 import { DI_TYPES } from "@/shared/infra/di/types";
 import { DrizzleAdapter } from "@/shared/infra/database/db-connection";
 import { ApiError, Code } from "@/shared/infra/http/api.responses";
-import { BoletaRepository, CreateBoletaInput } from "@/modules/boletas/domain/boleta.repository";
+import { BoletaRepository, CreateBoletaInput, UpdateBoletaInput } from "@/modules/boletas/domain/boleta.repository";
 import { Boleta } from "@/modules/boletas/domain/boleta";
 import { boletas } from "@/modules/boletas/infra/database/schema";
 
@@ -69,6 +69,35 @@ export class BoletaRepositoryDrizzle implements BoletaRepository {
       throw new ApiError("Failed to create boleta", Code.INTERNAL_SERVER_ERROR);
     }
     return this.toDomain(row);
+  }
+
+  async update(id: string, empresaId: string, input: UpdateBoletaInput): Promise<Boleta> {
+    const [row] = await this.orm.db
+      .update(boletas)
+      .set({
+        ...(input.fecha !== undefined ? { fecha: input.fecha } : {}),
+        ...(input.fechaVencimiento !== undefined ? { fechaVencimiento: input.fechaVencimiento } : {}),
+        ...(input.numero !== undefined ? { numero: input.numero } : {}),
+        ...(input.comentarios !== undefined ? { comentarios: input.comentarios } : {}),
+        updatedAt: new Date(),
+      })
+      .where(and(eq(boletas.id, id), eq(boletas.empresaId, empresaId), isNull(boletas.deletedAt)))
+      .returning();
+    if (!row) {
+      throw new ApiError("Boleta no encontrada", Code.NOT_FOUND);
+    }
+    return this.toDomain(row);
+  }
+
+  async delete(id: string, empresaId: string): Promise<void> {
+    const [row] = await this.orm.db
+      .update(boletas)
+      .set({ activo: false, deletedAt: new Date(), updatedAt: new Date() })
+      .where(and(eq(boletas.id, id), eq(boletas.empresaId, empresaId), isNull(boletas.deletedAt)))
+      .returning({ id: boletas.id });
+    if (!row) {
+      throw new ApiError("Boleta no encontrada", Code.NOT_FOUND);
+    }
   }
 
   private toDomain(row: typeof boletas.$inferSelect): Boleta {

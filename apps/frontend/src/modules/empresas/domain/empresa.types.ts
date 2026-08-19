@@ -7,6 +7,7 @@ export interface Empresa {
   cuit: string | null;
   telefono: string | null;
   direccion: string | null;
+  toleranciaTardanzaMinutos: number | null;
   rubro: Rubro;
   activa: boolean;
   createdAt: string;

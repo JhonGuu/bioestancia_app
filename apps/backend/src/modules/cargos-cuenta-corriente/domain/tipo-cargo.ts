@@ -9,8 +9,20 @@
 export enum TipoCargo {
   /** 5% sobre el monto de un cheque entregado a más de 7 días de la fecha de cobro. */
   RECARGO_CHEQUE = "recargo_cheque",
-  /** 7% sobre el monto de un cheque que se marcó `RECHAZADO`. */
+  /** 7% sobre el monto de un cheque que se marcó `RECHAZADO`. Opcional — ver `ConfirmarRechazoCheque`. */
   COMISION_RECHAZO = "comision_rechazo",
+  /**
+   * Línea informativa que deja registro visible en la cuenta corriente de
+   * que un cheque se rechazó (`ConfirmarRechazoCheque`) — SIEMPRE se crea
+   * (con comisión o sin ella), y también funciona como marcador de
+   * idempotencia (no se puede confirmar el mismo rechazo dos veces). Su
+   * `monto` es lo que se revirtió de boletas ya dadas por cobradas, pero NO
+   * suma al saldo corriente acumulado (`impactoEnSaldo` la trata como 0):
+   * ese efecto ya está reflejado en la reducción silenciosa de
+   * `AplicacionCobro.monto` del cobro original — ver
+   * `obtener-movimientos-cuenta-corriente.use-case.ts`.
+   */
+  CHEQUE_RECHAZADO = "cheque_rechazado",
   /** Cualquier otro cargo manual (ajustes puntuales, etc). */
   OTRO = "otro",
 }
@@ -18,5 +30,6 @@ export enum TipoCargo {
 export const TIPO_CARGO_LABELS: Record<TipoCargo, string> = {
   [TipoCargo.RECARGO_CHEQUE]: "Recargo por cheque a más de 7 días",
   [TipoCargo.COMISION_RECHAZO]: "Comisión por cheque rechazado",
+  [TipoCargo.CHEQUE_RECHAZADO]: "Cheque rechazado",
   [TipoCargo.OTRO]: "Otro",
 };

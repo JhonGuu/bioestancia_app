@@ -46,6 +46,7 @@ export class CompraRepositoryDrizzle implements CompraRepository {
         fecha: input.fecha,
         dte: input.dte,
         remito: input.remito,
+        precioCompraKg: input.precioCompraKg !== undefined ? String(input.precioCompraKg) : null,
         porcentajeDesbaste: String(input.porcentajeDesbaste),
         pesoBruto: String(input.pesoBruto),
         pesoNeto: String(input.pesoNeto),
@@ -69,6 +70,9 @@ export class CompraRepositoryDrizzle implements CompraRepository {
         ...(input.fecha !== undefined && { fecha: input.fecha }),
         ...(input.dte !== undefined && { dte: input.dte }),
         ...(input.remito !== undefined && { remito: input.remito }),
+        ...(input.precioCompraKg !== undefined && {
+          precioCompraKg: input.precioCompraKg !== null ? String(input.precioCompraKg) : null,
+        }),
         ...(input.porcentajeDesbaste !== undefined && {
           porcentajeDesbaste: String(input.porcentajeDesbaste),
         }),
@@ -132,6 +136,7 @@ export class CompraRepositoryDrizzle implements CompraRepository {
       fecha: row.fecha,
       dte: row.dte,
       remito: row.remito,
+      precioCompraKg: row.precioCompraKg !== null ? Number(row.precioCompraKg) : null,
       porcentajeDesbaste: Number(row.porcentajeDesbaste),
       pesoBruto: Number(row.pesoBruto),
       pesoNeto: Number(row.pesoNeto),

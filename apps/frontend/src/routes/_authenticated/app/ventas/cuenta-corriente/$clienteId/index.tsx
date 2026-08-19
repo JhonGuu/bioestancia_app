@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
 import { FileDown, FileSpreadsheet, Loader2 } from "lucide-react";
 
 import { useClientes } from "@/modules/clientes/hooks/use-clientes";
@@ -15,6 +16,8 @@ import { MovimientosCuentaCorrienteList } from "@/modules/cuenta-corriente/compo
 import { nombreCliente } from "@/modules/clientes/domain/cliente.types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { RangoFechasFiltro } from "@/shared/components/rango-fechas-filtro";
+import { dentroDeRango, type RangoFechas } from "@/shared/lib/rango-fechas";
 
 export const Route = createFileRoute("/_authenticated/app/ventas/cuenta-corriente/$clienteId/")({
   component: ResumenCuentaPage,
@@ -22,6 +25,7 @@ export const Route = createFileRoute("/_authenticated/app/ventas/cuenta-corrient
 
 function ResumenCuentaPage() {
   const { clienteId } = Route.useParams();
+  const [rango, setRango] = useState<RangoFechas | null>(null);
 
   const clientesQuery = useClientes();
   const boletasQuery = useBoletas();
@@ -54,6 +58,8 @@ function ResumenCuentaPage() {
   }
 
   const cliente = (clientesQuery.data ?? []).find((c) => c.id === clienteId);
+  const movimientos = movimientosQuery.data ?? [];
+  const movimientosFiltrados = rango ? movimientos.filter((m) => dentroDeRango(m.fecha, rango)) : movimientos;
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
@@ -91,9 +97,15 @@ function ResumenCuentaPage() {
         <CardHeader>
           <CardTitle className="text-base">Movimientos</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          <RangoFechasFiltro
+            rango={rango}
+            onChange={setRango}
+            cantidadResultados={movimientosFiltrados.length}
+            etiquetaResultados={movimientosFiltrados.length === 1 ? "movimiento" : "movimientos"}
+          />
           <MovimientosCuentaCorrienteList
-            movimientos={movimientosQuery.data ?? []}
+            movimientos={movimientosFiltrados}
             boletas={boletasQuery.data ?? []}
             cargos={cargosQuery.data ?? []}
           />

@@ -25,7 +25,7 @@ export class UsersAuthProvider implements AuthProvider {
   async getIdentity(userId: string): Promise<AuthenticatedIdentity | null> {
     const user = await this.userRepo.getById(userId);
     if (!user) return null;
-    return { id: user.id, isActive: user.isActive };
+    return { id: user.id, isActive: user.isActive, mustChangePassword: user.mustChangePassword };
   }
 
   async getAccessForEmpresa(userId: string, empresaId: string): Promise<EmpresaAccess | null> {

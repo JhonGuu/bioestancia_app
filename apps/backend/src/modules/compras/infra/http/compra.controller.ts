@@ -11,6 +11,7 @@ import { GetCompra } from "@/modules/compras/use-cases/get-compra.use-case";
 import { UpdateCompra, UpdateCompraUseCaseInput } from "@/modules/compras/use-cases/update-compra.use-case";
 import { CerrarCompra } from "@/modules/compras/use-cases/cerrar-compra.use-case";
 import { ReabrirCompra } from "@/modules/compras/use-cases/reabrir-compra.use-case";
+import { ObtenerStockTropas } from "@/modules/compras/use-cases/obtener-stock-tropas.use-case";
 
 @injectable()
 export class CompraController {
@@ -23,6 +24,7 @@ export class CompraController {
     @inject(DI_TYPES.UpdateCompra) private readonly updateCompra: UpdateCompra,
     @inject(DI_TYPES.CerrarCompra) private readonly cerrarCompra: CerrarCompra,
     @inject(DI_TYPES.ReabrirCompra) private readonly reabrirCompra: ReabrirCompra,
+    @inject(DI_TYPES.ObtenerStockTropas) private readonly obtenerStockTropas: ObtenerStockTropas,
   ) {
     this.registerRoutes();
   }
@@ -58,6 +60,23 @@ export class CompraController {
         return new ApiResponse({
           data,
           message: "Compras obtenidas correctamente",
+          status: Code.OK,
+        });
+      },
+    });
+
+    // OJO con el orden: tiene que registrarse ANTES de `/compras/:id` — si
+    // no, Express matchea "stock" contra el param `:id`.
+    this.httpServer.register({
+      method: "get",
+      url: "/compras/stock",
+      auth: "jwt-empresa",
+      handler: async ({ auth }) => {
+        if (!auth?.empresaId) throw new ApiError("Unauthorized", Code.UNAUTHORIZED);
+        const data = await this.obtenerStockTropas.execute({ empresaId: auth.empresaId });
+        return new ApiResponse({
+          data,
+          message: "Stock de tropas obtenido correctamente",
           status: Code.OK,
         });
       },

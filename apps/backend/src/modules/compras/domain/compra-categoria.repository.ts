@@ -27,6 +27,9 @@ export interface CompraCategoriaRepository {
     id: string,
     input: ActualizarLiquidacionCompraCategoriaData,
   ): Promise<CompraCategoria>;
+
+  /** Completa el canon de faena (lo que cobra el frigorífico) de una línea puntual. */
+  actualizarCanonFaena(id: string, input: ActualizarCanonFaenaCompraCategoriaData): Promise<CompraCategoria>;
 }
 
 export interface CreateCompraCategoriaInput {
@@ -51,6 +54,8 @@ export interface ActualizarFaenaCompraCategoriaData {
   destinoComercial: string | null;
   cuartosDelantero: number | null;
   cuartosTrasero: number | null;
+  comisosCabezas: number;
+  comisosKg: number;
 }
 
 export interface ActualizarLiquidacionCompraCategoriaData {
@@ -58,4 +63,9 @@ export interface ActualizarLiquidacionCompraCategoriaData {
   importeBruto: number;
   porcentajeIva: number;
   importeIva: number;
+}
+
+export interface ActualizarCanonFaenaCompraCategoriaData {
+  canonFaenaPorAnimal: number;
+  canonFaenaSubtotal: number;
 }

@@ -19,5 +19,18 @@ export interface LineaCobro {
   medioPago: MedioPago;
   monto: number;
   chequeId: string | null;
+  /**
+   * Banco o billetera virtual (texto libre, ej. "Banco Nación", "Mercado
+   * Pago") — solo tiene sentido cuando `medioPago` es TRANSFERENCIA_BANCO o
+   * BILLETERA_VIRTUAL.
+   */
+  bancoOBilletera: string | null;
+  /**
+   * Quién hizo la transferencia (texto libre) — cubre el caso de que el
+   * cliente le pida a UN TERCERO (ej. su propio cliente) que transfiera
+   * directamente a la empresa; solo tiene sentido junto con
+   * TRANSFERENCIA_BANCO/BILLETERA_VIRTUAL.
+   */
+  remitente: string | null;
   createdAt: Date;
 }

@@ -1,5 +1,6 @@
 import {
   boolean,
+  integer,
   pgEnum,
   pgTable,
   timestamp,
@@ -25,6 +26,8 @@ export const empresas = pgTable("empresas", {
   cuit: varchar("cuit", { length: 20 }),
   telefono: varchar("telefono", { length: 50 }),
   direccion: varchar("direccion", { length: 255 }),
+  /** Ver `Empresa.toleranciaTardanzaMinutos` en el dominio. */
+  toleranciaTardanzaMinutos: integer("tolerancia_tardanza_minutos"),
   rubro: rubroEnum("rubro").notNull(),
   activa: boolean("activa").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),

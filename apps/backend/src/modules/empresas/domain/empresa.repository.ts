@@ -28,4 +28,5 @@ export interface UpdateEmpresaInput {
   cuit?: string | null;
   telefono?: string | null;
   direccion?: string | null;
+  toleranciaTardanzaMinutos?: number | null;
 }

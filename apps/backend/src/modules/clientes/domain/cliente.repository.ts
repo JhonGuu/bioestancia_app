@@ -50,6 +50,8 @@ export interface CreateClienteInput {
   condicionFiscal: CondicionFiscal;
   esRevendedor?: boolean;
   diasPlazoPago?: number | null;
+  descuentoKgPorCabeza?: number | null;
+  metaCabezasSemanales?: number | null;
 }
 
 /** Reemplazo completo (no parcial) de los campos editables — ver `update()` arriba. */

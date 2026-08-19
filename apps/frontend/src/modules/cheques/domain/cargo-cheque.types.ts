@@ -49,7 +49,10 @@ export interface CargoCuentaCorriente {
 
 /** Resultado de `POST /cobros/cheques/:chequeId/confirmar-rechazo`. */
 export interface ResultadoConfirmarRechazoCheque {
-  cargo: CargoCuentaCorriente;
+  /** Cargo de la comisión del 7% — `null` si se omitió (cliente canceló el cheque el mismo día). */
+  cargoComision: CargoCuentaCorriente | null;
+  /** Línea informativa "Cheque rechazo Nº: X" — siempre se crea. */
+  cargoRechazo: CargoCuentaCorriente;
   /** Cuánto se pudo revertir realmente de lo aplicado a boletas (puede ser menor al monto del cheque). */
   montoRevertido: number;
 }

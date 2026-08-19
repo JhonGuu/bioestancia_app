@@ -13,6 +13,11 @@ export const cuentaCorrienteApi = {
     return unwrap(httpClient.get(`/cuenta-corriente/${clienteId}/saldo`));
   },
 
+  /** Saldo de TODOS los clientes de la empresa activa, de una — para el listado de cuenta corriente. */
+  getSaldos(): Promise<SaldoCliente[]> {
+    return unwrap(httpClient.get(`/cuenta-corriente/saldos`));
+  },
+
   /** Línea de tiempo de boletas, cobros y cargos del cliente, más reciente primero. */
   getMovimientos(clienteId: string): Promise<MovimientoCuentaCorriente[]> {
     return unwrap(httpClient.get(`/cuenta-corriente/${clienteId}/movimientos`));

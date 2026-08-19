@@ -70,6 +70,14 @@ export function ClienteForm({ onSubmit, isSubmitting, cliente }: ClienteFormProp
         cliente?.diasPlazoPago !== undefined && cliente?.diasPlazoPago !== null
           ? String(cliente.diasPlazoPago)
           : "",
+      descuentoKgPorCabeza:
+        cliente?.descuentoKgPorCabeza !== undefined && cliente?.descuentoKgPorCabeza !== null
+          ? String(cliente.descuentoKgPorCabeza)
+          : "",
+      metaCabezasSemanales:
+        cliente?.metaCabezasSemanales !== undefined && cliente?.metaCabezasSemanales !== null
+          ? String(cliente.metaCabezasSemanales)
+          : "",
     },
   });
 
@@ -90,7 +98,7 @@ export function ClienteForm({ onSubmit, isSubmitting, cliente }: ClienteFormProp
         </div>
 
         {tipoPersona === "fisica" ? (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormField
               control={form.control}
               name="nombre"
@@ -132,7 +140,7 @@ export function ClienteForm({ onSubmit, isSubmitting, cliente }: ClienteFormProp
             />
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormField
               control={form.control}
               name="razonSocial"
@@ -162,7 +170,7 @@ export function ClienteForm({ onSubmit, isSubmitting, cliente }: ClienteFormProp
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField
             control={form.control}
             name="condicionFiscal"
@@ -202,7 +210,7 @@ export function ClienteForm({ onSubmit, isSubmitting, cliente }: ClienteFormProp
           />
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <FormField
             control={form.control}
             name="pais"
@@ -244,19 +252,47 @@ export function ClienteForm({ onSubmit, isSubmitting, cliente }: ClienteFormProp
           />
         </div>
 
-        <FormField
-          control={form.control}
-          name="diasPlazoPago"
-          render={({ field }) => (
-            <FormItem className="max-w-xs">
-              <FormLabel>Días de plazo para pagar</FormLabel>
-              <FormControl>
-                <Input type="number" placeholder={`Default: ${DIAS_PLAZO_PAGO_DEFAULT}`} {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid max-w-2xl grid-cols-1 gap-4 sm:grid-cols-3">
+          <FormField
+            control={form.control}
+            name="diasPlazoPago"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Días de plazo para pagar</FormLabel>
+                <FormControl>
+                  <Input type="number" placeholder={`Default: ${DIAS_PLAZO_PAGO_DEFAULT}`} {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="descuentoKgPorCabeza"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Descuento kg por cabeza</FormLabel>
+                <FormControl>
+                  <Input type="number" step="0.01" min={0} placeholder="Sin descuento" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="metaCabezasSemanales"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Meta de cabezas/semana</FormLabel>
+                <FormControl>
+                  <Input type="number" min={1} placeholder="Sin meta" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         <FormField
           control={form.control}

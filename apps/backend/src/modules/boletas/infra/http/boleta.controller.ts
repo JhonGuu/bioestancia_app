@@ -11,6 +11,8 @@ import { GetBoleta } from "@/modules/boletas/use-cases/get-boleta.use-case";
 import { GenerarBoletaPdf } from "@/modules/boletas/use-cases/generar-boleta-pdf.use-case";
 import { GenerarReporteDiarioPdf } from "@/modules/boletas/use-cases/generar-reporte-diario-pdf.use-case";
 import { GenerarReporteDiarioExcel } from "@/modules/boletas/use-cases/generar-reporte-diario-excel.use-case";
+import { UpdateBoleta, UpdateBoletaInput } from "@/modules/boletas/use-cases/update-boleta.use-case";
+import { DeleteBoleta } from "@/modules/boletas/use-cases/delete-boleta.use-case";
 
 @injectable()
 export class BoletaController {
@@ -24,6 +26,8 @@ export class BoletaController {
     @inject(DI_TYPES.GenerarReporteDiarioPdf) private readonly generarReporteDiarioPdf: GenerarReporteDiarioPdf,
     @inject(DI_TYPES.GenerarReporteDiarioExcel)
     private readonly generarReporteDiarioExcel: GenerarReporteDiarioExcel,
+    @inject(DI_TYPES.UpdateBoleta) private readonly updateBoleta: UpdateBoleta,
+    @inject(DI_TYPES.DeleteBoleta) private readonly deleteBoleta: DeleteBoleta,
   ) {
     this.registerRoutes();
   }
@@ -133,6 +137,48 @@ export class BoletaController {
           empresaId: auth.empresaId,
         });
         return new FileResponse(buffer, filename, "application/pdf", "inline");
+      },
+    });
+
+    // Operario/admin/contable: corrige fecha/número/comentarios de una
+    // boleta ya cargada — para arreglar una carga mal hecha.
+    this.httpServer.register({
+      method: "patch",
+      url: "/boletas/:id",
+      auth: "jwt-empresa",
+      roles: RoleGroups.BoletaLoaders,
+      validation: this.validation.update,
+      handler: async ({ params, body, auth }) => {
+        if (!auth?.empresaId) throw new ApiError("Unauthorized", Code.UNAUTHORIZED);
+        const data = await this.updateBoleta.execute({
+          id: params.id,
+          empresaId: auth.empresaId,
+          ...(body as Omit<UpdateBoletaInput, "id" | "empresaId">),
+        });
+        return new ApiResponse({
+          data,
+          message: "Boleta actualizada correctamente",
+          status: Code.OK,
+        });
+      },
+    });
+
+    // Operario/admin/contable: borra (soft-delete) la boleta entera y sus
+    // ventas — para arreglar una carga mal hecha desde cero.
+    this.httpServer.register({
+      method: "delete",
+      url: "/boletas/:id",
+      auth: "jwt-empresa",
+      roles: RoleGroups.BoletaLoaders,
+      validation: this.validation.delete,
+      handler: async ({ params, auth }) => {
+        if (!auth?.empresaId) throw new ApiError("Unauthorized", Code.UNAUTHORIZED);
+        await this.deleteBoleta.execute({ id: params.id, empresaId: auth.empresaId });
+        return new ApiResponse({
+          data: null,
+          message: "Boleta eliminada correctamente",
+          status: Code.OK,
+        });
       },
     });
   }

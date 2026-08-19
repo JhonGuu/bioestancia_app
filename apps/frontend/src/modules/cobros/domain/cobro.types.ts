@@ -31,6 +31,11 @@ export function esMedioPagoCheque(medioPago: MedioPago): boolean {
   return medioPago === MedioPago.CHEQUE || medioPago === MedioPago.ECHEQ;
 }
 
+/** TRANSFERENCIA_BANCO y BILLETERA_VIRTUAL son los únicos medios con banco/billetera + remitente. */
+export function esMedioPagoTransferencia(medioPago: MedioPago): boolean {
+  return medioPago === MedioPago.TRANSFERENCIA_BANCO || medioPago === MedioPago.BILLETERA_VIRTUAL;
+}
+
 /**
  * `chequeId`: solo se completa cuando `medioPago` es CHEQUE o ECHEQ — el
  * backend crea el `Cheque` automáticamente al cargar la línea.
@@ -41,6 +46,10 @@ export interface LineaCobro {
   medioPago: MedioPago;
   monto: number;
   chequeId: string | null;
+  /** Solo con TRANSFERENCIA_BANCO/BILLETERA_VIRTUAL — texto libre (ej. "Mercado Pago", "Banco Nación"). */
+  bancoOBilletera: string | null;
+  /** Solo con TRANSFERENCIA_BANCO/BILLETERA_VIRTUAL — quién hizo la transferencia (puede ser un tercero). */
+  remitente: string | null;
   createdAt: string;
 }
 

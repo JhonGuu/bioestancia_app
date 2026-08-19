@@ -35,6 +35,12 @@ import {
 } from "@/modules/compras/domain/compra.types";
 import { useProveedores } from "@/modules/proveedores/hooks/use-proveedores";
 import { nombreProveedor } from "@/modules/proveedores/domain/proveedor.types";
+import {
+  DTE_PLACEHOLDER,
+  formatearDte,
+  formatearRemito,
+  REMITO_PLACEHOLDER,
+} from "@/modules/compras/domain/formato-documentos";
 
 // Misma razón que en `compra-form.tsx`: `categoria` es obligatoria y un
 // <Select> controlado no puede arrancar en un valor fuera de su enum. Sin
@@ -80,6 +86,7 @@ export function EditarCompraForm({ compra, onSubmit, isSubmitting }: EditarCompr
       fecha: compra.fecha.slice(0, 10),
       dte: compra.dte,
       remito: compra.remito,
+      precioCompraKg: compra.precioCompraKg !== null ? String(compra.precioCompraKg) : "",
       porcentajeDesbaste: String(compra.porcentajeDesbaste),
       pesoBruto: compra.pesoBruto,
       comentarios: compra.comentarios ?? "",
@@ -97,7 +104,7 @@ export function EditarCompraForm({ compra, onSubmit, isSubmitting }: EditarCompr
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-6">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField
             control={form.control}
             name="proveedorId"
@@ -148,7 +155,7 @@ export function EditarCompraForm({ compra, onSubmit, isSubmitting }: EditarCompr
           />
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <FormField
             control={form.control}
             name="numero"
@@ -190,7 +197,7 @@ export function EditarCompraForm({ compra, onSubmit, isSubmitting }: EditarCompr
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField
             control={form.control}
             name="dte"
@@ -198,7 +205,13 @@ export function EditarCompraForm({ compra, onSubmit, isSubmitting }: EditarCompr
               <FormItem>
                 <FormLabel>DTE (SENASA)</FormLabel>
                 <FormControl>
-                  <Input {...field} />
+                  <Input
+                    {...field}
+                    onChange={(e) => field.onChange(formatearDte(e.target.value))}
+                    inputMode="numeric"
+                    placeholder={DTE_PLACEHOLDER}
+                    maxLength={11}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -211,7 +224,13 @@ export function EditarCompraForm({ compra, onSubmit, isSubmitting }: EditarCompr
               <FormItem>
                 <FormLabel>Remito</FormLabel>
                 <FormControl>
-                  <Input {...field} />
+                  <Input
+                    {...field}
+                    onChange={(e) => field.onChange(formatearRemito(e.target.value))}
+                    inputMode="numeric"
+                    placeholder={REMITO_PLACEHOLDER}
+                    maxLength={11}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -219,7 +238,7 @@ export function EditarCompraForm({ compra, onSubmit, isSubmitting }: EditarCompr
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <FormField
             control={form.control}
             name="porcentajeDesbaste"
@@ -247,6 +266,19 @@ export function EditarCompraForm({ compra, onSubmit, isSubmitting }: EditarCompr
                     {...field}
                     value={field.value as string | number}
                   />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="precioCompraKg"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>$/kg en pie (opcional)</FormLabel>
+                <FormControl>
+                  <Input type="number" step="0.01" min={0} placeholder="Sin IVA" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -285,7 +317,7 @@ export function EditarCompraForm({ compra, onSubmit, isSubmitting }: EditarCompr
           </CardHeader>
           <CardContent className="space-y-4">
             {categoriasField.fields.map((item, index) => (
-              <div key={item.id} className="grid grid-cols-[2fr_2fr_1fr_auto] items-end gap-3">
+              <div key={item.id} className="grid grid-cols-1 gap-3 sm:grid-cols-[2fr_2fr_1fr_auto] sm:items-end">
                 <input type="hidden" {...form.register(`categorias.${index}.id`)} />
                 <FormField
                   control={form.control}

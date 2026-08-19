@@ -9,6 +9,7 @@ const validation = new ResultadoFaenaValidation();
 const resultadoFaenaSchema = z.object({
   id: z.string().uuid(),
   compraId: z.string().uuid(),
+  frigorificoId: z.string().uuid().nullable(),
   fechaFaena: z.string().datetime(),
   numero: z.string().nullable(),
   numeroAutorizacion: z.string().nullable(),
@@ -37,10 +38,14 @@ const compraCategoriaSchema = z.object({
   destinoComercial: z.string().nullable(),
   cuartosDelantero: z.number().int().nullable(),
   cuartosTrasero: z.number().int().nullable(),
+  comisosCabezas: z.number().int().nullable(),
+  comisosKg: z.number().nullable(),
   precioKg: z.number().nullable(),
   importeBruto: z.number().nullable(),
   porcentajeIva: z.number().nullable(),
   importeIva: z.number().nullable(),
+  canonFaenaPorAnimal: z.number().nullable(),
+  canonFaenaSubtotal: z.number().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
@@ -56,9 +61,10 @@ export function registerResultadoFaenaOpenApi(): void {
     tags: ["Resultado de faena"],
     summary:
       "Carga el resultado de faena (documento SENASA del frigorífico) de una compra y completa " +
-      "los campos de faena de cada línea de categoría. kgVivoTotal/kgCarneTotal/rendimiento se " +
-      "calculan en el server a partir de las líneas. Una compra tiene a lo sumo un resultado de " +
-      "faena. Admin o contable.",
+      "los campos de faena de cada línea de categoría. kgVivoTotal/kgCarneTotal/rendimiento y " +
+      "comisosKg/comisosCabezas del header se calculan en el server sumando las líneas — el " +
+      "decomiso sanitario se carga por categoría, no como total de tropa. Una compra tiene a lo " +
+      "sumo un resultado de faena. Admin o contable.",
     security: [{ bearerAuth: [] }],
     request: {
       headers: empresaIdHeaderSchema,

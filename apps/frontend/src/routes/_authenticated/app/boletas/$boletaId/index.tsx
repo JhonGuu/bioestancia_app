@@ -1,13 +1,19 @@
+import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { FileDown, Loader2 } from "lucide-react";
+import { FileDown, Loader2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
 import { useBoleta } from "@/modules/boletas/hooks/use-boleta";
 import { useDescargarBoletaPdf } from "@/modules/boletas/hooks/use-descargar-boleta-pdf";
+import { EditarBoletaDialog } from "@/modules/boletas/components/editar-boleta-dialog";
+import { EliminarBoletaDialog } from "@/modules/boletas/components/eliminar-boleta-dialog";
+import { EditarVentaItemDialog } from "@/modules/ventas/components/editar-venta-item-dialog";
+import { EliminarVentaDialog } from "@/modules/ventas/components/eliminar-venta-dialog";
 import { useClientes } from "@/modules/clientes/hooks/use-clientes";
 import { useCompras } from "@/modules/compras/hooks/use-compras";
 import { nombreCliente } from "@/modules/clientes/domain/cliente.types";
 import { FORMA_VENTA_LABELS } from "@/modules/ventas/domain/venta.types";
+import type { Venta } from "@/modules/ventas/domain/venta.types";
 import { ApiError } from "@/shared/api/api-response";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +29,8 @@ function BoletaDetallePage() {
   const clientesQuery = useClientes();
   const comprasQuery = useCompras();
   const descargarPdf = useDescargarBoletaPdf();
+  const [editandoBoleta, setEditandoBoleta] = useState(false);
+  const [ventaEditando, setVentaEditando] = useState<Venta | null>(null);
 
   const handleDescargarPdf = () => {
     descargarPdf.mutate(boletaId, {
@@ -63,13 +71,20 @@ function BoletaDetallePage() {
           <h1 className="text-2xl font-semibold">Boleta {boleta.numero ? `N° ${boleta.numero}` : ""}</h1>
           <p className="text-muted-foreground text-sm">
             {cliente ? nombreCliente(cliente) : "—"} ·{" "}
-            {new Date(boleta.fecha).toLocaleDateString("es-AR")}
+            {new Date(boleta.fecha).toLocaleDateString("es-AR", { timeZone: "UTC" })}
           </p>
         </div>
-        <Button variant="outline" onClick={handleDescargarPdf} disabled={descargarPdf.isPending}>
-          {descargarPdf.isPending ? <Loader2 className="animate-spin" /> : <FileDown />}
-          <span className="hidden sm:inline">Descargar PDF</span>
-        </Button>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <Button variant="outline" onClick={handleDescargarPdf} disabled={descargarPdf.isPending}>
+            {descargarPdf.isPending ? <Loader2 className="animate-spin" /> : <FileDown />}
+            <span className="hidden sm:inline">Descargar PDF</span>
+          </Button>
+          <Button variant="outline" onClick={() => setEditandoBoleta(true)}>
+            <Pencil />
+            <span className="hidden sm:inline">Editar</span>
+          </Button>
+          <EliminarBoletaDialog boletaId={boleta.id} />
+        </div>
       </div>
 
       {boleta.comentarios && (
@@ -88,11 +103,17 @@ function BoletaDetallePage() {
                   {FORMA_VENTA_LABELS[venta.formaVenta]}
                   {venta.categoria ? ` · ${venta.categoria}` : ""}
                 </CardTitle>
-                {venta.precioKg === null ? (
-                  <Badge variant="outline">Pendiente de precio</Badge>
-                ) : (
-                  <Badge variant="secondary">${venta.total?.toLocaleString("es-AR")}</Badge>
-                )}
+                <div className="flex items-center gap-1">
+                  {venta.precioKg === null ? (
+                    <Badge variant="outline">Pendiente de precio</Badge>
+                  ) : (
+                    <Badge variant="secondary">${venta.total?.toLocaleString("es-AR")}</Badge>
+                  )}
+                  <Button variant="ghost" size="icon" title="Editar ítem" onClick={() => setVentaEditando(venta)}>
+                    <Pencil className="size-4" />
+                  </Button>
+                  <EliminarVentaDialog ventaId={venta.id} />
+                </div>
               </CardHeader>
               <CardContent className="text-muted-foreground grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
                 {venta.garron !== null && (
@@ -116,11 +137,28 @@ function BoletaDetallePage() {
                     <span className="block text-xs">Precio/kg</span>${venta.precioKg}
                   </div>
                 )}
+                {venta.comentarios && (
+                  <div className="col-span-2 sm:col-span-4">
+                    <span className="block text-xs">Comentarios</span>
+                    {venta.comentarios}
+                  </div>
+                )}
               </CardContent>
             </Card>
           );
         })}
       </div>
+
+      <EditarBoletaDialog boleta={boleta} open={editandoBoleta} onOpenChange={setEditandoBoleta} />
+      {ventaEditando && (
+        <EditarVentaItemDialog
+          venta={ventaEditando}
+          open={!!ventaEditando}
+          onOpenChange={(open) => {
+            if (!open) setVentaEditando(null);
+          }}
+        />
+      )}
     </div>
   );
 }

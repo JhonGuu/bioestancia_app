@@ -69,6 +69,8 @@ export class ChequeRepositoryDrizzle implements ChequeRepository {
       .set({
         estado: input.estado,
         motivoRechazo: input.motivoRechazo ?? null,
+        endosadoA: input.endosadoA ?? null,
+        fechaEndoso: input.fechaEndoso ?? null,
         fechaUltimoCambioEstado: new Date(),
         updatedAt: new Date(),
       })
@@ -95,6 +97,8 @@ export class ChequeRepositoryDrizzle implements ChequeRepository {
       estado: row.estado as EstadoCheque,
       fechaUltimoCambioEstado: row.fechaUltimoCambioEstado,
       motivoRechazo: row.motivoRechazo,
+      endosadoA: row.endosadoA,
+      fechaEndoso: row.fechaEndoso,
       comentarios: row.comentarios,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,

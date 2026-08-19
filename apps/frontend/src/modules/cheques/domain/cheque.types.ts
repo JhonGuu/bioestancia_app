@@ -58,7 +58,20 @@ export interface Cheque {
   fechaUltimoCambioEstado: string;
   /** Solo se espera cargado cuando `estado === RECHAZADO`. */
   motivoRechazo: string | null;
+  /** A quién se endosó — solo se espera cargado cuando `estado === ENDOSADO_A_TERCEROS`. */
+  endosadoA: string | null;
+  /** Cuándo se endosó — solo se espera cargado cuando `estado === ENDOSADO_A_TERCEROS`. */
+  fechaEndoso: string | null;
   comentarios: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+/**
+ * "Listo para cobrar": todavía en cartera (no depositado/acreditado/etc.) y
+ * ya llegó (o pasó) su fecha de pago — se puede llevar al banco. Se usa para
+ * resaltarlo en la tabla y en el card de resumen de la Cartera de cheques.
+ */
+export function esListoParaCobrar(cheque: Pick<Cheque, "estado" | "fechaPago">): boolean {
+  return cheque.estado === EstadoCheque.EN_CARTERA && new Date(cheque.fechaPago).getTime() <= Date.now();
 }

@@ -18,6 +18,25 @@ export const TIPO_MOVIMIENTO_LABELS: Record<TipoMovimientoCuentaCorriente, strin
   [TipoMovimientoCuentaCorriente.CARGO]: "Cargo",
 };
 
+/** Espejo de `apps/backend/src/modules/ventas/domain/detalle-categoria-venta.ts`. */
+export interface DetalleCategoriaVenta {
+  categoria: string;
+  /** Cabeza entera = 1, media res = 0.5, pulpa = 0. */
+  cabezas: number;
+  kg: number;
+  monto: number;
+}
+
+/** Espejo de `apps/backend/src/modules/cobros/domain/detalle-linea-cobro.ts`. */
+export interface DetalleLineaCobro {
+  medioPago: string;
+  monto: number;
+  numeroCheque: string | null;
+  bancoCheque: string | null;
+  bancoOBilletera: string | null;
+  remitente: string | null;
+}
+
 /**
  * Un renglón del resumen de cuenta de un cliente — mezcla boletas (deuda),
  * cobros (pago) y cargos (recargo/comisión, deuda), más reciente primero,
@@ -35,6 +54,10 @@ export interface MovimientoCuentaCorriente {
   saldoPendiente: number | null;
   /** Solo en movimientos BOLETA. */
   fechaVencimiento: string | null;
+  /** Solo en movimientos BOLETA: cabezas/kg/monto agrupados por categoría (Capón, MEI, Chancha, etc. — nunca mezcladas entre sí). */
+  detalleCategorias: DetalleCategoriaVenta[] | null;
+  /** Solo en movimientos COBRO: una entrada por línea, con su medio de pago (y cheque/banco/remitente si corresponde). */
+  detalleLineas: DetalleLineaCobro[] | null;
   /** Saldo total del cliente inmediatamente después de este movimiento. */
   saldoCorriente: number;
 }

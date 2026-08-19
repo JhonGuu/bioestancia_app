@@ -1,6 +1,7 @@
 import {
   boolean,
   integer,
+  numeric,
   pgEnum,
   pgTable,
   timestamp,
@@ -53,6 +54,10 @@ export const clientes = pgTable("clientes", {
   esRevendedor: boolean("es_revendedor").notNull().default(false),
   /** Nullable: si no está cargado se usa `DIAS_PLAZO_PAGO_DEFAULT` (ver `domain/cliente.ts`). */
   diasPlazoPago: integer("dias_plazo_pago"),
+  /** Nullable: sin descuento configurado (ver `domain/cliente.ts`). */
+  descuentoKgPorCabeza: numeric("descuento_kg_por_cabeza", { precision: 6, scale: 2 }),
+  /** Nullable: sin meta configurada (ver `domain/cliente.ts`). */
+  metaCabezasSemanales: integer("meta_cabezas_semanales"),
   activo: boolean("activo").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),

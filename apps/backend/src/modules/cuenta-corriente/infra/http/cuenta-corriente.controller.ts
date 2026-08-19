@@ -6,6 +6,7 @@ import { ExpressAdapter } from "@/shared/infra/http/http-server";
 import { RoleGroups } from "@/modules/users/domain/role-groups";
 import { CuentaCorrienteValidation } from "@/modules/cuenta-corriente/infra/http/validation";
 import { ObtenerSaldoCliente } from "@/modules/cuenta-corriente/use-cases/obtener-saldo-cliente.use-case";
+import { ObtenerSaldosClientes } from "@/modules/cuenta-corriente/use-cases/obtener-saldos-clientes.use-case";
 import { ObtenerMovimientosCuentaCorriente } from "@/modules/cuenta-corriente/use-cases/obtener-movimientos-cuenta-corriente.use-case";
 import { GenerarResumenCuentaPdf } from "@/modules/cuenta-corriente/use-cases/generar-resumen-cuenta-pdf.use-case";
 import { GenerarResumenCuentaExcel } from "@/modules/cuenta-corriente/use-cases/generar-resumen-cuenta-excel.use-case";
@@ -16,6 +17,7 @@ export class CuentaCorrienteController {
     @inject(DI_TYPES.HttpServer) private readonly httpServer: ExpressAdapter,
     @inject(DI_TYPES.CuentaCorrienteValidation) private readonly validation: CuentaCorrienteValidation,
     @inject(DI_TYPES.ObtenerSaldoCliente) private readonly obtenerSaldoCliente: ObtenerSaldoCliente,
+    @inject(DI_TYPES.ObtenerSaldosClientes) private readonly obtenerSaldosClientes: ObtenerSaldosClientes,
     @inject(DI_TYPES.ObtenerMovimientosCuentaCorriente)
     private readonly obtenerMovimientosCuentaCorriente: ObtenerMovimientosCuentaCorriente,
     @inject(DI_TYPES.GenerarResumenCuentaPdf) private readonly generarResumenCuentaPdf: GenerarResumenCuentaPdf,
@@ -27,6 +29,18 @@ export class CuentaCorrienteController {
 
   private registerRoutes(): void {
     // Visibilidad de saldos/movimientos — admin y contable (mismo grupo que cobros/cheques).
+    this.httpServer.register({
+      method: "get",
+      url: "/cuenta-corriente/saldos",
+      auth: "jwt-empresa",
+      roles: RoleGroups.AdminAndContable,
+      handler: async ({ auth }) => {
+        if (!auth?.empresaId) throw new ApiError("Unauthorized", Code.UNAUTHORIZED);
+        const data = await this.obtenerSaldosClientes.execute({ empresaId: auth.empresaId });
+        return new ApiResponse({ data, message: "Saldos obtenidos correctamente", status: Code.OK });
+      },
+    });
+
     this.httpServer.register({
       method: "get",
       url: "/cuenta-corriente/:clienteId/saldo",

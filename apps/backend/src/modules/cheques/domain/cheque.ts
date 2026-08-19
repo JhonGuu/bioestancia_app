@@ -33,6 +33,10 @@ export interface Cheque {
   fechaUltimoCambioEstado: Date;
   /** Solo se espera cargado cuando `estado === RECHAZADO`. */
   motivoRechazo: string | null;
+  /** A quién se endosó — solo se espera cargado cuando `estado === ENDOSADO_A_TERCEROS`. Texto libre: casi nunca es un cliente/proveedor propio. */
+  endosadoA: string | null;
+  /** Cuándo se endosó — solo se espera cargado cuando `estado === ENDOSADO_A_TERCEROS`. */
+  fechaEndoso: Date | null;
   comentarios: string | null;
   createdAt: Date;
   updatedAt: Date;

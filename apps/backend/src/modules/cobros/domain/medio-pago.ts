@@ -24,3 +24,8 @@ export const MEDIO_PAGO_LABELS: Record<MedioPago, string> = {
 export function esMedioPagoCheque(medioPago: MedioPago): boolean {
   return medioPago === MedioPago.CHEQUE || medioPago === MedioPago.ECHEQ;
 }
+
+/** TRANSFERENCIA_BANCO y BILLETERA_VIRTUAL son los únicos medios con banco/billetera + remitente (ver `LineaCobro`). */
+export function esMedioPagoTransferencia(medioPago: MedioPago): boolean {
+  return medioPago === MedioPago.TRANSFERENCIA_BANCO || medioPago === MedioPago.BILLETERA_VIRTUAL;
+}

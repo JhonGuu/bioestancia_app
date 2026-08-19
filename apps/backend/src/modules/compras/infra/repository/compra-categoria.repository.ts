@@ -5,6 +5,7 @@ import { DI_TYPES } from "@/shared/infra/di/types";
 import { DrizzleAdapter } from "@/shared/infra/database/db-connection";
 import { ApiError, Code } from "@/shared/infra/http/api.responses";
 import {
+  ActualizarCanonFaenaCompraCategoriaData,
   ActualizarFaenaCompraCategoriaData,
   ActualizarLiquidacionCompraCategoriaData,
   CompraCategoriaRepository,
@@ -102,6 +103,8 @@ export class CompraCategoriaRepositoryDrizzle implements CompraCategoriaReposito
         destinoComercial: input.destinoComercial,
         cuartosDelantero: input.cuartosDelantero,
         cuartosTrasero: input.cuartosTrasero,
+        comisosCabezas: input.comisosCabezas,
+        comisosKg: String(input.comisosKg),
         updatedAt: new Date(),
       })
       .where(eq(compraCategorias.id, id))
@@ -133,6 +136,25 @@ export class CompraCategoriaRepositoryDrizzle implements CompraCategoriaReposito
     return this.toDomain(row);
   }
 
+  async actualizarCanonFaena(
+    id: string,
+    input: ActualizarCanonFaenaCompraCategoriaData,
+  ): Promise<CompraCategoria> {
+    const [row] = await this.orm.db
+      .update(compraCategorias)
+      .set({
+        canonFaenaPorAnimal: String(input.canonFaenaPorAnimal),
+        canonFaenaSubtotal: String(input.canonFaenaSubtotal),
+        updatedAt: new Date(),
+      })
+      .where(eq(compraCategorias.id, id))
+      .returning();
+    if (!row) {
+      throw new ApiError("Línea de categoría de compra no encontrada", Code.NOT_FOUND);
+    }
+    return this.toDomain(row);
+  }
+
   private toDomain(row: typeof compraCategorias.$inferSelect): CompraCategoria {
     return {
       id: row.id,
@@ -148,10 +170,14 @@ export class CompraCategoriaRepositoryDrizzle implements CompraCategoriaReposito
       destinoComercial: row.destinoComercial,
       cuartosDelantero: row.cuartosDelantero,
       cuartosTrasero: row.cuartosTrasero,
+      comisosCabezas: row.comisosCabezas,
+      comisosKg: row.comisosKg !== null ? Number(row.comisosKg) : null,
       precioKg: row.precioKg !== null ? Number(row.precioKg) : null,
       importeBruto: row.importeBruto !== null ? Number(row.importeBruto) : null,
       porcentajeIva: row.porcentajeIva !== null ? Number(row.porcentajeIva) : null,
       importeIva: row.importeIva !== null ? Number(row.importeIva) : null,
+      canonFaenaPorAnimal: row.canonFaenaPorAnimal !== null ? Number(row.canonFaenaPorAnimal) : null,
+      canonFaenaSubtotal: row.canonFaenaSubtotal !== null ? Number(row.canonFaenaSubtotal) : null,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     };

@@ -11,6 +11,8 @@ import { ObtenerReporteDiarioData } from "@/modules/boletas/use-cases/obtener-re
 import { GenerarBoletaPdf } from "@/modules/boletas/use-cases/generar-boleta-pdf.use-case";
 import { GenerarReporteDiarioPdf } from "@/modules/boletas/use-cases/generar-reporte-diario-pdf.use-case";
 import { GenerarReporteDiarioExcel } from "@/modules/boletas/use-cases/generar-reporte-diario-excel.use-case";
+import { UpdateBoleta } from "@/modules/boletas/use-cases/update-boleta.use-case";
+import { DeleteBoleta } from "@/modules/boletas/use-cases/delete-boleta.use-case";
 
 /**
  * Depende de `ventas` (VentaRepository), `compras` (CompraRepository) y
@@ -18,6 +20,9 @@ import { GenerarReporteDiarioExcel } from "@/modules/boletas/use-cases/generar-r
  * ítems de la boleta en el mismo request y valida sus referencias (tropa,
  * destino de reventa). Debe registrarse DESPUÉS de los tres en `di.ts`
  * (`clientes` ya se registra primero por su cuenta, no hace falta reordenar).
+ *
+ * `DeleteBoleta` también depende de `CobroRepository` (re-ajusta aplicaciones
+ * FIFO) — bindeado temprano en `di.ts`, ver comentario ahí.
  */
 export function registerBoletasModule(container: Container): void {
   container.bind(DI_TYPES.BoletaValidation).to(BoletaValidation);
@@ -29,6 +34,8 @@ export function registerBoletasModule(container: Container): void {
   container.bind(DI_TYPES.GenerarBoletaPdf).to(GenerarBoletaPdf);
   container.bind(DI_TYPES.GenerarReporteDiarioPdf).to(GenerarReporteDiarioPdf);
   container.bind(DI_TYPES.GenerarReporteDiarioExcel).to(GenerarReporteDiarioExcel);
+  container.bind(DI_TYPES.UpdateBoleta).to(UpdateBoleta);
+  container.bind(DI_TYPES.DeleteBoleta).to(DeleteBoleta);
   container.bind(DI_TYPES.BoletaController).to(BoletaController);
   container.get(DI_TYPES.BoletaController);
 }

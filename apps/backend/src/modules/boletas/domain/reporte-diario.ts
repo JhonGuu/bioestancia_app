@@ -3,6 +3,7 @@ import { Venta } from "@/modules/ventas/domain/venta";
 import { Cliente } from "@/modules/clientes/domain/cliente";
 import { Empresa } from "@/modules/empresas/domain/empresa";
 import { Compra } from "@/modules/compras/domain/compra";
+import { StockTropa } from "@/modules/compras/domain/stock-tropa";
 
 /** Una boleta del día, con sus ítems. */
 export interface ReporteDiarioItem {
@@ -40,6 +41,13 @@ export interface ReporteDiarioData {
    * (`compraNumeroYLetra`, ver `modules/compras/domain/compra.ts`).
    */
   compras: Compra[];
+  /**
+   * Stock teórico de cada tropa ABIERTA de la empresa (no solo las que
+   * tuvieron movimiento hoy) — para que el reporte del día también sirva
+   * como "cuánto queda por repartir" (ver `ObtenerStockTropas`). Vacío si no
+   * hay tropas abiertas.
+   */
+  stockTropas: StockTropa[];
   totalGeneralKg: number;
   totalGeneralImporte: number;
   totalPendientesDePrecio: number;

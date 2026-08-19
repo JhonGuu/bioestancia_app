@@ -35,6 +35,8 @@ export const cheques = pgTable("cheques", {
   estado: estadoChequeEnum("estado").notNull().default(EstadoCheque.EN_CARTERA),
   fechaUltimoCambioEstado: timestamp("fecha_ultimo_cambio_estado").notNull().defaultNow(),
   motivoRechazo: varchar("motivo_rechazo", { length: 255 }),
+  endosadoA: varchar("endosado_a", { length: 150 }),
+  fechaEndoso: timestamp("fecha_endoso"),
   comentarios: varchar("comentarios", { length: 255 }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),

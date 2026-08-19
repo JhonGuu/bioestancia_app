@@ -11,6 +11,7 @@ import { GetCompra } from "@/modules/compras/use-cases/get-compra.use-case";
 import { UpdateCompra } from "@/modules/compras/use-cases/update-compra.use-case";
 import { CerrarCompra } from "@/modules/compras/use-cases/cerrar-compra.use-case";
 import { ReabrirCompra } from "@/modules/compras/use-cases/reabrir-compra.use-case";
+import { ObtenerStockTropas } from "@/modules/compras/use-cases/obtener-stock-tropas.use-case";
 
 export function registerComprasModule(container: Container): void {
   container.bind(DI_TYPES.CompraValidation).to(CompraValidation);
@@ -22,6 +23,7 @@ export function registerComprasModule(container: Container): void {
   container.bind(DI_TYPES.UpdateCompra).to(UpdateCompra);
   container.bind(DI_TYPES.CerrarCompra).to(CerrarCompra);
   container.bind(DI_TYPES.ReabrirCompra).to(ReabrirCompra);
+  container.bind(DI_TYPES.ObtenerStockTropas).to(ObtenerStockTropas);
   container.bind(DI_TYPES.CompraController).to(CompraController);
   container.get(DI_TYPES.CompraController);
 }

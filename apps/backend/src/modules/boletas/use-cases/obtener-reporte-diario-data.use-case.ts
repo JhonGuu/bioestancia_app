@@ -9,6 +9,7 @@ import { ClienteRepository } from "@/modules/clientes/domain/cliente.repository"
 import { nombreCliente } from "@/modules/clientes/domain/cliente";
 import { EmpresaRepository } from "@/modules/empresas/domain/empresa.repository";
 import { CompraRepository } from "@/modules/compras/domain/compra.repository";
+import { ObtenerStockTropas } from "@/modules/compras/use-cases/obtener-stock-tropas.use-case";
 import {
   ReporteDiarioData,
   ReporteDiarioClienteGrupo,
@@ -32,6 +33,10 @@ export interface ObtenerReporteDiarioDataInput {
  * rango (agrupadas en memoria por `boletaId`), todos los clientes de la
  * empresa (mapeados por id), todas las compras de la empresa (para mostrar
  * número/letra de tropa por ítem — ver `compraNumeroYLetra`), y la empresa.
+ *
+ * También agrega `stockTropas` (ver `ObtenerStockTropas`) — no es gratis (un
+ * query extra por tropa abierta), pero el reporte diario se pide una vez por
+ * día, no es un endpoint de alto volumen.
  */
 @injectable()
 export class ObtenerReporteDiarioData {
@@ -41,6 +46,7 @@ export class ObtenerReporteDiarioData {
     @inject(DI_TYPES.VentaRepository) private readonly ventaRepository: VentaRepository,
     @inject(DI_TYPES.ClienteRepository) private readonly clienteRepository: ClienteRepository,
     @inject(DI_TYPES.CompraRepository) private readonly compraRepository: CompraRepository,
+    @inject(DI_TYPES.ObtenerStockTropas) private readonly obtenerStockTropas: ObtenerStockTropas,
   ) {}
 
   async execute(input: ObtenerReporteDiarioDataInput): Promise<ReporteDiarioData> {
@@ -53,11 +59,12 @@ export class ObtenerReporteDiarioData {
     const hasta = new Date(desde);
     hasta.setUTCDate(hasta.getUTCDate() + 1);
 
-    const [boletasDelDia, ventasDelDia, clientes, compras] = await Promise.all([
+    const [boletasDelDia, ventasDelDia, clientes, compras, stockTropas] = await Promise.all([
       this.boletaRepository.listByRango(input.empresaId, desde, hasta),
       this.ventaRepository.listByEmpresaYRango(input.empresaId, desde, hasta),
       this.clienteRepository.list(input.empresaId),
       this.compraRepository.list(input.empresaId),
+      this.obtenerStockTropas.execute({ empresaId: input.empresaId }),
     ]);
 
     const clientesPorId = new Map(clientes.map((c) => [c.id, c]));
@@ -112,6 +119,7 @@ export class ObtenerReporteDiarioData {
       fecha: input.fecha,
       grupos,
       compras,
+      stockTropas,
       totalGeneralKg,
       totalGeneralImporte,
       totalPendientesDePrecio,

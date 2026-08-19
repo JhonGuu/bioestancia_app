@@ -13,6 +13,8 @@ const lineaCobroSchema = z.object({
   medioPago: z.nativeEnum(MedioPago),
   monto: z.number(),
   chequeId: z.string().uuid().nullable(),
+  bancoOBilletera: z.string().nullable(),
+  remitente: z.string().nullable(),
   createdAt: z.string().datetime(),
 });
 
@@ -68,11 +70,13 @@ const sugerenciaRechazoSchema = z.object({
 });
 
 const confirmarRechazoBodySchema = z.object({
-  comision: z.number().positive().optional(),
+  comision: z.number().min(0).optional(),
+  sinComision: z.boolean().optional(),
 });
 
 const confirmarRechazoResponseSchema = z.object({
-  cargo: cargoSchema,
+  cargoComision: cargoSchema.nullable(),
+  cargoRechazo: cargoSchema,
   montoRevertido: z.number(),
 });
 
@@ -200,8 +204,9 @@ export function registerCobrosOpenApi(): void {
     path: "/cobros/cheques/{chequeId}/confirmar-rechazo",
     tags: ["Cobros"],
     summary:
-      "Confirma (a mano) el rechazo de un cheque: revierte lo aplicado a boletas (orden LIFO) y carga la " +
-      "comisión del 7%. Admin o contable.",
+      "Confirma (a mano) el rechazo de un cheque: revierte lo aplicado a boletas (orden LIFO), deja una " +
+      "línea 'Cheque rechazo Nº: X' visible en la cuenta corriente, y carga la comisión del 7% salvo que " +
+      "se mande `sinComision: true` (cliente canceló el cheque el mismo día). Admin o contable.",
     security: [{ bearerAuth: [] }],
     request: {
       headers: empresaIdHeaderSchema,

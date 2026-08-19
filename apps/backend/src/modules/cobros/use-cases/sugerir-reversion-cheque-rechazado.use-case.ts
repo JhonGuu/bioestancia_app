@@ -48,10 +48,13 @@ export class SugerirReversionChequeRechazado {
       throw new ApiError("El cheque no está marcado como rechazado", Code.BAD_REQUEST);
     }
 
+    // CHEQUE_RECHAZADO se crea siempre al confirmar (con comisión o sin
+    // ella) — es el marcador correcto de idempotencia, ya que COMISION_RECHAZO
+    // ahora es opcional (ver `ConfirmarRechazoCheque`).
     const yaConfirmado =
       (await this.cargoCuentaCorrienteRepository.getByChequeYTipo(
         input.chequeId,
-        TipoCargo.COMISION_RECHAZO,
+        TipoCargo.CHEQUE_RECHAZADO,
         input.empresaId,
       )) !== null;
 

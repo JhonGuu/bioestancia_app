@@ -79,10 +79,16 @@ export interface CompraCategoria {
   destinoComercial: string | null;
   cuartosDelantero: number | null;
   cuartosTrasero: number | null;
+  /** Cabezas/kg de ESTA categoría decomisados en la faena (sanitario) — 0 si no se cargó ninguno, `null` hasta que se carga el resultado de faena. */
+  comisosCabezas: number | null;
+  comisosKg: number | null;
   precioKg: number | null;
   importeBruto: number | null;
   porcentajeIva: number | null;
   importeIva: number | null;
+  /** Fase 4: lo que cobra el FRIGORÍFICO por faenar (canon $/animal, ya combina lo facturado + lo efectivo). */
+  canonFaenaPorAnimal: number | null;
+  canonFaenaSubtotal: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -104,6 +110,8 @@ export interface Compra {
   fecha: string;
   dte: string;
   remito: string;
+  /** $/kg en pie negociado con el proveedor para esta tropa (sin IVA) — referencia, no lo facturado final. */
+  precioCompraKg: number | null;
   porcentajeDesbaste: number;
   /** Kg vivo de báscula de la tropa entera (sin discriminar por categoría). */
   pesoBruto: number;
@@ -125,4 +133,45 @@ export interface CompraConCategorias extends Compra {
 
 export function totalCabezas(categorias: CompraCategoria[]): number {
   return categorias.reduce((acc, c) => acc + c.cabezas, 0);
+}
+
+/** "45 - A" (o solo "45" si todavía no tiene letra asignada). */
+export function compraNumeroYLetra(compra: Pick<Compra, "numero" | "letra">): string {
+  return compra.letra ? `${compra.numero} - ${compra.letra}` : compra.numero;
+}
+
+/**
+ * Stock TEÓRICO de una tropa abierta — ver `ObtenerStockTropas` en el
+ * backend. Solo tropas no cerradas (`GET /compras/stock`).
+ */
+/** Cabezas compradas de una categoría puntual dentro de una tropa — ver `StockTropa.categorias`. */
+export interface StockTropaCategoria {
+  categoria: CategoriaPorcino;
+  cabezas: number;
+}
+
+export interface StockTropa extends Compra {
+  cabezasCompradas: number;
+  cabezasVendidas: number;
+  stockRestante: number;
+  /** Categorías de esta tropa con sus cabezas compradas — ver `etiquetasStockTropa`. */
+  categorias: StockTropaCategoria[];
+}
+
+/**
+ * "CHA" si la tropa tiene alguna línea de Cerda/Chancha, "CAP" si tiene
+ * Capón o Machos Enteros Inmunocastrados (MEI) — para que quien planifica el
+ * reparto vea de un vistazo qué tipo de animal queda en cada tropa, sin
+ * tener que abrir el detalle. Puede devolver ambas etiquetas si la tropa
+ * mezcla categorías.
+ */
+export function etiquetasStockTropa(categorias: Pick<StockTropaCategoria, "categoria">[]): string[] {
+  const tags = new Set<string>();
+  for (const { categoria } of categorias) {
+    if (categoria === CategoriaPorcino.CERDA_CHANCHA) tags.add("CHA");
+    if (categoria === CategoriaPorcino.CAPON || categoria === CategoriaPorcino.MACHOS_ENTEROS_INMUNOCASTRADOS) {
+      tags.add("CAP");
+    }
+  }
+  return [...tags];
 }

@@ -93,6 +93,18 @@ function ChequeDetallePage() {
               <p>{cheque.motivoRechazo}</p>
             </div>
           )}
+          {cheque.endosadoA && (
+            <div>
+              <p className="text-muted-foreground text-xs">Endosado a</p>
+              <p>{cheque.endosadoA}</p>
+            </div>
+          )}
+          {cheque.fechaEndoso && (
+            <div>
+              <p className="text-muted-foreground text-xs">Fecha de endoso</p>
+              <p>{new Date(cheque.fechaEndoso).toLocaleDateString("es-AR", { timeZone: "UTC" })}</p>
+            </div>
+          )}
         </CardContent>
       </Card>
 

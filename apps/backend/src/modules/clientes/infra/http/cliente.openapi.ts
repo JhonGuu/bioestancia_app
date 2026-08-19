@@ -24,6 +24,8 @@ const clienteSchema = z.object({
   condicionFiscal: z.nativeEnum(CondicionFiscal),
   esRevendedor: z.boolean(),
   diasPlazoPago: z.number().nullable(),
+  descuentoKgPorCabeza: z.number().nullable(),
+  metaCabezasSemanales: z.number().nullable(),
   activo: z.boolean(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),

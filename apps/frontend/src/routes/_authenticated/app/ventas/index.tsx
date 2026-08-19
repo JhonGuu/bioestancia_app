@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Banknote, DollarSign, HandCoins, Wallet } from "lucide-react";
+import { Banknote, DollarSign, HandCoins, PiggyBank, Percent, Target, Wallet } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import { useVentas } from "@/modules/ventas/hooks/use-ventas";
 import { useCheques } from "@/modules/cheques/hooks/use-cheques";
 import { EstadoCheque } from "@/modules/cheques/domain/cheque.types";
+import { useProgresoMetasSemanales } from "@/modules/metas-semanales/hooks/use-progreso-metas-semanales";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -25,6 +26,9 @@ function VentasDashboardPage() {
 
   const chequesQuery = useCheques({ estado: EstadoCheque.EN_CARTERA });
   const chequesEnCartera = (chequesQuery.data ?? []).length;
+
+  const progresoMetasQuery = useProgresoMetasSemanales();
+  const metasCumplidas = (progresoMetasQuery.data ?? []).filter((p) => p.cumplida).length;
 
   return (
     <div className="space-y-4">
@@ -62,6 +66,25 @@ function VentasDashboardPage() {
           titulo="Cuenta corriente"
           descripcion="Resumen de cuenta por cliente: saldo total, saldo vencido y detalle de movimientos."
         />
+        <SeccionCard
+          to="/app/ventas/metas-semanales"
+          icon={Target}
+          titulo="Metas semanales"
+          descripcion="Progreso de cabezas/semana de los clientes con meta configurada — no se compensa entre semanas."
+          badge={metasCumplidas > 0 ? `${metasCumplidas} cumplida${metasCumplidas === 1 ? "" : "s"}` : undefined}
+        />
+        <SeccionCard
+          to="/app/ventas/porcentaje-cobranza"
+          icon={Percent}
+          titulo="Porcentaje de cobranza"
+          descripcion="% de la deuda vencida cobrada cada semana, por cliente — sin contar la venta nueva de esa semana."
+        />
+        <SeccionCard
+          to="/app/ventas/cabezas"
+          icon={PiggyBank}
+          titulo="Cabezas"
+          descripcion="Planificación vs. venta real de cabezas por cliente y semana, por categoría (Capón, Chancha)."
+        />
       </div>
     </div>
   );
@@ -71,7 +94,14 @@ interface SeccionCardProps {
   icon: LucideIcon;
   titulo: string;
   descripcion: string;
-  to?: "/app/ventas/precios" | "/app/ventas/cobros" | "/app/ventas/cheques" | "/app/ventas/cuenta-corriente";
+  to?:
+    | "/app/ventas/precios"
+    | "/app/ventas/cobros"
+    | "/app/ventas/cheques"
+    | "/app/ventas/cuenta-corriente"
+    | "/app/ventas/metas-semanales"
+    | "/app/ventas/porcentaje-cobranza"
+    | "/app/ventas/cabezas";
   proximamente?: boolean;
   badge?: string;
 }
