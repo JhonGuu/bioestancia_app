@@ -1,5 +1,6 @@
 import { Compra } from "@/modules/compras/domain/compra";
 import { EspecieAnimal } from "@/modules/compras/domain/especie-animal";
+import { PaginatedResult, PaginationQuery } from "@/shared/infra/http/pagination";
 
 /**
  * Interface del repositorio de Compras. Forma parte del DOMINIO.
@@ -11,8 +12,17 @@ import { EspecieAnimal } from "@/modules/compras/domain/especie-animal";
 export interface CompraRepository {
   getById(id: string, empresaId: string): Promise<Compra | null>;
 
-  /** Lista las compras de una empresa puntual. */
+  /**
+   * Lista las compras de una empresa puntual.
+   *
+   * Sin `pagination`: devuelve TODO (comportamiento histórico) — la usan
+   * `informes-compras`, el reporte diario de boletas y `obtener-stock-tropas`
+   * (necesitan agregar/filtrar sobre el total). Con `pagination`: devuelve
+   * una página (`{items, pagination}`) — la forma que tiene que usar
+   * cualquier pantalla de listado nueva.
+   */
   list(empresaId: string): Promise<Compra[]>;
+  list(empresaId: string, pagination: PaginationQuery): Promise<PaginatedResult<Compra>>;
 
   create(input: CreateCompraInput): Promise<Compra>;
 

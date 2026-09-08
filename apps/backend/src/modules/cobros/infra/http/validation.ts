@@ -1,6 +1,7 @@
 import { injectable } from "inversify";
 import { z } from "zod";
 
+import { optionalPaginationQuerySchema } from "@/shared/infra/http/pagination";
 import { MedioPago, esMedioPagoCheque } from "@/modules/cobros/domain/medio-pago";
 
 const lineaBody = z
@@ -35,8 +36,13 @@ const createBody = z.object({
   lineas: z.array(lineaBody).min(1, "El cobro necesita al menos una línea"),
 });
 
+// `page`/`limit` opcionales a propósito, igual que en el resto de los
+// módulos: sin ninguno de los dos, GET /cobros devuelve todo (compatibilidad
+// con pantallas viejas que agregan sobre el total). Pasando cualquiera de
+// los dos, devuelve `{items, pagination}` (respetando `clienteId` si vino).
 const listQuery = z.object({
   clienteId: z.string().uuid().optional(),
+  ...optionalPaginationQuerySchema.shape,
 });
 
 const idParams = z.object({

@@ -1,11 +1,18 @@
 import { httpClient, unwrap } from "@/shared/api/http-client";
+import type { PaginatedResult } from "@/shared/api/pagination.types";
 import type { CreateCobroFormValues } from "@/modules/cobros/domain/cobro.schemas";
 import type { CobroConLineas } from "@/modules/cobros/domain/cobro.types";
 import { esMedioPagoCheque, esMedioPagoTransferencia } from "@/modules/cobros/domain/cobro.types";
 
 export const cobrosApi = {
+  /** Trae TODOS los cobros de la empresa activa (opcionalmente filtrados por cliente), sin paginar — mismo comportamiento de siempre. Para una pantalla nueva de listado, usar `listPaginado`. */
   list(clienteId?: string): Promise<CobroConLineas[]> {
     return unwrap(httpClient.get("/cobros", { params: clienteId ? { clienteId } : undefined }));
+  },
+
+  /** Trae una página de cobros, opcionalmente filtrados por cliente. `page` arranca en 1. */
+  listPaginado(page: number, limit: number, clienteId?: string): Promise<PaginatedResult<CobroConLineas>> {
+    return unwrap(httpClient.get("/cobros", { params: { page, limit, ...(clienteId ? { clienteId } : {}) } }));
   },
 
   getById(id: string): Promise<CobroConLineas> {

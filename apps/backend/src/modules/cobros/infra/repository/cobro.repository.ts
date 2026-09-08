@@ -1,9 +1,10 @@
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNull } from "drizzle-orm";
 import { inject, injectable } from "inversify";
 
 import { DI_TYPES } from "@/shared/infra/di/types";
 import { DrizzleAdapter } from "@/shared/infra/database/db-connection";
 import { ApiError, Code } from "@/shared/infra/http/api.responses";
+import { buildPaginationMeta, PaginatedResult, PaginationQuery } from "@/shared/infra/http/pagination";
 import {
   AjusteAplicacionInput,
   CobroConLineas,
@@ -30,18 +31,46 @@ export class CobroRepositoryDrizzle implements CobroRepository {
     return this.toDomain(row, lineas.get(row.id) ?? []);
   }
 
-  async list(empresaId: string, clienteId?: string): Promise<CobroConLineas[]> {
+  async list(empresaId: string, clienteId?: string): Promise<CobroConLineas[]>;
+  async list(
+    empresaId: string,
+    clienteId: string | undefined,
+    pagination: PaginationQuery,
+  ): Promise<PaginatedResult<CobroConLineas>>;
+  async list(
+    empresaId: string,
+    clienteId?: string,
+    pagination?: PaginationQuery,
+  ): Promise<CobroConLineas[] | PaginatedResult<CobroConLineas>> {
     const condiciones = [eq(cobros.empresaId, empresaId), isNull(cobros.deletedAt)];
     if (clienteId) condiciones.push(eq(cobros.clienteId, clienteId));
+    const condicion = and(...condiciones);
 
-    const rows = await this.orm.db
-      .select()
-      .from(cobros)
-      .where(and(...condiciones));
-    if (rows.length === 0) return [];
+    if (!pagination) {
+      const rows = await this.orm.db.select().from(cobros).where(condicion);
+      if (rows.length === 0) return [];
 
-    const lineasPorCobro = await this.getLineas(rows.map((r) => r.id));
-    return rows.map((row) => this.toDomain(row, lineasPorCobro.get(row.id) ?? []));
+      const lineasPorCobro = await this.getLineas(rows.map((r) => r.id));
+      return rows.map((row) => this.toDomain(row, lineasPorCobro.get(row.id) ?? []));
+    }
+
+    const [rows, [{ total }]] = await Promise.all([
+      this.orm.db
+        .select()
+        .from(cobros)
+        .where(condicion)
+        .orderBy(desc(cobros.fecha))
+        .limit(pagination.limit)
+        .offset((pagination.page - 1) * pagination.limit),
+      this.orm.db.select({ total: count() }).from(cobros).where(condicion),
+    ]);
+
+    const lineasPorCobro =
+      rows.length > 0 ? await this.getLineas(rows.map((r) => r.id)) : new Map<string, LineaCobro[]>();
+    return {
+      items: rows.map((row) => this.toDomain(row, lineasPorCobro.get(row.id) ?? [])),
+      pagination: buildPaginationMeta(pagination, total),
+    };
   }
 
   async create(input: CreateCobroInput): Promise<CobroConLineas> {

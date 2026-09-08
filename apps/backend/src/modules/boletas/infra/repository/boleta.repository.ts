@@ -1,9 +1,10 @@
-import { and, eq, gte, isNull, lt } from "drizzle-orm";
+import { and, count, desc, eq, gte, isNull, lt } from "drizzle-orm";
 import { inject, injectable } from "inversify";
 
 import { DI_TYPES } from "@/shared/infra/di/types";
 import { DrizzleAdapter } from "@/shared/infra/database/db-connection";
 import { ApiError, Code } from "@/shared/infra/http/api.responses";
+import { buildPaginationMeta, PaginatedResult, PaginationQuery } from "@/shared/infra/http/pagination";
 import { BoletaRepository, CreateBoletaInput, UpdateBoletaInput } from "@/modules/boletas/domain/boleta.repository";
 import { Boleta } from "@/modules/boletas/domain/boleta";
 import { boletas } from "@/modules/boletas/infra/database/schema";
@@ -20,12 +21,34 @@ export class BoletaRepositoryDrizzle implements BoletaRepository {
     return row ? this.toDomain(row) : null;
   }
 
-  async list(empresaId: string): Promise<Boleta[]> {
-    const rows = await this.orm.db
-      .select()
-      .from(boletas)
-      .where(and(eq(boletas.empresaId, empresaId), isNull(boletas.deletedAt)));
-    return rows.map((row) => this.toDomain(row));
+  async list(empresaId: string): Promise<Boleta[]>;
+  async list(empresaId: string, pagination: PaginationQuery): Promise<PaginatedResult<Boleta>>;
+  async list(
+    empresaId: string,
+    pagination?: PaginationQuery,
+  ): Promise<Boleta[] | PaginatedResult<Boleta>> {
+    const condicion = and(eq(boletas.empresaId, empresaId), isNull(boletas.deletedAt));
+
+    if (!pagination) {
+      const rows = await this.orm.db.select().from(boletas).where(condicion);
+      return rows.map((row) => this.toDomain(row));
+    }
+
+    const [rows, [{ total }]] = await Promise.all([
+      this.orm.db
+        .select()
+        .from(boletas)
+        .where(condicion)
+        .orderBy(desc(boletas.fecha))
+        .limit(pagination.limit)
+        .offset((pagination.page - 1) * pagination.limit),
+      this.orm.db.select({ total: count() }).from(boletas).where(condicion),
+    ]);
+
+    return {
+      items: rows.map((row) => this.toDomain(row)),
+      pagination: buildPaginationMeta(pagination, total),
+    };
   }
 
   async listByRango(empresaId: string, desde: Date, hasta: Date): Promise<Boleta[]> {

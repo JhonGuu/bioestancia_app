@@ -1,9 +1,10 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, count, desc, eq, isNull } from "drizzle-orm";
 import { inject, injectable } from "inversify";
 
 import { DI_TYPES } from "@/shared/infra/di/types";
 import { DrizzleAdapter } from "@/shared/infra/database/db-connection";
 import { ApiError, Code } from "@/shared/infra/http/api.responses";
+import { buildPaginationMeta, PaginatedResult, PaginationQuery } from "@/shared/infra/http/pagination";
 import {
   CompraRepository,
   CreateCompraInput,
@@ -26,12 +27,34 @@ export class CompraRepositoryDrizzle implements CompraRepository {
     return row ? this.toDomain(row) : null;
   }
 
-  async list(empresaId: string): Promise<Compra[]> {
-    const rows = await this.orm.db
-      .select()
-      .from(compras)
-      .where(and(eq(compras.empresaId, empresaId), isNull(compras.deletedAt)));
-    return rows.map((row) => this.toDomain(row));
+  async list(empresaId: string): Promise<Compra[]>;
+  async list(empresaId: string, pagination: PaginationQuery): Promise<PaginatedResult<Compra>>;
+  async list(
+    empresaId: string,
+    pagination?: PaginationQuery,
+  ): Promise<Compra[] | PaginatedResult<Compra>> {
+    const condicion = and(eq(compras.empresaId, empresaId), isNull(compras.deletedAt));
+
+    if (!pagination) {
+      const rows = await this.orm.db.select().from(compras).where(condicion);
+      return rows.map((row) => this.toDomain(row));
+    }
+
+    const [rows, [{ total }]] = await Promise.all([
+      this.orm.db
+        .select()
+        .from(compras)
+        .where(condicion)
+        .orderBy(desc(compras.fecha))
+        .limit(pagination.limit)
+        .offset((pagination.page - 1) * pagination.limit),
+      this.orm.db.select({ total: count() }).from(compras).where(condicion),
+    ]);
+
+    return {
+      items: rows.map((row) => this.toDomain(row)),
+      pagination: buildPaginationMeta(pagination, total),
+    };
   }
 
   async create(input: CreateCompraInput): Promise<Compra> {

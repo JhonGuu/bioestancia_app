@@ -1,4 +1,5 @@
 import { Boleta } from "@/modules/boletas/domain/boleta";
+import { PaginatedResult, PaginationQuery } from "@/shared/infra/http/pagination";
 
 /**
  * Interface del repositorio de Boletas. Forma parte del DOMINIO.
@@ -9,8 +10,17 @@ import { Boleta } from "@/modules/boletas/domain/boleta";
 export interface BoletaRepository {
   getById(id: string, empresaId: string): Promise<Boleta | null>;
 
-  /** Lista las boletas de una empresa puntual. */
+  /**
+   * Lista las boletas de una empresa puntual.
+   *
+   * Sin `pagination`: devuelve TODO (comportamiento histórico) — la usan
+   * `porcentaje-cobranza` y `cuenta-corriente` (`obtener-saldos-clientes`)
+   * para agregar sobre el total. Con `pagination`: devuelve una página
+   * (`{items, pagination}`) — la forma que tiene que usar cualquier pantalla
+   * de listado nueva.
+   */
   list(empresaId: string): Promise<Boleta[]>;
+  list(empresaId: string, pagination: PaginationQuery): Promise<PaginatedResult<Boleta>>;
 
   /**
    * Lista las boletas de una empresa en un rango de fechas — la usa el

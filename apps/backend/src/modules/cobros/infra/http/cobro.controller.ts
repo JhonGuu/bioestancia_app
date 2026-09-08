@@ -46,6 +46,9 @@ export class CobroController {
       },
     });
 
+    // Paginado opcional (ver CobroValidation.list): sin page/limit devuelve
+    // todo (compatibilidad con pantallas viejas); con cualquiera de los dos,
+    // devuelve {items, pagination}, respetando el filtro clienteId si vino.
     this.httpServer.register({
       method: "get",
       url: "/cobros",
@@ -54,8 +57,13 @@ export class CobroController {
       validation: this.validation.list,
       handler: async ({ query, auth }) => {
         if (!auth?.empresaId) throw new ApiError("Unauthorized", Code.UNAUTHORIZED);
-        const { clienteId } = query as unknown as { clienteId?: string };
-        const data = await this.listCobros.execute({ empresaId: auth.empresaId, clienteId });
+        const { clienteId, page, limit } = query as unknown as {
+          clienteId?: string;
+          page?: number;
+          limit?: number;
+        };
+        const pagination = page !== undefined || limit !== undefined ? { page: page ?? 1, limit: limit ?? 50 } : undefined;
+        const data = await this.listCobros.execute({ empresaId: auth.empresaId, clienteId, pagination });
         return new ApiResponse({ data, message: "Cobros obtenidos correctamente", status: Code.OK });
       },
     });

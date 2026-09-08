@@ -54,13 +54,19 @@ export class BoletaController {
     });
 
     // Lectura: cualquier usuario con acceso a la empresa activa.
+    // Paginado opcional (ver BoletaValidation.list): sin page/limit devuelve
+    // todo (compatibilidad con pantallas viejas); con cualquiera de los dos,
+    // devuelve {items, pagination}.
     this.httpServer.register({
       method: "get",
       url: "/boletas",
       auth: "jwt-empresa",
-      handler: async ({ auth }) => {
+      validation: this.validation.list,
+      handler: async ({ auth, query }) => {
         if (!auth?.empresaId) throw new ApiError("Unauthorized", Code.UNAUTHORIZED);
-        const data = await this.listBoletas.execute({ empresaId: auth.empresaId });
+        const { page, limit } = query as { page?: number; limit?: number };
+        const pagination = page !== undefined || limit !== undefined ? { page: page ?? 1, limit: limit ?? 50 } : undefined;
+        const data = await this.listBoletas.execute({ empresaId: auth.empresaId, pagination });
         return new ApiResponse({
           data,
           message: "Boletas obtenidas correctamente",

@@ -1,5 +1,6 @@
 import { httpClient, unwrap } from "@/shared/api/http-client";
 import { filenameFromContentDisposition } from "@/shared/lib/download-blob";
+import type { PaginatedResult } from "@/shared/api/pagination.types";
 import type { CreateBoletaFormValues } from "@/modules/boletas/domain/boleta.schemas";
 import type { Boleta, BoletaConVentas } from "@/modules/boletas/domain/boleta.types";
 import { CategoriaReventa } from "@/modules/ventas/domain/categoria-venta";
@@ -11,8 +12,14 @@ export interface ArchivoDescargado {
 }
 
 export const boletasApi = {
+  /** Trae TODAS las boletas de la empresa activa, sin paginar — mismo comportamiento de siempre. Para una pantalla nueva de listado, usar `listPaginado`. */
   list(): Promise<Boleta[]> {
     return unwrap(httpClient.get("/boletas"));
+  },
+
+  /** Trae una página de boletas. `page` arranca en 1. */
+  listPaginado(page: number, limit: number): Promise<PaginatedResult<Boleta>> {
+    return unwrap(httpClient.get("/boletas", { params: { page, limit } }));
   },
 
   getById(id: string): Promise<BoletaConVentas> {

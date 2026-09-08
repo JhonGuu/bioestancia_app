@@ -1,6 +1,7 @@
 import { injectable } from "inversify";
 import { z } from "zod";
 
+import { optionalPaginationQuerySchema } from "@/shared/infra/http/pagination";
 import { EspecieAnimal } from "@/modules/compras/domain/especie-animal";
 import { CategoriaPorcino } from "@/modules/compras/domain/categoria-porcino";
 import { RazaPorcino } from "@/modules/compras/domain/raza-porcino";
@@ -69,6 +70,14 @@ const updateBody = z.object({
 @injectable()
 export class CompraValidation {
   create = { body: createBody };
+
+  /**
+   * `page`/`limit` opcionales a propósito: sin ninguno de los dos, GET
+   * /compras devuelve todo (compatibilidad con pantallas viejas que agregan
+   * sobre el total). Pasando cualquiera de los dos, devuelve
+   * `{items, pagination}`.
+   */
+  list = { query: optionalPaginationQuerySchema };
 
   getById = {
     params: z.object({

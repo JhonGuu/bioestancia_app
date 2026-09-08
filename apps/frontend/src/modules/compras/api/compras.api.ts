@@ -1,4 +1,5 @@
 import { httpClient, unwrap } from "@/shared/api/http-client";
+import type { PaginatedResult } from "@/shared/api/pagination.types";
 import type {
   CreateCompraFormValues,
   UpdateCompraFormValues,
@@ -6,8 +7,14 @@ import type {
 import type { Compra, CompraConCategorias, StockTropa } from "@/modules/compras/domain/compra.types";
 
 export const comprasApi = {
+  /** Trae TODAS las compras de la empresa activa, sin paginar — mismo comportamiento de siempre. Para una pantalla nueva de listado, usar `listPaginado`. */
   list(): Promise<Compra[]> {
     return unwrap(httpClient.get("/compras"));
+  },
+
+  /** Trae una página de compras. `page` arranca en 1. */
+  listPaginado(page: number, limit: number): Promise<PaginatedResult<Compra>> {
+    return unwrap(httpClient.get("/compras", { params: { page, limit } }));
   },
 
   getById(id: string): Promise<CompraConCategorias> {

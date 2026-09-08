@@ -1,6 +1,7 @@
 import { injectable } from "inversify";
 import { z } from "zod";
 
+import { optionalPaginationQuerySchema } from "@/shared/infra/http/pagination";
 import { FormaVenta } from "@/modules/ventas/domain/forma-venta";
 import { CategoriaPorcino } from "@/modules/compras/domain/categoria-porcino";
 import { CategoriaReventa, esReventa } from "@/modules/ventas/domain/categoria-venta";
@@ -87,6 +88,14 @@ const updateBody = z.object({
 @injectable()
 export class BoletaValidation {
   create = { body: createBody };
+
+  /**
+   * `page`/`limit` opcionales a propósito: sin ninguno de los dos, GET
+   * /boletas devuelve todo (compatibilidad con pantallas viejas que agregan
+   * sobre el total). Pasando cualquiera de los dos, devuelve
+   * `{items, pagination}`.
+   */
+  list = { query: optionalPaginationQuerySchema };
 
   getById = { params: idParams };
 
