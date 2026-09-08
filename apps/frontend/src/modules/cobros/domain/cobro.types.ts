@@ -17,6 +17,8 @@ export const MedioPago = {
   ECHEQ: "echeq",
   /** El cliente cancela sin que se mueva plata: se compensa contra otra cosa. Se trata igual que EFECTIVO. */
   COMPENSACION: "compensacion",
+  /** Una retención que le practicaron al cliente se acredita como pago — reduce su deuda sin mover plata. Igual que EFECTIVO. */
+  RETENCION: "retencion",
 } as const;
 export type MedioPago = (typeof MedioPago)[keyof typeof MedioPago];
 
@@ -27,6 +29,7 @@ export const MEDIO_PAGO_LABELS: Record<MedioPago, string> = {
   [MedioPago.CHEQUE]: "Cheque",
   [MedioPago.ECHEQ]: "Echeq",
   [MedioPago.COMPENSACION]: "Compensación",
+  [MedioPago.RETENCION]: "Retención",
 };
 
 /** CHEQUE y ECHEQ son los únicos medios que generan un `Cheque` (ver `modules/cheques`, todavía sin espejo frontend). */

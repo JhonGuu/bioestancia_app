@@ -232,6 +232,13 @@
       "when": 1788884173258,
       "tag": "0032_agrega_compensacion_medio_pago",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1788888357466,
+      "tag": "0033_agrega_retencion_medio_pago",
+      "breakpoints": true
     }
   ]
 }

@@ -17,6 +17,12 @@ export enum MedioPago {
    * igual que EFECTIVO en cuanto a los datos que pide `LineaCobro`.
    */
   COMPENSACION = "compensacion",
+  /**
+   * Una retención que le practicaron al cliente (ej. impositiva) se
+   * acredita como si hubiera pagado ese monto — reduce su deuda sin que
+   * se mueva plata hacia la empresa. Mismos datos que EFECTIVO.
+   */
+  RETENCION = "retencion",
 }
 
 export const MEDIO_PAGO_LABELS: Record<MedioPago, string> = {
@@ -26,6 +32,7 @@ export const MEDIO_PAGO_LABELS: Record<MedioPago, string> = {
   [MedioPago.CHEQUE]: "Cheque",
   [MedioPago.ECHEQ]: "Echeq",
   [MedioPago.COMPENSACION]: "Compensación",
+  [MedioPago.RETENCION]: "Retención",
 };
 
 /** CHEQUE y ECHEQ son los únicos medios que generan un `Cheque` (ver `modules/cheques`). */
