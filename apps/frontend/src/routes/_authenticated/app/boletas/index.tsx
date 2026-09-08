@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { FileSpreadsheet, FileText, Loader2, Plus } from "lucide-react";
+import { FileSpreadsheet, FileText, Loader2, Plus, Upload } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -65,12 +65,20 @@ function BoletasPage() {
             Comprobantes cargados por cliente/día, con sus ítems entregados.
           </p>
         </div>
-        <Button asChild size="lg" className="sm:size-default">
-          <Link to="/app/boletas/nueva">
-            <Plus />
-            <span className="hidden sm:inline">Nueva boleta</span>
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <Link to="/app/boletas/importar">
+              <Upload />
+              <span className="hidden sm:inline">Importar Excel</span>
+            </Link>
+          </Button>
+          <Button asChild size="lg" className="sm:size-default">
+            <Link to="/app/boletas/nueva">
+              <Plus />
+              <span className="hidden sm:inline">Nueva boleta</span>
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {!cargando && !error && (

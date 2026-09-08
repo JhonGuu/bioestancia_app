@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, FileBarChart, Loader2, Plus } from "lucide-react";
+import { ArrowLeft, FileBarChart, Loader2, Plus, Upload } from "lucide-react";
 
 import { useCobros } from "@/modules/cobros/hooks/use-cobros";
 import { useClientes } from "@/modules/clientes/hooks/use-clientes";
@@ -34,6 +34,12 @@ function CobrosPage() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <Link to="/app/ventas/cobros/importar">
+              <Upload className="size-4" />
+              <span className="hidden sm:inline">Importar Excel</span>
+            </Link>
+          </Button>
           <Button variant="outline" asChild>
             <Link to="/app/ventas/cobros/informe">
               <FileBarChart className="size-4" />
