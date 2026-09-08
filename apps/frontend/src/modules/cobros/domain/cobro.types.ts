@@ -15,6 +15,8 @@ export const MedioPago = {
   BILLETERA_VIRTUAL: "billetera_virtual",
   CHEQUE: "cheque",
   ECHEQ: "echeq",
+  /** El cliente cancela sin que se mueva plata: se compensa contra otra cosa. Se trata igual que EFECTIVO. */
+  COMPENSACION: "compensacion",
 } as const;
 export type MedioPago = (typeof MedioPago)[keyof typeof MedioPago];
 
@@ -24,6 +26,7 @@ export const MEDIO_PAGO_LABELS: Record<MedioPago, string> = {
   [MedioPago.BILLETERA_VIRTUAL]: "Billetera virtual",
   [MedioPago.CHEQUE]: "Cheque",
   [MedioPago.ECHEQ]: "Echeq",
+  [MedioPago.COMPENSACION]: "Compensación",
 };
 
 /** CHEQUE y ECHEQ son los únicos medios que generan un `Cheque` (ver `modules/cheques`, todavía sin espejo frontend). */

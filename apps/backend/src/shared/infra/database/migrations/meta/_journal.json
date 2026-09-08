@@ -225,6 +225,13 @@
       "when": 1788881399676,
       "tag": "0031_agrega_reglas_asiento",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1788884173258,
+      "tag": "0032_agrega_compensacion_medio_pago",
+      "breakpoints": true
     }
   ]
 }

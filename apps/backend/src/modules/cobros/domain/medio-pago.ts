@@ -10,6 +10,13 @@ export enum MedioPago {
   BILLETERA_VIRTUAL = "billetera_virtual",
   CHEQUE = "cheque",
   ECHEQ = "echeq",
+  /**
+   * El cliente cancela (total o parcialmente) sin que se mueva plata: se
+   * compensa contra otra cosa (mercadería, un servicio, un arreglo
+   * puntual). No lleva banco/billetera ni genera un `Cheque` — se trata
+   * igual que EFECTIVO en cuanto a los datos que pide `LineaCobro`.
+   */
+  COMPENSACION = "compensacion",
 }
 
 export const MEDIO_PAGO_LABELS: Record<MedioPago, string> = {
@@ -18,6 +25,7 @@ export const MEDIO_PAGO_LABELS: Record<MedioPago, string> = {
   [MedioPago.BILLETERA_VIRTUAL]: "Billetera virtual",
   [MedioPago.CHEQUE]: "Cheque",
   [MedioPago.ECHEQ]: "Echeq",
+  [MedioPago.COMPENSACION]: "Compensación",
 };
 
 /** CHEQUE y ECHEQ son los únicos medios que generan un `Cheque` (ver `modules/cheques`). */
