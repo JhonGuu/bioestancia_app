@@ -23,7 +23,12 @@ export enum TipoCargo {
    * `obtener-movimientos-cuenta-corriente.use-case.ts`.
    */
   CHEQUE_RECHAZADO = "cheque_rechazado",
-  /** Cualquier otro cargo manual (ajustes puntuales, etc). */
+  /**
+   * Cualquier otro cargo manual (arreglos puntuales con el cliente, ajustes
+   * por diferencia, etc). Es el único tipo cuyo `monto` puede ser negativo
+   * — ej. un "ajuste por diferencia" que reduce la deuda del cliente en vez
+   * de aumentarla.
+   */
   OTRO = "otro",
 }
 

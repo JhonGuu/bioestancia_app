@@ -2,9 +2,13 @@ import { TipoCargo } from "@/modules/cargos-cuenta-corriente/domain/tipo-cargo";
 
 /**
  * Un cargo adicional en la cuenta corriente de un cliente (recargo por
- * cheque, comisión por rechazo, u otro ajuste manual) — suma directamente
- * al saldo del cliente, igual que una boleta, pero sin estar atado a
- * ninguna venta.
+ * cheque, comisión por rechazo, u otro ajuste manual) — impacta
+ * directamente al saldo del cliente, igual que una boleta, pero sin estar
+ * atado a ninguna venta.
+ *
+ * `monto` normalmente es positivo (aumenta la deuda), pero en `tipo: OTRO`
+ * puede ser negativo — ej. un "ajuste por diferencia" que la reduce, o un
+ * arreglo puntual con el cliente (ver `TipoCargo`). Nunca puede ser cero.
  *
  * `chequeId` referencia el cheque que originó el cargo, cuando corresponde
  * (`RECARGO_CHEQUE`/`COMISION_RECHAZO`) — nullable porque `OTRO` no

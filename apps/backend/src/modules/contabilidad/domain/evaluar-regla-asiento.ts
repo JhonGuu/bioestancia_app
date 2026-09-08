@@ -31,6 +31,15 @@ export function reglaAplicaAUnidad(regla: ReglaAsiento, unidad: UnidadEventoCont
  * (`auxiliarResolver`) que la unidad no trae — así una regla no rompe el
  * asiento entero cuando le falta un dato opcional (ej. `totalGastos` en una
  * liquidación de compra sin gastos).
+ *
+ * Casi todo evento trae valores siempre positivos (una venta, un cobro),
+ * así que el `lado` configurado en la línea (debe/haber) alcanza tal cual.
+ * Pero `CARGO_OTRO` admite montos negativos (ej. un "ajuste por diferencia"
+ * que reduce la deuda del cliente en vez de aumentarla) — cuando `valor` es
+ * negativo, el efecto contable es el opuesto al de un valor positivo, así
+ * que la línea se genera del lado CONTRARIO al configurado en la regla (con
+ * el valor absoluto). Como esto aplica por igual a todas las líneas de la
+ * regla que miran ese mismo campo, el asiento sigue balanceado.
  */
 export function evaluarReglaAsiento(regla: ReglaAsiento, unidad: UnidadEventoContable): LineaGeneradaPorRegla[] {
   const contexto = unidad as unknown as Record<string, unknown>;
@@ -40,6 +49,7 @@ export function evaluarReglaAsiento(regla: ReglaAsiento, unidad: UnidadEventoCon
     const valor = contexto[lineaRegla.expresion];
     if (typeof valor !== "number" || valor === 0) continue;
     const monto = Math.round(Math.abs(valor) * 100) / 100;
+    const lado = valor < 0 ? (lineaRegla.lado === "debe" ? "haber" : "debe") : lineaRegla.lado;
 
     let auxiliarTipo: TipoAuxiliar | null = null;
     let auxiliarId: string | null = null;
@@ -52,8 +62,8 @@ export function evaluarReglaAsiento(regla: ReglaAsiento, unidad: UnidadEventoCon
 
     lineas.push({
       cuentaId: lineaRegla.cuentaId,
-      debe: lineaRegla.lado === "debe" ? monto : 0,
-      haber: lineaRegla.lado === "haber" ? monto : 0,
+      debe: lado === "debe" ? monto : 0,
+      haber: lado === "haber" ? monto : 0,
       auxiliarTipo,
       auxiliarId,
     });

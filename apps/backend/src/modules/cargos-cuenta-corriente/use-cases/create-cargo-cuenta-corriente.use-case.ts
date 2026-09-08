@@ -40,8 +40,8 @@ export class CreateCargoCuentaCorriente {
     if (!cliente) {
       throw new ApiError("El cliente no existe (o no es de esta empresa)", Code.BAD_REQUEST);
     }
-    if (input.monto <= 0) {
-      throw new ApiError("El monto tiene que ser mayor a cero", Code.BAD_REQUEST);
+    if (input.monto === 0) {
+      throw new ApiError("El monto no puede ser cero", Code.BAD_REQUEST);
     }
     const cargo = await this.cargoCuentaCorrienteRepository.create({
       empresaId: input.empresaId,

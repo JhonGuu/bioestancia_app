@@ -6,7 +6,7 @@ import { TipoCargo } from "@/modules/cargos-cuenta-corriente/domain/tipo-cargo";
 const createBody = z.object({
   clienteId: z.string().uuid("clienteId inválido"),
   tipo: z.nativeEnum(TipoCargo),
-  monto: z.coerce.number().positive("El monto tiene que ser mayor a 0"),
+  monto: z.coerce.number().refine((v) => v !== 0, "El monto no puede ser cero"),
   motivo: z.string().max(255).optional(),
   fecha: z.coerce.date(),
 });

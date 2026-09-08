@@ -80,14 +80,55 @@ describe("evaluarReglaAsiento", () => {
     ]);
   });
 
-  it("usa siempre el valor absoluto del monto (el signo lo da debe/haber, no un número negativo)", () => {
+  it("con un valor positivo, usa el lado configurado en la línea tal cual", () => {
+    const r = regla({
+      lineas: [lineaRegla({ orden: 1, lado: "debe", expresion: "monto", cuentaId: "caja" })],
+    });
+
+    expect(evaluarReglaAsiento(r, { monto: 500 })).toEqual([
+      { cuentaId: "caja", debe: 500, haber: 0, auxiliarTipo: null, auxiliarId: null },
+    ]);
+  });
+
+  it("con un valor negativo, genera la línea del lado CONTRARIO al configurado, con el valor absoluto", () => {
+    // Ej. un CARGO_OTRO con monto negativo (ajuste por diferencia que reduce
+    // la deuda) — la línea configurada como "debe" se genera al haber.
     const r = regla({
       lineas: [lineaRegla({ orden: 1, lado: "debe", expresion: "monto", cuentaId: "caja" })],
     });
 
     expect(evaluarReglaAsiento(r, { monto: -500 })).toEqual([
-      { cuentaId: "caja", debe: 500, haber: 0, auxiliarTipo: null, auxiliarId: null },
+      { cuentaId: "caja", debe: 0, haber: 500, auxiliarTipo: null, auxiliarId: null },
     ]);
+  });
+
+  it("el sign-flip de un valor negativo también invierte una línea configurada al haber (queda al debe)", () => {
+    const r = regla({
+      lineas: [lineaRegla({ orden: 1, lado: "haber", expresion: "monto", cuentaId: "deudores" })],
+    });
+
+    expect(evaluarReglaAsiento(r, { monto: -300 })).toEqual([
+      { cuentaId: "deudores", debe: 300, haber: 0, auxiliarTipo: null, auxiliarId: null },
+    ]);
+  });
+
+  it("un valor negativo sigue generando un asiento balanceado — todas las líneas que miran ese campo se invierten juntas", () => {
+    const r = regla({
+      lineas: [
+        lineaRegla({ orden: 1, lado: "debe", expresion: "monto", cuentaId: "deudores", auxiliarResolver: "cliente" }),
+        lineaRegla({ orden: 2, lado: "haber", expresion: "monto", cuentaId: "ajustes" }),
+      ],
+    });
+
+    const lineas = evaluarReglaAsiento(r, { monto: -300, clienteId: "cliente-1" });
+
+    expect(lineas).toEqual([
+      { cuentaId: "deudores", debe: 0, haber: 300, auxiliarTipo: TipoAuxiliar.CLIENTE, auxiliarId: "cliente-1" },
+      { cuentaId: "ajustes", debe: 300, haber: 0, auxiliarTipo: null, auxiliarId: null },
+    ]);
+    const totalDebe = lineas.reduce((acc, l) => acc + l.debe, 0);
+    const totalHaber = lineas.reduce((acc, l) => acc + l.haber, 0);
+    expect(totalDebe).toBe(totalHaber);
   });
 
   it("redondea el monto a 2 decimales", () => {
