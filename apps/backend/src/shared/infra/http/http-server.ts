@@ -6,6 +6,7 @@ import express, {
   Response,
 } from "express";
 import cors from "cors";
+import { rateLimit } from "express-rate-limit";
 import { inject, injectable } from "inversify";
 import { ZodError, ZodSchema } from "zod";
 import swaggerUi from "swagger-ui-express";
@@ -108,6 +109,23 @@ export class ExpressAdapter {
     this.app = express();
     this.app.use(cors());
     this.app.use(express.json());
+    // Protege contra bugs o clientes que disparen ráfagas de peticiones: en un
+    // hosting de servidor fijo (Fly.io, etc.) esto no cambia la factura, pero
+    // sí puede tirar abajo el servidor o volverlo inutilizable para todos.
+    this.app.use(
+      rateLimit({
+        windowMs: 60_000, // 1 minuto
+        limit: 200, // 200 peticiones por IP por minuto
+        standardHeaders: true, // expone RateLimit-* en la respuesta
+        legacyHeaders: false,
+        handler: (_req, res) => {
+          res.status(Code.TOO_MANY_REQUESTS).json({
+            status: Code.TOO_MANY_REQUESTS,
+            message: "Demasiadas peticiones. Esperá un minuto e intentá de nuevo.",
+          });
+        },
+      }),
+    );
   }
 
   register(params: RegisterRouteParams): void {
