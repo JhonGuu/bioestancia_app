@@ -185,6 +185,8 @@ export const DI_TYPES = {
   ConfirmarRecargoCheque: Symbol.for("ConfirmarRecargoCheque"),
   SugerirReversionChequeRechazado: Symbol.for("SugerirReversionChequeRechazado"),
   ConfirmarRechazoCheque: Symbol.for("ConfirmarRechazoCheque"),
+  PrevisualizarImportacionCobros: Symbol.for("PrevisualizarImportacionCobros"),
+  ConfirmarImportacionCobros: Symbol.for("ConfirmarImportacionCobros"),
   CobroController: Symbol.for("CobroController"),
 
   // ── Module: cuenta-corriente ──────────────────────

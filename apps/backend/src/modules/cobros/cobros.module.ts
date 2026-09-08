@@ -11,15 +11,19 @@ import { SugerirRecargoCheque } from "@/modules/cobros/use-cases/sugerir-recargo
 import { ConfirmarRecargoCheque } from "@/modules/cobros/use-cases/confirmar-recargo-cheque.use-case";
 import { SugerirReversionChequeRechazado } from "@/modules/cobros/use-cases/sugerir-reversion-cheque-rechazado.use-case";
 import { ConfirmarRechazoCheque } from "@/modules/cobros/use-cases/confirmar-rechazo-cheque.use-case";
+import { PrevisualizarImportacionCobros } from "@/modules/cobros/use-cases/importar/previsualizar-importacion-cobros.use-case";
+import { ConfirmarImportacionCobros } from "@/modules/cobros/use-cases/importar/confirmar-importacion-cobros.use-case";
 
 /**
  * Depende de `clientes` (ClienteRepository), `boletas` (BoletaRepository),
  * `ventas` (VentaRepository), `cheques` (ChequeRepository) y
  * `cargos-cuenta-corriente` (CargoCuentaCorrienteRepository) —
  * `CreateCobro` valida el cliente y crea cheques, `AplicarCobroFifo` lee
- * boletas/ventas para calcular el saldo pendiente, y los 4 use-cases de
- * recargo/rechazo de cheque leen y crean cargos. Debe registrarse DESPUÉS
- * de los cinco en `di.ts`.
+ * boletas/ventas para calcular el saldo pendiente, los 4 use-cases de
+ * recargo/rechazo de cheque leen y crean cargos, y el importador histórico
+ * (`ConfirmarImportacionCobros`) crea cobros/cheques/cargos directo por
+ * repositorio para no duplicar asientos automáticos. Debe registrarse
+ * DESPUÉS de los cinco en `di.ts`.
  *
  * `CobroRepository` NO se bindea acá — se bindea suelto en `di.ts` antes de
  * `boletas`/`ventas` (ver comentario ahí) porque esos módulos también lo
@@ -35,6 +39,8 @@ export function registerCobrosModule(container: Container): void {
   container.bind(DI_TYPES.ConfirmarRecargoCheque).to(ConfirmarRecargoCheque);
   container.bind(DI_TYPES.SugerirReversionChequeRechazado).to(SugerirReversionChequeRechazado);
   container.bind(DI_TYPES.ConfirmarRechazoCheque).to(ConfirmarRechazoCheque);
+  container.bind(DI_TYPES.PrevisualizarImportacionCobros).to(PrevisualizarImportacionCobros);
+  container.bind(DI_TYPES.ConfirmarImportacionCobros).to(ConfirmarImportacionCobros);
   container.bind(DI_TYPES.CobroController).to(CobroController);
   container.get(DI_TYPES.CobroController);
 }

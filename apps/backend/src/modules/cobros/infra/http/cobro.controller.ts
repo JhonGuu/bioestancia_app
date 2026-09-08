@@ -1,4 +1,5 @@
 import { inject, injectable } from "inversify";
+import multer from "multer";
 
 import { DI_TYPES } from "@/shared/infra/di/types";
 import { ApiError, ApiResponse, Code } from "@/shared/infra/http/api.responses";
@@ -12,6 +13,11 @@ import { SugerirRecargoCheque } from "@/modules/cobros/use-cases/sugerir-recargo
 import { ConfirmarRecargoCheque } from "@/modules/cobros/use-cases/confirmar-recargo-cheque.use-case";
 import { SugerirReversionChequeRechazado } from "@/modules/cobros/use-cases/sugerir-reversion-cheque-rechazado.use-case";
 import { ConfirmarRechazoCheque } from "@/modules/cobros/use-cases/confirmar-rechazo-cheque.use-case";
+import { PrevisualizarImportacionCobros } from "@/modules/cobros/use-cases/importar/previsualizar-importacion-cobros.use-case";
+import { ConfirmarImportacionCobros } from "@/modules/cobros/use-cases/importar/confirmar-importacion-cobros.use-case";
+import { CargoAImportar, CobroAImportar } from "@/modules/cobros/domain/importacion-cobros";
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
 
 @injectable()
 export class CobroController {
@@ -26,6 +32,9 @@ export class CobroController {
     @inject(DI_TYPES.SugerirReversionChequeRechazado)
     private readonly sugerirReversionChequeRechazado: SugerirReversionChequeRechazado,
     @inject(DI_TYPES.ConfirmarRechazoCheque) private readonly confirmarRechazoCheque: ConfirmarRechazoCheque,
+    @inject(DI_TYPES.PrevisualizarImportacionCobros)
+    private readonly previsualizarImportacionCobros: PrevisualizarImportacionCobros,
+    @inject(DI_TYPES.ConfirmarImportacionCobros) private readonly confirmarImportacionCobros: ConfirmarImportacionCobros,
   ) {
     this.registerRoutes();
   }
@@ -153,6 +162,46 @@ export class CobroController {
           message: sinComision
             ? "Rechazo confirmado: se revirtió lo aplicado, sin comisión"
             : "Rechazo confirmado: se revirtió lo aplicado y se cargó la comisión",
+          status: Code.CREATED,
+        });
+      },
+    });
+
+    // ─────────────────── Importación de cobros históricos ───────────────────
+    // Solo admin/contable (carga inicial de datos, no el flujo diario). Corre
+    // DESPUÉS de importar boletas (ver `modules/boletas`) — el FIFO necesita
+    // las boletas ya cargadas para saber qué está pendiente.
+    this.httpServer.register({
+      method: "post",
+      url: "/cobros/importar/preview",
+      auth: "jwt-empresa",
+      roles: RoleGroups.AdminAndContable,
+      middlewares: [upload.single("archivo")],
+      validation: this.validation.previsualizarImportacion,
+      handler: async ({ file, auth }) => {
+        if (!auth?.empresaId) throw new ApiError("Unauthorized", Code.UNAUTHORIZED);
+        if (!file) throw new ApiError("Falta el archivo (campo 'archivo')", Code.BAD_REQUEST);
+        const data = await this.previsualizarImportacionCobros.execute({
+          empresaId: auth.empresaId,
+          buffer: file.buffer,
+        });
+        return new ApiResponse({ data, message: "Archivo procesado correctamente", status: Code.OK });
+      },
+    });
+
+    this.httpServer.register({
+      method: "post",
+      url: "/cobros/importar/confirmar",
+      auth: "jwt-empresa",
+      roles: RoleGroups.AdminAndContable,
+      validation: this.validation.confirmarImportacion,
+      handler: async ({ body, auth }) => {
+        if (!auth?.empresaId) throw new ApiError("Unauthorized", Code.UNAUTHORIZED);
+        const { cobros, cargos } = body as { cobros: CobroAImportar[]; cargos: CargoAImportar[] };
+        const data = await this.confirmarImportacionCobros.execute({ empresaId: auth.empresaId, cobros, cargos });
+        return new ApiResponse({
+          data,
+          message: `Se crearon ${data.creados} movimientos${data.fallidos > 0 ? ` (${data.fallidos} con error)` : ""}`,
           status: Code.CREATED,
         });
       },

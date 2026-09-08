@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { optionalPaginationQuerySchema } from "@/shared/infra/http/pagination";
 import { MedioPago, esMedioPagoCheque } from "@/modules/cobros/domain/medio-pago";
+import { TipoCargo } from "@/modules/cargos-cuenta-corriente/domain/tipo-cargo";
 
 const lineaBody = z
   .object({
@@ -63,6 +64,41 @@ const confirmarRechazoBody = z.object({
   sinComision: z.coerce.boolean().optional(),
 });
 
+// ─────────────────── Importación de cobros históricos ───────────────────
+const cobroAImportarBody = z
+  .object({
+    hoja: z.string().min(1),
+    clienteId: z.string().uuid("clienteId inválido").nullable(),
+    clienteEsNuevo: z.boolean(),
+    fila: z.number(),
+    fecha: z.string(),
+    medioPago: z.nativeEnum(MedioPago),
+    monto: z.number().positive("El monto tiene que ser mayor a 0"),
+    numeroCheque: z.string().max(50).nullable(),
+    bancoCheque: z.string().max(100).nullable(),
+    observaciones: z.string().nullable(),
+  })
+  .refine((data) => !esMedioPagoCheque(data.medioPago) || (data.numeroCheque && data.bancoCheque), {
+    message: "Faltan datos del cheque (número, banco)",
+    path: ["numeroCheque"],
+  });
+
+const cargoAImportarBody = z.object({
+  hoja: z.string().min(1),
+  clienteId: z.string().uuid("clienteId inválido").nullable(),
+  clienteEsNuevo: z.boolean(),
+  fila: z.number(),
+  fecha: z.string(),
+  tipo: z.nativeEnum(TipoCargo),
+  monto: z.number().refine((v) => v !== 0, "El monto no puede ser cero"),
+  motivo: z.string().nullable(),
+});
+
+const confirmarImportacionCobrosBody = z.object({
+  cobros: z.array(cobroAImportarBody),
+  cargos: z.array(cargoAImportarBody),
+});
+
 @injectable()
 export class CobroValidation {
   create = { body: createBody };
@@ -78,4 +114,8 @@ export class CobroValidation {
   sugerenciaRechazoCheque = { params: chequeIdParams };
 
   confirmarRechazoCheque = { params: chequeIdParams, body: confirmarRechazoBody };
+
+  previsualizarImportacion = {};
+
+  confirmarImportacion = { body: confirmarImportacionCobrosBody };
 }
