@@ -19,6 +19,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   reglaAsientoSchema,
+  type ReglaAsientoFormInput,
   type ReglaAsientoFormValues,
 } from "@/modules/contabilidad/domain/regla-asiento.schemas";
 import {
@@ -89,7 +90,7 @@ export function ReglaAsientoFormDialog({ regla }: ReglaAsientoFormDialogProps) {
     (c) => c.imputable && c.activa,
   );
 
-  const form = useForm<ReglaAsientoFormValues>({
+  const form = useForm<ReglaAsientoFormInput, unknown, ReglaAsientoFormValues>({
     resolver: zodResolver(reglaAsientoSchema),
     defaultValues: valoresPorDefecto(regla),
   });
@@ -224,7 +225,7 @@ export function ReglaAsientoFormDialog({ regla }: ReglaAsientoFormDialogProps) {
                   <FormItem>
                     <FormLabel>Prioridad</FormLabel>
                     <FormControl>
-                      <Input type="number" step="1" {...field} />
+                      <Input type="number" step="1" {...field} value={field.value as number | string} />
                     </FormControl>
                     <p className="text-muted-foreground text-xs">
                       Si varias reglas activas matchean, se usa la de menor número.

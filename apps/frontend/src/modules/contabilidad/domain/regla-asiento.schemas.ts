@@ -27,3 +27,5 @@ export const reglaAsientoSchema = z.object({
   lineas: z.array(lineaReglaAsientoSchema).min(1, "La regla necesita al menos una línea"),
 });
 export type ReglaAsientoFormValues = z.infer<typeof reglaAsientoSchema>;
+/** Tipo de entrada del form, antes de que Zod coerciones `prioridad` a number (necesario para tipar `useForm` con Zod v4 + @hookform/resolvers v5). */
+export type ReglaAsientoFormInput = z.input<typeof reglaAsientoSchema>;

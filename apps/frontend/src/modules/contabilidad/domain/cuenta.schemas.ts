@@ -14,3 +14,9 @@ export const cuentaSchema = z.object({
   requiereAuxiliar: z.nativeEnum(TipoAuxiliar),
 });
 export type CuentaFormValues = z.infer<typeof cuentaSchema>;
+/**
+ * Payload real que espera la API: `parentId` viaja como `null` para "sin padre"
+ * (una cuenta raíz), mientras que en el form es `string | undefined` (RHF no
+ * maneja bien `null` en un input controlado). Se separan los dos tipos acá.
+ */
+export type CuentaPayload = Omit<CuentaFormValues, "parentId"> & { parentId?: string | null };

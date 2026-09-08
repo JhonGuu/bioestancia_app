@@ -1,5 +1,5 @@
-import { Asiento, TotalesAsiento } from "@/modules/contabilidad/domain/asiento.types";
-import { CuentaNodo } from "@/modules/contabilidad/domain/cuenta.types";
+import type { Asiento, TotalesAsiento } from "@/modules/contabilidad/domain/asiento.types";
+import type { CuentaNodo } from "@/modules/contabilidad/domain/cuenta.types";
 import { TipoAuxiliar } from "@/modules/contabilidad/domain/tipo-auxiliar";
 
 /** Espejo de las respuestas de `use-cases/obtener-*` del backend. */

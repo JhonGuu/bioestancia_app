@@ -1,6 +1,6 @@
 import { httpClient, unwrap } from "@/shared/api/http-client";
 import type { Cuenta } from "@/modules/contabilidad/domain/cuenta.types";
-import type { CuentaFormValues } from "@/modules/contabilidad/domain/cuenta.schemas";
+import type { CuentaPayload } from "@/modules/contabilidad/domain/cuenta.schemas";
 
 function cleanPayload<T extends Record<string, unknown>>(values: T): Partial<T> {
   const cleaned: Partial<T> = {};
@@ -24,11 +24,11 @@ export const planCuentasApi = {
     return unwrap(httpClient.post("/contabilidad/plan-cuentas/sembrar", { forzar }));
   },
 
-  create(input: CuentaFormValues): Promise<Cuenta> {
+  create(input: CuentaPayload): Promise<Cuenta> {
     return unwrap(httpClient.post("/contabilidad/plan-cuentas", cleanPayload(input)));
   },
 
-  update(id: string, input: Partial<CuentaFormValues> & { activa?: boolean }): Promise<Cuenta> {
+  update(id: string, input: Partial<CuentaPayload> & { activa?: boolean }): Promise<Cuenta> {
     return unwrap(httpClient.patch(`/contabilidad/plan-cuentas/${id}`, cleanPayload(input)));
   },
 
