@@ -39,6 +39,11 @@ export interface AuthContext {
   empresaId?: string;
   /** Solo presente si auth === "jwt-empresa". */
   rol?: string;
+  /**
+   * Códigos de permiso granular del usuario en la empresa activa (ver
+   * `modules/permisos/domain/permiso.ts`). Solo presente si auth === "jwt-empresa".
+   */
+  permisos?: string[];
 }
 
 export interface HandlerInput {
@@ -71,6 +76,17 @@ export interface RegisterRouteParams {
    */
   roles?: string[];
   /**
+   * Lista de permisos granulares requeridos (ver `modules/permisos/domain/permiso.ts`).
+   * Solo tiene efecto si auth === "jwt-empresa". Es una capa ORTOGONAL a `roles`
+   * — ambas se chequean si están presentes (rol Y permisos, no rol O permisos).
+   * - Vacío o undefined: no se exige ningún permiso puntual.
+   * - Con valores: el usuario tiene que tener TODOS los permisos listados en esa
+   *   empresa, sino 403. Pensado para las vistas/informes sensibles que el admin
+   *   habilita persona por persona (ver `modules/permisos`), a diferencia de
+   *   `roles`, que es fijo por categoría de usuario.
+   */
+  permisos?: string[];
+  /**
    * Middlewares de Express adicionales, aplicados ANTES de la validación y
    * autenticación — pensado para `multer` (subida de archivos vía
    * `multipart/form-data`, que `express.json()` no puede parsear). El archivo
@@ -95,10 +111,10 @@ export class ExpressAdapter {
   }
 
   register(params: RegisterRouteParams): void {
-    const { method, url, validation, auth = "public", roles, middlewares, handler } = params;
+    const { method, url, validation, auth = "public", roles, permisos, middlewares, handler } = params;
 
     const validationMiddleware = this.buildValidationMiddleware(validation);
-    const authMiddleware = this.buildAuthMiddleware(auth, roles);
+    const authMiddleware = this.buildAuthMiddleware(auth, roles, permisos);
 
     const routeHandler = async (
       req: Request,
@@ -213,15 +229,17 @@ export class ExpressAdapter {
    *   1. Lee header `Authorization`, decodifica el JWT → obtiene userId.
    *   2. Llama a AuthProvider.getIdentity() → si no existe o está desactivado, 401.
    *   3. Si auth === "jwt", listo: mete `{ userId }` en req.auth y sigue (no hay
-   *      contexto de empresa, así que `roles` no se evalúa).
+   *      contexto de empresa, así que `roles`/`permisos` no se evalúan).
    *   4. Si auth === "jwt-empresa": lee el header `X-Empresa-Id` (400 si falta),
    *      y llama a AuthProvider.getAccessForEmpresa(userId, empresaId).
    *      Esto es lo que VALIDA que el usuario realmente tenga acceso a esa
    *      empresa — el header nunca se confía a ciegas. Si no hay acceso, 403.
    *   5. Si se pidieron roles específicos y el rol resuelto no está, 403.
-   *   6. Si todo OK, mete `{ userId, empresaId, rol }` en req.auth y sigue.
+   *   6. Si se pidieron permisos específicos y falta alguno, 403. Es una capa
+   *      aparte de `roles` — se chequean ambas si están presentes.
+   *   7. Si todo OK, mete `{ userId, empresaId, rol, permisos }` en req.auth y sigue.
    */
-  private buildAuthMiddleware(auth: AuthType, allowedRoles?: string[]) {
+  private buildAuthMiddleware(auth: AuthType, allowedRoles?: string[], requiredPermisos?: string[]) {
     return async (
       req: Request,
       _res: Response,
@@ -296,10 +314,24 @@ export class ExpressAdapter {
         return;
       }
 
+      if (requiredPermisos && requiredPermisos.length > 0) {
+        const faltante = requiredPermisos.filter((p) => !access.permisos.includes(p));
+        if (faltante.length > 0) {
+          next(
+            new ApiError(
+              `Forbidden: no tenés acceso a esta vista (falta permiso: ${faltante.join(", ")})`,
+              Code.FORBIDDEN,
+            ),
+          );
+          return;
+        }
+      }
+
       (req as Request & { auth?: AuthContext }).auth = {
         userId: identity.id,
         empresaId,
         rol: access.rol,
+        permisos: access.permisos,
       };
       next();
     };

@@ -2,6 +2,9 @@ import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, Loader2 } from "lucide-react";
 
+import { Permisos } from "@/modules/auth/domain/auth.types";
+import { useTienePermiso } from "@/modules/auth/hooks/use-tiene-permiso";
+import { SinPermiso } from "@/shared/components/sin-permiso";
 import { useCheques } from "@/modules/cheques/hooks/use-cheques";
 import { useClientes } from "@/modules/clientes/hooks/use-clientes";
 import { ChequesTable } from "@/modules/cheques/components/cheques-table";
@@ -24,9 +27,14 @@ function ChequesPage() {
   // Independiente del filtro de la tabla — el resumen siempre muestra la cartera completa.
   const carteraQuery = useCheques({ estado: EstadoCheque.EN_CARTERA });
   const clientesQuery = useClientes();
+  const tieneAcceso = useTienePermiso(Permisos.VER_CHEQUES);
 
   const cargando = chequesQuery.isPending || clientesQuery.isPending;
   const error = chequesQuery.error ?? clientesQuery.error;
+
+  if (!tieneAcceso) {
+    return <SinPermiso />;
+  }
 
   return (
     <div className="space-y-4">

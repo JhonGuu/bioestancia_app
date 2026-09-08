@@ -2,11 +2,14 @@ import { inject, injectable } from "inversify";
 
 import { DI_TYPES } from "@/shared/infra/di/types";
 import { ApiError, Code } from "@/shared/infra/http/api.responses";
+import { Logger } from "@/shared/infra/logger/logger";
 import { LiquidacionCompra } from "@/modules/liquidacion-compra/domain/liquidacion-compra";
 import { LiquidacionCompraRepository } from "@/modules/liquidacion-compra/domain/liquidacion-compra.repository";
 import { CompraRepository } from "@/modules/compras/domain/compra.repository";
 import { CompraCategoriaRepository } from "@/modules/compras/domain/compra-categoria.repository";
 import { CompraCategoria } from "@/modules/compras/domain/compra-categoria";
+import { GenerarAsientosAutomaticos } from "@/modules/contabilidad/use-cases/generar-asientos-automaticos.use-case";
+import { EventoAsiento } from "@/modules/contabilidad/domain/regla-asiento";
 
 export interface CreateLiquidacionCompraCategoriaUseCaseInput {
   compraCategoriaId: string;
@@ -53,6 +56,8 @@ export class CreateLiquidacionCompra {
     @inject(DI_TYPES.CompraRepository) private readonly compraRepository: CompraRepository,
     @inject(DI_TYPES.CompraCategoriaRepository)
     private readonly compraCategoriaRepository: CompraCategoriaRepository,
+    @inject(DI_TYPES.GenerarAsientosAutomaticos) private readonly generarAsientosAutomaticos: GenerarAsientosAutomaticos,
+    @inject(DI_TYPES.Logger) private readonly logger: Logger,
   ) {}
 
   async execute(input: CreateLiquidacionCompraUseCaseInput): Promise<LiquidacionCompraConCategorias> {
@@ -137,6 +142,25 @@ export class CreateLiquidacionCompra {
       importeNeto,
       comentarios: input.comentarios,
     });
+
+    const { advertencia } = await this.generarAsientosAutomaticos.execute({
+      empresaId: input.empresaId,
+      evento: EventoAsiento.LIQUIDACION_COMPRA,
+      origenId: liquidacion.id,
+      fecha: liquidacion.fecha,
+      descripcion: `Liquidación de compra Nº ${liquidacion.numeroComprobante}`,
+      unidades: [
+        {
+          proveedorId: compra.proveedorId,
+          importeBruto: importeBrutoTotal,
+          importeIva: ivaSobreBrutoTotal,
+          totalGastos: input.totalGastos ?? 0,
+          ivaSobreGastos: input.ivaSobreGastos ?? 0,
+          totalTributos: input.totalTributos ?? 0,
+        },
+      ],
+    });
+    if (advertencia) this.logger.warn(advertencia);
 
     return { ...liquidacion, categorias: categoriasActualizadas };
   }

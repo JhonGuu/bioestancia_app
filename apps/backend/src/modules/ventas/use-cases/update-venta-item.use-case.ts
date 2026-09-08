@@ -2,6 +2,7 @@ import { inject, injectable } from "inversify";
 
 import { DI_TYPES } from "@/shared/infra/di/types";
 import { ApiError, Code } from "@/shared/infra/http/api.responses";
+import { Logger } from "@/shared/infra/logger/logger";
 import { Venta } from "@/modules/ventas/domain/venta";
 import { VentaRepository } from "@/modules/ventas/domain/venta.repository";
 import { FormaVenta } from "@/modules/ventas/domain/forma-venta";
@@ -9,6 +10,8 @@ import { CategoriaVenta } from "@/modules/ventas/domain/categoria-venta";
 import { CobroRepository } from "@/modules/cobros/domain/cobro.repository";
 import { calcularMontoBoleta } from "@/modules/boletas/domain/calcular-monto-boleta";
 import { ajustarAplicacionesBoleta } from "@/modules/cobros/use-cases/ajustar-aplicaciones-boleta";
+import { GenerarAsientosAutomaticos } from "@/modules/contabilidad/use-cases/generar-asientos-automaticos.use-case";
+import { regenerarAsientoBoletaFacturada } from "@/modules/boletas/use-cases/regenerar-asiento-boleta-facturada";
 
 export interface UpdateVentaItemInput {
   id: string;
@@ -35,6 +38,8 @@ export class UpdateVentaItem {
   constructor(
     @inject(DI_TYPES.VentaRepository) private readonly ventaRepository: VentaRepository,
     @inject(DI_TYPES.CobroRepository) private readonly cobroRepository: CobroRepository,
+    @inject(DI_TYPES.GenerarAsientosAutomaticos) private readonly generarAsientosAutomaticos: GenerarAsientosAutomaticos,
+    @inject(DI_TYPES.Logger) private readonly logger: Logger,
   ) {}
 
   async execute(input: UpdateVentaItemInput): Promise<Venta> {
@@ -80,5 +85,12 @@ export class UpdateVentaItem {
       empresaId,
       nuevoMontoMax: monto,
     });
+
+    const advertencia = await regenerarAsientoBoletaFacturada(
+      this.generarAsientosAutomaticos,
+      { boletaId, empresaId, clienteId, fecha: ventasBoleta[0]?.fecha ?? new Date(), numero: null },
+      ventasBoleta,
+    );
+    if (advertencia) this.logger.warn(advertencia);
   }
 }

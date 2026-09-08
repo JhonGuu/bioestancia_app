@@ -2,9 +2,12 @@ import { inject, injectable } from "inversify";
 
 import { DI_TYPES } from "@/shared/infra/di/types";
 import { ApiError, Code } from "@/shared/infra/http/api.responses";
+import { Logger } from "@/shared/infra/logger/logger";
 import { Cheque } from "@/modules/cheques/domain/cheque";
 import { ChequeRepository } from "@/modules/cheques/domain/cheque.repository";
 import { EstadoCheque } from "@/modules/cheques/domain/estado-cheque";
+import { GenerarAsientosAutomaticos } from "@/modules/contabilidad/use-cases/generar-asientos-automaticos.use-case";
+import { EventoAsiento } from "@/modules/contabilidad/domain/regla-asiento";
 
 export interface ActualizarEstadoChequeUseCaseInput {
   id: string;
@@ -25,7 +28,11 @@ export interface ActualizarEstadoChequeUseCaseInput {
  */
 @injectable()
 export class ActualizarEstadoCheque {
-  constructor(@inject(DI_TYPES.ChequeRepository) private readonly chequeRepository: ChequeRepository) {}
+  constructor(
+    @inject(DI_TYPES.ChequeRepository) private readonly chequeRepository: ChequeRepository,
+    @inject(DI_TYPES.GenerarAsientosAutomaticos) private readonly generarAsientosAutomaticos: GenerarAsientosAutomaticos,
+    @inject(DI_TYPES.Logger) private readonly logger: Logger,
+  ) {}
 
   async execute(input: ActualizarEstadoChequeUseCaseInput): Promise<Cheque> {
     if (input.estado === EstadoCheque.RECHAZADO && !input.motivoRechazo) {
@@ -34,11 +41,25 @@ export class ActualizarEstadoCheque {
     if (input.estado === EstadoCheque.ENDOSADO_A_TERCEROS && (!input.endosadoA || !input.fechaEndoso)) {
       throw new ApiError("Indicá a quién y cuándo se endosó el cheque", Code.BAD_REQUEST);
     }
-    return this.chequeRepository.actualizarEstado(input.id, input.empresaId, {
+    const cheque = await this.chequeRepository.actualizarEstado(input.id, input.empresaId, {
       estado: input.estado,
       motivoRechazo: input.estado === EstadoCheque.RECHAZADO ? input.motivoRechazo : null,
       endosadoA: input.estado === EstadoCheque.ENDOSADO_A_TERCEROS ? input.endosadoA : null,
       fechaEndoso: input.estado === EstadoCheque.ENDOSADO_A_TERCEROS ? input.fechaEndoso : null,
     });
+
+    if (input.estado === EstadoCheque.DEPOSITADO) {
+      const { advertencia } = await this.generarAsientosAutomaticos.execute({
+        empresaId: input.empresaId,
+        evento: EventoAsiento.CHEQUE_DEPOSITADO,
+        origenId: cheque.id,
+        fecha: new Date(),
+        descripcion: `Depósito cheque Nº ${cheque.numero}`,
+        unidades: [{ monto: cheque.monto, clienteId: cheque.clienteId, chequeId: cheque.id }],
+      });
+      if (advertencia) this.logger.warn(advertencia);
+    }
+
+    return cheque;
   }
 }

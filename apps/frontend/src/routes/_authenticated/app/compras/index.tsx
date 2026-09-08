@@ -2,6 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Banknote, Boxes, Building2, LineChart, Receipt, Scale, ShoppingCart } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
+import { Permisos } from "@/modules/auth/domain/auth.types";
+import { useTienePermiso } from "@/modules/auth/hooks/use-tiene-permiso";
 import { useCompras } from "@/modules/compras/hooks/use-compras";
 import { useStockTropas } from "@/modules/compras/hooks/use-stock-tropas";
 import { useFrigorificos } from "@/modules/frigorificos/hooks/use-frigorificos";
@@ -29,6 +31,10 @@ function ComprasDashboardPage() {
 
   const frigorificosQuery = useFrigorificos();
   const cantidadFrigorificos = (frigorificosQuery.data ?? []).length;
+
+  // Informes muestra rentabilidad/márgenes — protegido por permiso granular
+  // (ver `Permisos`), sin el permiso ni la tarjeta se muestra.
+  const tieneAccesoInformes = useTienePermiso(Permisos.VER_RENTABILIDAD_COMPRAS);
 
   return (
     <div className="space-y-4">
@@ -79,12 +85,14 @@ function ComprasDashboardPage() {
           titulo="Liquidación de compra"
           descripcion="Liquidación fiscal de la tropa al proveedor, con emisión de CAE (AFIP/WSLSP) — se carga desde el detalle de cada tropa."
         />
-        <SeccionCard
-          to="/app/compras/informes"
-          icon={LineChart}
-          titulo="Informes"
-          descripcion="Rentabilidad por tropa: costo (proveedor + frigorífico) vs. ingreso de venta."
-        />
+        {tieneAccesoInformes && (
+          <SeccionCard
+            to="/app/compras/informes"
+            icon={LineChart}
+            titulo="Informes"
+            descripcion="Rentabilidad por tropa: costo (proveedor + frigorífico) vs. ingreso de venta."
+          />
+        )}
       </div>
     </div>
   );

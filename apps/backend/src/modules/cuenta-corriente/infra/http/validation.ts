@@ -14,4 +14,10 @@ export class CuentaCorrienteValidation {
   resumenPdf = { params: clienteParams };
 
   resumenExcel = { params: clienteParams };
+
+  conciliacion = {
+    query: z.object({
+      cuentaId: z.string().uuid("cuentaId inválido"),
+    }),
+  };
 }

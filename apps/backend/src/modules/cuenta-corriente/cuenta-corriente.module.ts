@@ -9,6 +9,7 @@ import { ObtenerMovimientosCuentaCorriente } from "@/modules/cuenta-corriente/us
 import { ObtenerResumenCuentaData } from "@/modules/cuenta-corriente/use-cases/obtener-resumen-cuenta-data.use-case";
 import { GenerarResumenCuentaPdf } from "@/modules/cuenta-corriente/use-cases/generar-resumen-cuenta-pdf.use-case";
 import { GenerarResumenCuentaExcel } from "@/modules/cuenta-corriente/use-cases/generar-resumen-cuenta-excel.use-case";
+import { ObtenerConciliacionClientes } from "@/modules/cuenta-corriente/use-cases/obtener-conciliacion-clientes.use-case";
 
 /**
  * No tiene tabla ni repositorio propio — es una capa de agregación pura
@@ -17,6 +18,11 @@ import { GenerarResumenCuentaExcel } from "@/modules/cuenta-corriente/use-cases/
  * `di.ts`. `ObtenerResumenCuentaData` (y los generadores de PDF/Excel que
  * dependen de ella) reutiliza `ObtenerSaldoCliente`/
  * `ObtenerMovimientosCuentaCorriente` — por eso van bindeados ANTES acá abajo.
+ *
+ * `ObtenerConciliacionClientes` (fase 2 de contabilidad) además inyecta
+ * `CuentaRepository`/`AsientoRepository` de `contabilidad` — seguro porque
+ * `contabilidad` ahora se registra bien temprano en `di.ts` (antes de
+ * `ventas`), mucho antes que este módulo.
  */
 export function registerCuentaCorrienteModule(container: Container): void {
   container.bind(DI_TYPES.CuentaCorrienteValidation).to(CuentaCorrienteValidation);
@@ -26,6 +32,7 @@ export function registerCuentaCorrienteModule(container: Container): void {
   container.bind(DI_TYPES.ObtenerResumenCuentaData).to(ObtenerResumenCuentaData);
   container.bind(DI_TYPES.GenerarResumenCuentaPdf).to(GenerarResumenCuentaPdf);
   container.bind(DI_TYPES.GenerarResumenCuentaExcel).to(GenerarResumenCuentaExcel);
+  container.bind(DI_TYPES.ObtenerConciliacionClientes).to(ObtenerConciliacionClientes);
   container.bind(DI_TYPES.CuentaCorrienteController).to(CuentaCorrienteController);
   container.get(DI_TYPES.CuentaCorrienteController);
 }

@@ -27,6 +27,13 @@ export interface EmpresaAcceso {
   razonSocial: string;
   rubro: string;
   rol: Roles;
+  /**
+   * Códigos de permiso granular del usuario en esta empresa (ver
+   * `modules/permisos/domain/permiso.ts`). String[] genérico (no el enum
+   * `Permisos`) para no acoplar el dominio de `users` al de `permisos` —
+   * mismo criterio que `AuthContext`/`EmpresaAccess` en `shared/infra`.
+   */
+  permisos: string[];
 }
 
 /**

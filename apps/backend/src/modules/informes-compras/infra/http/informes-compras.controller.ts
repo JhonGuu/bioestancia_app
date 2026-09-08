@@ -4,6 +4,7 @@ import { DI_TYPES } from "@/shared/infra/di/types";
 import { ApiError, ApiResponse, Code } from "@/shared/infra/http/api.responses";
 import { ExpressAdapter } from "@/shared/infra/http/http-server";
 import { RoleGroups } from "@/modules/users/domain/role-groups";
+import { Permisos } from "@/modules/permisos/domain/permiso";
 import { ObtenerRentabilidadTropas } from "@/modules/informes-compras/use-cases/obtener-rentabilidad-tropas.use-case";
 
 @injectable()
@@ -23,6 +24,7 @@ export class InformesComprasController {
       url: "/compras/informes/rentabilidad",
       auth: "jwt-empresa",
       roles: RoleGroups.AdminAndContable,
+      permisos: [Permisos.VER_RENTABILIDAD_COMPRAS],
       handler: async ({ auth }) => {
         if (!auth?.empresaId) throw new ApiError("Unauthorized", Code.UNAUTHORIZED);
         const data = await this.obtenerRentabilidadTropas.execute({ empresaId: auth.empresaId });

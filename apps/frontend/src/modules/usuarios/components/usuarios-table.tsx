@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/table";
 import { ROL_LABELS } from "@/modules/usuarios/domain/rol-labels";
 import { EditarRolDialog } from "@/modules/usuarios/components/editar-rol-dialog";
+import { PermisosUsuarioDialog } from "@/modules/usuarios/components/permisos-usuario-dialog";
 import { DesactivarUsuarioDialog } from "@/modules/usuarios/components/desactivar-usuario-dialog";
 import { ActivarUsuarioButton } from "@/modules/usuarios/components/activar-usuario-button";
 import type { UsuarioConAcceso } from "@/modules/usuarios/domain/usuario.types";
@@ -112,6 +113,7 @@ function Acciones({
   return (
     <div className="flex justify-end gap-1">
       <EditarRolDialog usuario={usuario} />
+      <PermisosUsuarioDialog usuario={usuario} />
       {usuario.usuarioId === usuarioActualId ? null : usuario.isActive ? (
         <DesactivarUsuarioDialog
           usuarioId={usuario.usuarioId}

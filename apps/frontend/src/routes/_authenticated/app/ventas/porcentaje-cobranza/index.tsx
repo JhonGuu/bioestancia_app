@@ -2,6 +2,9 @@ import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, Loader2 } from "lucide-react";
 
+import { Permisos } from "@/modules/auth/domain/auth.types";
+import { useTienePermiso } from "@/modules/auth/hooks/use-tiene-permiso";
+import { SinPermiso } from "@/shared/components/sin-permiso";
 import { useClientes } from "@/modules/clientes/hooks/use-clientes";
 import { usePorcentajeCobranza } from "@/modules/porcentaje-cobranza/hooks/use-porcentaje-cobranza";
 import { PorcentajeCobranzaTable } from "@/modules/porcentaje-cobranza/components/porcentaje-cobranza-table";
@@ -22,6 +25,11 @@ function PorcentajeCobranzaPage() {
 
   const porcentajeQuery = usePorcentajeCobranza(anio);
   const clientesQuery = useClientes();
+  const tieneAcceso = useTienePermiso(Permisos.VER_PORCENTAJE_COBRANZA);
+
+  if (!tieneAcceso) {
+    return <SinPermiso />;
+  }
 
   const cargando = porcentajeQuery.isPending || clientesQuery.isPending;
   const error = porcentajeQuery.error ?? clientesQuery.error;

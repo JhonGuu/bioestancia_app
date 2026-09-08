@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { inject, injectable } from "inversify";
 
 import { DI_TYPES } from "@/shared/infra/di/types";
@@ -16,6 +16,9 @@ import {
 import { Roles } from "@/modules/users/domain/roles";
 import { usuarioEmpresas, users } from "@/modules/users/infra/database/schema";
 import { empresas } from "@/modules/empresas/infra/database/schema";
+// Cross-module: ver la nota en `users-auth-provider.ts` sobre por qué `users`
+// depende acá de `permisos` (resolver rol + permisos juntos en una sola pasada).
+import { usuarioEmpresaPermisos } from "@/modules/permisos/infra/database/schema";
 
 @injectable()
 export class UsuarioEmpresaRepositoryDrizzle implements UsuarioEmpresaRepository {
@@ -39,6 +42,7 @@ export class UsuarioEmpresaRepositoryDrizzle implements UsuarioEmpresaRepository
   async listEmpresasForUsuario(usuarioId: string): Promise<EmpresaAcceso[]> {
     const rows = await this.orm.db
       .select({
+        usuarioEmpresaId: usuarioEmpresas.id,
         empresaId: empresas.id,
         razonSocial: empresas.razonSocial,
         rubro: empresas.rubro,
@@ -48,11 +52,32 @@ export class UsuarioEmpresaRepositoryDrizzle implements UsuarioEmpresaRepository
       .innerJoin(empresas, eq(empresas.id, usuarioEmpresas.empresaId))
       .where(and(eq(usuarioEmpresas.usuarioId, usuarioId), eq(empresas.activa, true)));
 
+    if (rows.length === 0) return [];
+
+    // Segunda query para los permisos de todos los accesos de una — evita un
+    // N+1 (una query de permisos por empresa) y no complica el join de arriba
+    // con un GROUP BY/array_agg. Se arma un mapa usuarioEmpresaId -> permisos[].
+    const permisoRows = await this.orm.db
+      .select({
+        usuarioEmpresaId: usuarioEmpresaPermisos.usuarioEmpresaId,
+        permiso: usuarioEmpresaPermisos.permiso,
+      })
+      .from(usuarioEmpresaPermisos)
+      .where(inArray(usuarioEmpresaPermisos.usuarioEmpresaId, rows.map((r) => r.usuarioEmpresaId)));
+
+    const permisosPorAcceso = new Map<string, string[]>();
+    for (const permisoRow of permisoRows) {
+      const lista = permisosPorAcceso.get(permisoRow.usuarioEmpresaId) ?? [];
+      lista.push(permisoRow.permiso);
+      permisosPorAcceso.set(permisoRow.usuarioEmpresaId, lista);
+    }
+
     return rows.map((row) => ({
       empresaId: row.empresaId,
       razonSocial: row.razonSocial,
       rubro: row.rubro,
       rol: row.rol as Roles,
+      permisos: permisosPorAcceso.get(row.usuarioEmpresaId) ?? [],
     }));
   }
 

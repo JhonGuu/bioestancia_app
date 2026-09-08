@@ -36,7 +36,10 @@ import { registerPorcentajeCobranzaModule } from "@/modules/porcentaje-cobranza/
 import { registerPersonalModule } from "@/modules/personal/personal.module";
 import { registerInformeCobranzasModule } from "@/modules/informe-cobranzas/informe-cobranzas.module";
 import { registerCabezasModule } from "@/modules/cabezas/cabezas.module";
+import { registerContabilidadModule } from "@/modules/contabilidad/contabilidad.module";
+import { registerPermisosModule } from "@/modules/permisos/permisos.module";
 import { CobroRepositoryDrizzle } from "@/modules/cobros/infra/repository/cobro.repository";
+import { UsuarioEmpresaPermisoRepositoryDrizzle } from "@/modules/permisos/infra/repository/usuario-empresa-permiso.repository";
 
 /**
  * Contenedor central de inyección de dependencias.
@@ -78,6 +81,14 @@ export class DI {
     // (Esto es independiente de que `usuario_empresas`, dentro de `users`,
     // referencie la tabla `empresas` en su schema de Drizzle — eso es un import
     // de TS a nivel de módulo, no depende del orden de registro en el container).
+    // `UsuarioEmpresaPermisoRepository` se bindea ACÁ (suelto, antes de
+    // `users`) por el mismo motivo que `CobroRepository` más abajo:
+    // `UsersAuthProvider` (dentro de `users`) inyecta este repo para resolver
+    // rol + permisos juntos en cada request, y `UserController` se instancia
+    // eager al final de `registerUsersModule()` — si el repo no está bindeado
+    // ANTES de esa línea, revienta con "No bindings found". Solo necesita
+    // `DBConnection`, así que es seguro bindearlo acá.
+    this.container.bind(DI_TYPES.UsuarioEmpresaPermisoRepository).to(UsuarioEmpresaPermisoRepositoryDrizzle);
     registerUsersModule(this.container);
     registerEmpresasModule(this.container);
     registerListasPreciosModule(this.container);
@@ -96,6 +107,16 @@ export class DI {
     // dependencia circular en el orden de registro. `CobroRepositoryDrizzle`
     // solo necesita `DBConnection`, no otro repo — es seguro bindearlo acá.
     this.container.bind(DI_TYPES.CobroRepository).to(CobroRepositoryDrizzle);
+    // `contabilidad` va acá (adelantado desde el final, fase 2): el motor de
+    // asientos automáticos (`GenerarAsientosAutomaticos`) ahora lo inyectan
+    // `ventas`, `compras`, `liquidacion-compra`, `liquidacion-faena`,
+    // `boletas`, `cheques`, `cargos-cuenta-corriente` y `cobros` para
+    // generar el asiento en el mismo request que crea/edita el documento de
+    // origen — tiene que estar bindeado ANTES de que cualquiera de esos
+    // módulos haga su `.get()` eager de controller. `contabilidad` en sí
+    // solo depende de infra compartida (DBConnection + Logger), así que es
+    // seguro adelantarlo acá.
+    registerContabilidadModule(this.container);
     // `ventas` antes que `compras`: `CerrarCompra` (dentro de compras) inyecta
     // `VentaRepository` para reconciliar cabezas al cerrar una compra. Si
     // `compras` se registrara primero, su `.get()` eager fallaría con
@@ -154,6 +175,10 @@ export class DI {
     // `cuenta-corriente` — va después de todos esos.
     registerInformeCobranzasModule(this.container);
     registerCabezasModule(this.container);
+    // `permisos` inyecta UserRepository + UsuarioEmpresaRepository
+    // (bindeados en `users`) para resolver el acceso al que cuelgan los
+    // permisos — va después de `users`. No depende de ningún otro módulo.
+    registerPermisosModule(this.container);
     // Cuando agregues un módulo nuevo (ej. granjas, sanidad, planificación):
     // registerNuevoModulo(this.container);
   }

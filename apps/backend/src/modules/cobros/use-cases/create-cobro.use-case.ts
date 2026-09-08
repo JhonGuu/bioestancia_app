@@ -2,11 +2,15 @@ import { inject, injectable } from "inversify";
 
 import { DI_TYPES } from "@/shared/infra/di/types";
 import { ApiError, Code } from "@/shared/infra/http/api.responses";
+import { Logger } from "@/shared/infra/logger/logger";
 import { ClienteRepository } from "@/modules/clientes/domain/cliente.repository";
+import { nombreCliente } from "@/modules/clientes/domain/cliente";
 import { ChequeRepository } from "@/modules/cheques/domain/cheque.repository";
 import { CobroConLineas, CobroRepository, CreateLineaCobroInput } from "@/modules/cobros/domain/cobro.repository";
 import { MedioPago, esMedioPagoCheque } from "@/modules/cobros/domain/medio-pago";
 import { AplicarCobroFifo } from "@/modules/cobros/use-cases/aplicar-cobro-fifo.use-case";
+import { GenerarAsientosAutomaticos } from "@/modules/contabilidad/use-cases/generar-asientos-automaticos.use-case";
+import { EventoAsiento } from "@/modules/contabilidad/domain/regla-asiento";
 
 export interface CreateLineaCobroUseCaseInput {
   medioPago: MedioPago;
@@ -48,6 +52,8 @@ export class CreateCobro {
     @inject(DI_TYPES.ChequeRepository) private readonly chequeRepository: ChequeRepository,
     @inject(DI_TYPES.CobroRepository) private readonly cobroRepository: CobroRepository,
     @inject(DI_TYPES.AplicarCobroFifo) private readonly aplicarCobroFifo: AplicarCobroFifo,
+    @inject(DI_TYPES.GenerarAsientosAutomaticos) private readonly generarAsientosAutomaticos: GenerarAsientosAutomaticos,
+    @inject(DI_TYPES.Logger) private readonly logger: Logger,
   ) {}
 
   async execute(input: CreateCobroUseCaseInput): Promise<CobroConLineas> {
@@ -118,6 +124,21 @@ export class CreateCobro {
         aplicaciones.map((a) => ({ cobroId: cobro.id, boletaId: a.boletaId, monto: a.monto })),
       );
     }
+
+    const { advertencia } = await this.generarAsientosAutomaticos.execute({
+      empresaId: input.empresaId,
+      evento: EventoAsiento.COBRO_REGISTRADO,
+      origenId: cobro.id,
+      fecha: cobro.fecha,
+      descripcion: `Cobro de ${nombreCliente(cliente)}`,
+      unidades: cobro.lineas.map((linea) => ({
+        monto: linea.monto,
+        medioPago: linea.medioPago,
+        clienteId: input.clienteId,
+        chequeId: linea.chequeId ?? undefined,
+      })),
+    });
+    if (advertencia) this.logger.warn(advertencia);
 
     return cobro;
   }

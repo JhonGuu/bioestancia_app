@@ -20,6 +20,12 @@ export interface AuthenticatedIdentity {
  */
 export interface EmpresaAccess {
   rol: string;
+  /**
+   * Códigos de permiso granular (ver `modules/permisos/domain/permiso.ts`)
+   * que tiene este acceso — capa ortogonal al rol, resuelta contra la DB en
+   * cada request igual que el rol (nunca se confía en el JWT para esto).
+   */
+  permisos: string[];
 }
 
 /**

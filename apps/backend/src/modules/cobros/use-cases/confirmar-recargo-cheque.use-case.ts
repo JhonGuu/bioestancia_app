@@ -2,11 +2,14 @@ import { inject, injectable } from "inversify";
 
 import { DI_TYPES } from "@/shared/infra/di/types";
 import { ApiError, Code } from "@/shared/infra/http/api.responses";
+import { Logger } from "@/shared/infra/logger/logger";
 import { ChequeRepository } from "@/modules/cheques/domain/cheque.repository";
 import { CargoCuentaCorriente } from "@/modules/cargos-cuenta-corriente/domain/cargo-cuenta-corriente";
 import { CargoCuentaCorrienteRepository } from "@/modules/cargos-cuenta-corriente/domain/cargo-cuenta-corriente.repository";
 import { TipoCargo } from "@/modules/cargos-cuenta-corriente/domain/tipo-cargo";
 import { calcularMontoRecargoCheque } from "@/modules/cobros/domain/calcular-cargos-cheque";
+import { GenerarAsientosAutomaticos } from "@/modules/contabilidad/use-cases/generar-asientos-automaticos.use-case";
+import { EventoAsiento } from "@/modules/contabilidad/domain/regla-asiento";
 
 export interface ConfirmarRecargoChequeInput {
   chequeId: string;
@@ -28,6 +31,8 @@ export class ConfirmarRecargoCheque {
     @inject(DI_TYPES.ChequeRepository) private readonly chequeRepository: ChequeRepository,
     @inject(DI_TYPES.CargoCuentaCorrienteRepository)
     private readonly cargoCuentaCorrienteRepository: CargoCuentaCorrienteRepository,
+    @inject(DI_TYPES.GenerarAsientosAutomaticos) private readonly generarAsientosAutomaticos: GenerarAsientosAutomaticos,
+    @inject(DI_TYPES.Logger) private readonly logger: Logger,
   ) {}
 
   async execute(input: ConfirmarRecargoChequeInput): Promise<CargoCuentaCorriente> {
@@ -50,7 +55,7 @@ export class ConfirmarRecargoCheque {
       throw new ApiError("El monto del recargo tiene que ser mayor a cero", Code.BAD_REQUEST);
     }
 
-    return this.cargoCuentaCorrienteRepository.create({
+    const cargo = await this.cargoCuentaCorrienteRepository.create({
       empresaId: input.empresaId,
       clienteId: cheque.clienteId,
       tipo: TipoCargo.RECARGO_CHEQUE,
@@ -59,5 +64,17 @@ export class ConfirmarRecargoCheque {
       motivo: `Recargo por cheque Nº ${cheque.numero} entregado a más de 7 días de su fecha de cobro`,
       fecha: new Date(),
     });
+
+    const { advertencia } = await this.generarAsientosAutomaticos.execute({
+      empresaId: input.empresaId,
+      evento: EventoAsiento.CARGO_RECARGO_CHEQUE,
+      origenId: cargo.id,
+      fecha: cargo.fecha,
+      descripcion: cargo.motivo ?? `Recargo cheque Nº ${cheque.numero}`,
+      unidades: [{ monto: cargo.monto, clienteId: cargo.clienteId, chequeId: cheque.id }],
+    });
+    if (advertencia) this.logger.warn(advertencia);
+
+    return cargo;
   }
 }

@@ -4,6 +4,7 @@ import { DI_TYPES } from "@/shared/infra/di/types";
 import { ApiError, ApiResponse, Code } from "@/shared/infra/http/api.responses";
 import { ExpressAdapter } from "@/shared/infra/http/http-server";
 import { RoleGroups } from "@/modules/users/domain/role-groups";
+import { Permisos } from "@/modules/permisos/domain/permiso";
 import { ChequeValidation } from "@/modules/cheques/infra/http/validation";
 import { ListCheques } from "@/modules/cheques/use-cases/list-cheques.use-case";
 import { GetCheque } from "@/modules/cheques/use-cases/get-cheque.use-case";
@@ -29,6 +30,7 @@ export class ChequeController {
       url: "/cheques",
       auth: "jwt-empresa",
       roles: RoleGroups.AdminAndContable,
+      permisos: [Permisos.VER_CHEQUES],
       validation: this.validation.list,
       handler: async ({ query, auth }) => {
         if (!auth?.empresaId) throw new ApiError("Unauthorized", Code.UNAUTHORIZED);
@@ -46,6 +48,7 @@ export class ChequeController {
       url: "/cheques/:id",
       auth: "jwt-empresa",
       roles: RoleGroups.AdminAndContable,
+      permisos: [Permisos.VER_CHEQUES],
       validation: this.validation.getById,
       handler: async ({ params, auth }) => {
         if (!auth?.empresaId) throw new ApiError("Unauthorized", Code.UNAUTHORIZED);
@@ -56,6 +59,8 @@ export class ChequeController {
 
     this.httpServer.register({
       method: "patch",
+      // El permiso VER_CHEQUES es de visibilidad, no de acción — cambiar el
+      // estado sigue gobernado solo por rol, a propósito (decisión con Juan Jose).
       url: "/cheques/:id/estado",
       auth: "jwt-empresa",
       roles: RoleGroups.AdminAndContable,

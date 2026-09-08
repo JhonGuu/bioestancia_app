@@ -2,6 +2,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { Permisos } from "@/modules/auth/domain/auth.types";
+import { useTienePermiso } from "@/modules/auth/hooks/use-tiene-permiso";
+import { SinPermiso } from "@/shared/components/sin-permiso";
 import { useCompra } from "@/modules/compras/hooks/use-compra";
 import { useLiquidacionFaena } from "@/modules/liquidacion-faena/hooks/use-liquidacion-faena";
 import { useCreateLiquidacionFaena } from "@/modules/liquidacion-faena/hooks/use-create-liquidacion-faena";
@@ -28,6 +31,7 @@ function LiquidacionFaenaPage() {
   const compraQuery = useCompra(compraId);
   const liquidacionQuery = useLiquidacionFaena(compraId);
   const createLiquidacionFaena = useCreateLiquidacionFaena(compraId);
+  const tieneAcceso = useTienePermiso(Permisos.VER_LIQUIDACIONES);
 
   async function handleSubmit(values: CreateLiquidacionFaenaFormValues) {
     try {
@@ -38,6 +42,10 @@ function LiquidacionFaenaPage() {
         error instanceof ApiError ? error.message : "No se pudo cargar la liquidación de faena";
       toast.error(message);
     }
+  }
+
+  if (!tieneAcceso) {
+    return <SinPermiso />;
   }
 
   if (compraQuery.isPending) {

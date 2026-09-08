@@ -2,10 +2,13 @@ import { inject, injectable } from "inversify";
 
 import { DI_TYPES } from "@/shared/infra/di/types";
 import { ApiError, Code } from "@/shared/infra/http/api.responses";
+import { Logger } from "@/shared/infra/logger/logger";
 import { BoletaRepository } from "@/modules/boletas/domain/boleta.repository";
 import { VentaRepository } from "@/modules/ventas/domain/venta.repository";
 import { CobroRepository } from "@/modules/cobros/domain/cobro.repository";
 import { ajustarAplicacionesBoleta } from "@/modules/cobros/use-cases/ajustar-aplicaciones-boleta";
+import { GenerarAsientosAutomaticos } from "@/modules/contabilidad/use-cases/generar-asientos-automaticos.use-case";
+import { regenerarAsientoBoletaFacturada } from "@/modules/boletas/use-cases/regenerar-asiento-boleta-facturada";
 
 export interface DeleteBoletaInput {
   id: string;
@@ -25,6 +28,8 @@ export class DeleteBoleta {
     @inject(DI_TYPES.BoletaRepository) private readonly boletaRepository: BoletaRepository,
     @inject(DI_TYPES.VentaRepository) private readonly ventaRepository: VentaRepository,
     @inject(DI_TYPES.CobroRepository) private readonly cobroRepository: CobroRepository,
+    @inject(DI_TYPES.GenerarAsientosAutomaticos) private readonly generarAsientosAutomaticos: GenerarAsientosAutomaticos,
+    @inject(DI_TYPES.Logger) private readonly logger: Logger,
   ) {}
 
   async execute(input: DeleteBoletaInput): Promise<void> {
@@ -46,5 +51,12 @@ export class DeleteBoleta {
       empresaId: input.empresaId,
       nuevoMontoMax: 0,
     });
+
+    const advertencia = await regenerarAsientoBoletaFacturada(
+      this.generarAsientosAutomaticos,
+      { boletaId: boleta.id, empresaId: input.empresaId, clienteId: boleta.clienteId, fecha: boleta.fecha, numero: boleta.numero },
+      [],
+    );
+    if (advertencia) this.logger.warn(advertencia);
   }
 }

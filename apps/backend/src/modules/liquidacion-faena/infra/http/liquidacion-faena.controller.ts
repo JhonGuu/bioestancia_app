@@ -4,6 +4,7 @@ import { DI_TYPES } from "@/shared/infra/di/types";
 import { ApiError, ApiResponse, Code } from "@/shared/infra/http/api.responses";
 import { ExpressAdapter } from "@/shared/infra/http/http-server";
 import { RoleGroups } from "@/modules/users/domain/role-groups";
+import { Permisos } from "@/modules/permisos/domain/permiso";
 import { LiquidacionFaenaValidation } from "@/modules/liquidacion-faena/infra/http/validation";
 import {
   CreateLiquidacionFaena,
@@ -47,11 +48,13 @@ export class LiquidacionFaenaController {
       },
     });
 
-    // Lectura: cualquier usuario con acceso a la empresa activa.
+    // Lectura protegida por permiso granular (VER_LIQUIDACIONES, compartido con
+    // liquidación de compra — quien ve una, ve la otra).
     this.httpServer.register({
       method: "get",
       url: "/compras/:compraId/liquidacion-faena",
       auth: "jwt-empresa",
+      permisos: [Permisos.VER_LIQUIDACIONES],
       validation: this.validation.getByCompra,
       handler: async ({ params, auth }) => {
         if (!auth?.empresaId) throw new ApiError("Unauthorized", Code.UNAUTHORIZED);

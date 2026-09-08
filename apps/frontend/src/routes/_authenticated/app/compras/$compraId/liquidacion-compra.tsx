@@ -3,7 +3,9 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { useAuth } from "@/modules/auth/context/auth-context";
-import { Roles } from "@/modules/auth/domain/auth.types";
+import { Roles, Permisos } from "@/modules/auth/domain/auth.types";
+import { useTienePermiso } from "@/modules/auth/hooks/use-tiene-permiso";
+import { SinPermiso } from "@/shared/components/sin-permiso";
 import { useCompra } from "@/modules/compras/hooks/use-compra";
 import { useLiquidacionCompra } from "@/modules/liquidacion-compra/hooks/use-liquidacion-compra";
 import { useCreateLiquidacionCompra } from "@/modules/liquidacion-compra/hooks/use-create-liquidacion-compra";
@@ -35,6 +37,7 @@ function LiquidacionCompraPage() {
 
   const puedeEditar =
     empresaActiva?.rol === Roles.ADMIN || empresaActiva?.rol === Roles.CONTABLE;
+  const tieneAcceso = useTienePermiso(Permisos.VER_LIQUIDACIONES);
 
   async function handleSubmit(values: CreateLiquidacionCompraFormValues) {
     try {
@@ -45,6 +48,10 @@ function LiquidacionCompraPage() {
         error instanceof ApiError ? error.message : "No se pudo cargar la liquidación de compra";
       toast.error(message);
     }
+  }
+
+  if (!tieneAcceso) {
+    return <SinPermiso />;
   }
 
   if (compraQuery.isPending) {

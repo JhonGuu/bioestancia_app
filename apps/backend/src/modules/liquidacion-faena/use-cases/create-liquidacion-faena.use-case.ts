@@ -2,11 +2,14 @@ import { inject, injectable } from "inversify";
 
 import { DI_TYPES } from "@/shared/infra/di/types";
 import { ApiError, Code } from "@/shared/infra/http/api.responses";
+import { Logger } from "@/shared/infra/logger/logger";
 import { LiquidacionFaena } from "@/modules/liquidacion-faena/domain/liquidacion-faena";
 import { LiquidacionFaenaRepository } from "@/modules/liquidacion-faena/domain/liquidacion-faena.repository";
 import { CompraRepository } from "@/modules/compras/domain/compra.repository";
 import { CompraCategoriaRepository } from "@/modules/compras/domain/compra-categoria.repository";
 import { CompraCategoria } from "@/modules/compras/domain/compra-categoria";
+import { GenerarAsientosAutomaticos } from "@/modules/contabilidad/use-cases/generar-asientos-automaticos.use-case";
+import { EventoAsiento } from "@/modules/contabilidad/domain/regla-asiento";
 
 export interface CreateLiquidacionFaenaCategoriaUseCaseInput {
   compraCategoriaId: string;
@@ -45,6 +48,8 @@ export class CreateLiquidacionFaena {
     @inject(DI_TYPES.CompraRepository) private readonly compraRepository: CompraRepository,
     @inject(DI_TYPES.CompraCategoriaRepository)
     private readonly compraCategoriaRepository: CompraCategoriaRepository,
+    @inject(DI_TYPES.GenerarAsientosAutomaticos) private readonly generarAsientosAutomaticos: GenerarAsientosAutomaticos,
+    @inject(DI_TYPES.Logger) private readonly logger: Logger,
   ) {}
 
   async execute(input: CreateLiquidacionFaenaUseCaseInput): Promise<LiquidacionFaenaConCategorias> {
@@ -92,6 +97,20 @@ export class CreateLiquidacionFaena {
       comentarios: input.comentarios,
       total,
     });
+
+    // Asiento automático (fase 2) — solo si hay frigorífico cargado (per
+    // decisión: sin frigorífico no se genera el asiento, se avisa nomás).
+    if (liquidacion.frigorificoId) {
+      const { advertencia } = await this.generarAsientosAutomaticos.execute({
+        empresaId: input.empresaId,
+        evento: EventoAsiento.LIQUIDACION_FAENA,
+        origenId: liquidacion.id,
+        fecha: liquidacion.fecha,
+        descripcion: `Liquidación de faena (compra Nº ${compra.numero})`,
+        unidades: [{ frigorificoId: liquidacion.frigorificoId, total: liquidacion.total }],
+      });
+      if (advertencia) this.logger.warn(advertencia);
+    }
 
     return { ...liquidacion, categorias: categoriasActualizadas };
   }

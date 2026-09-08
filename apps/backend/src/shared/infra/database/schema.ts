@@ -24,3 +24,5 @@ export * from "@/modules/cheques/infra/database/schema";
 export * from "@/modules/cargos-cuenta-corriente/infra/database/schema";
 export * from "@/modules/cobros/infra/database/schema";
 export * from "@/modules/personal/infra/database/schema";
+export * from "@/modules/permisos/infra/database/schema";
+export * from "@/modules/contabilidad/infra/database/schema";

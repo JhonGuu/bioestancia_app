@@ -2,6 +2,7 @@ import { inject, injectable } from "inversify";
 
 import { DI_TYPES } from "@/shared/infra/di/types";
 import { ApiError, Code } from "@/shared/infra/http/api.responses";
+import { Logger } from "@/shared/infra/logger/logger";
 import { ChequeRepository } from "@/modules/cheques/domain/cheque.repository";
 import { EstadoCheque } from "@/modules/cheques/domain/estado-cheque";
 import { AjusteAplicacionInput, CobroRepository } from "@/modules/cobros/domain/cobro.repository";
@@ -9,6 +10,8 @@ import { CargoCuentaCorriente } from "@/modules/cargos-cuenta-corriente/domain/c
 import { CargoCuentaCorrienteRepository } from "@/modules/cargos-cuenta-corriente/domain/cargo-cuenta-corriente.repository";
 import { TipoCargo } from "@/modules/cargos-cuenta-corriente/domain/tipo-cargo";
 import { calcularMontoComisionRechazo } from "@/modules/cobros/domain/calcular-cargos-cheque";
+import { GenerarAsientosAutomaticos } from "@/modules/contabilidad/use-cases/generar-asientos-automaticos.use-case";
+import { EventoAsiento } from "@/modules/contabilidad/domain/regla-asiento";
 
 export interface ConfirmarRechazoChequeInput {
   chequeId: string;
@@ -56,6 +59,8 @@ export class ConfirmarRechazoCheque {
     @inject(DI_TYPES.CobroRepository) private readonly cobroRepository: CobroRepository,
     @inject(DI_TYPES.CargoCuentaCorrienteRepository)
     private readonly cargoCuentaCorrienteRepository: CargoCuentaCorrienteRepository,
+    @inject(DI_TYPES.GenerarAsientosAutomaticos) private readonly generarAsientosAutomaticos: GenerarAsientosAutomaticos,
+    @inject(DI_TYPES.Logger) private readonly logger: Logger,
   ) {}
 
   async execute(input: ConfirmarRechazoChequeInput): Promise<ResultadoConfirmarRechazoCheque> {
@@ -92,6 +97,18 @@ export class ConfirmarRechazoCheque {
       fecha: new Date(),
     });
 
+    const advertenciaRechazo = (
+      await this.generarAsientosAutomaticos.execute({
+        empresaId: input.empresaId,
+        evento: EventoAsiento.CARGO_RECHAZO_CHEQUE,
+        origenId: cargoRechazo.id,
+        fecha: cargoRechazo.fecha,
+        descripcion: cargoRechazo.motivo ?? `Cheque rechazo Nº: ${cheque.numero}`,
+        unidades: [{ monto: cargoRechazo.monto, clienteId: cargoRechazo.clienteId, chequeId: cheque.id }],
+      })
+    ).advertencia;
+    if (advertenciaRechazo) this.logger.warn(advertenciaRechazo);
+
     let cargoComision: CargoCuentaCorriente | null = null;
     const comision = input.sinComision ? 0 : (input.comision ?? calcularMontoComisionRechazo(cheque.monto));
     if (comision > 0) {
@@ -104,6 +121,18 @@ export class ConfirmarRechazoCheque {
         motivo: `Comisión cheque rechazado Nº: ${cheque.numero}`,
         fecha: new Date(),
       });
+
+      const advertenciaComision = (
+        await this.generarAsientosAutomaticos.execute({
+          empresaId: input.empresaId,
+          evento: EventoAsiento.CARGO_COMISION_RECHAZO,
+          origenId: cargoComision.id,
+          fecha: cargoComision.fecha,
+          descripcion: cargoComision.motivo ?? `Comisión cheque rechazado Nº: ${cheque.numero}`,
+          unidades: [{ monto: cargoComision.monto, clienteId: cargoComision.clienteId, chequeId: cheque.id }],
+        })
+      ).advertencia;
+      if (advertenciaComision) this.logger.warn(advertenciaComision);
     }
 
     return { cargoComision, cargoRechazo, montoRevertido };

@@ -2,6 +2,7 @@ import { inject, injectable } from "inversify";
 
 import { DI_TYPES } from "@/shared/infra/di/types";
 import { ApiError, Code } from "@/shared/infra/http/api.responses";
+import { Logger } from "@/shared/infra/logger/logger";
 import { CompraRepository } from "@/modules/compras/domain/compra.repository";
 import { CompraCategoriaRepository } from "@/modules/compras/domain/compra-categoria.repository";
 import { CompraConCategorias } from "@/modules/compras/use-cases/create-compra.use-case";
@@ -9,6 +10,8 @@ import { EspecieAnimal } from "@/modules/compras/domain/especie-animal";
 import { CategoriaPorcino } from "@/modules/compras/domain/categoria-porcino";
 import { RazaPorcino } from "@/modules/compras/domain/raza-porcino";
 import { ProveedorRepository } from "@/modules/proveedores/domain/proveedor.repository";
+import { GenerarAsientosAutomaticos } from "@/modules/contabilidad/use-cases/generar-asientos-automaticos.use-case";
+import { EventoAsiento } from "@/modules/contabilidad/domain/regla-asiento";
 
 export interface UpdateCompraCategoriaUseCaseInput {
   /** Si viene y coincide con una línea existente, la actualiza; si no, crea una nueva. */
@@ -58,6 +61,8 @@ export class UpdateCompra {
     @inject(DI_TYPES.CompraCategoriaRepository)
     private readonly compraCategoriaRepository: CompraCategoriaRepository,
     @inject(DI_TYPES.ProveedorRepository) private readonly proveedorRepository: ProveedorRepository,
+    @inject(DI_TYPES.GenerarAsientosAutomaticos) private readonly generarAsientosAutomaticos: GenerarAsientosAutomaticos,
+    @inject(DI_TYPES.Logger) private readonly logger: Logger,
   ) {}
 
   async execute(input: UpdateCompraUseCaseInput): Promise<CompraConCategorias> {
@@ -110,6 +115,25 @@ export class UpdateCompra {
           })),
         )
       : await this.compraCategoriaRepository.listByCompra(input.id);
+
+    // Asiento automático (fase 2) — se re-evalúa siempre que se edita la
+    // compra (puede haber cambiado `precioCompraKg` o `pesoBruto`, o se pudo
+    // haber sacado el precio de referencia — en ese caso `montoReferencia`
+    // queda `undefined` y el motor borra el asiento automático si estaba en
+    // borrador, ver `evaluar-regla-asiento.ts`).
+    const montoReferencia =
+      compraActualizada.precioCompraKg !== null && compraActualizada.precioCompraKg !== undefined
+        ? Math.round(compraActualizada.pesoBruto * compraActualizada.precioCompraKg * 100) / 100
+        : undefined;
+    const { advertencia } = await this.generarAsientosAutomaticos.execute({
+      empresaId: input.empresaId,
+      evento: EventoAsiento.COMPRA_TROPA,
+      origenId: compraActualizada.id,
+      fecha: compraActualizada.fecha,
+      descripcion: `Compra Nº ${compraActualizada.numero}`,
+      unidades: [{ monto: montoReferencia, proveedorId: compraActualizada.proveedorId }],
+    });
+    if (advertencia) this.logger.warn(advertencia);
 
     return { ...compraActualizada, categorias };
   }

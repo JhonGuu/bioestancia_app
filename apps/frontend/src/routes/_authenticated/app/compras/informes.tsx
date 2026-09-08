@@ -1,6 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, Loader2 } from "lucide-react";
 
+import { useTienePermiso } from "@/modules/auth/hooks/use-tiene-permiso";
+import { Permisos } from "@/modules/auth/domain/auth.types";
+import { SinPermiso } from "@/shared/components/sin-permiso";
 import { useRentabilidadTropas } from "@/modules/informes-compras/hooks/use-rentabilidad-tropas";
 import { RentabilidadChart } from "@/modules/informes-compras/components/rentabilidad-chart";
 import { PrecioEvolucionChart } from "@/modules/informes-compras/components/precio-evolucion-chart";
@@ -40,6 +43,11 @@ function InformesComprasPage() {
   const rentabilidadQuery = useRentabilidadTropas();
   const proveedoresQuery = useProveedores();
   const comprasQuery = useCompras();
+  const tieneAcceso = useTienePermiso(Permisos.VER_RENTABILIDAD_COMPRAS);
+
+  if (!tieneAcceso) {
+    return <SinPermiso />;
+  }
 
   if (rentabilidadQuery.isPending) {
     return (

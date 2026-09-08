@@ -2,6 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Banknote, DollarSign, HandCoins, PiggyBank, Percent, Target, Wallet } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
+import { Permisos } from "@/modules/auth/domain/auth.types";
+import { useTienePermiso } from "@/modules/auth/hooks/use-tiene-permiso";
 import { useVentas } from "@/modules/ventas/hooks/use-ventas";
 import { useCheques } from "@/modules/cheques/hooks/use-cheques";
 import { EstadoCheque } from "@/modules/cheques/domain/cheque.types";
@@ -30,6 +32,13 @@ function VentasDashboardPage() {
   const progresoMetasQuery = useProgresoMetasSemanales();
   const metasCumplidas = (progresoMetasQuery.data ?? []).filter((p) => p.cumplida).length;
 
+  // Estas 3 secciones muestran información sensible protegida por permiso
+  // granular (ver `Permisos`) — sin el permiso, ni la tarjeta se muestra
+  // (mismo criterio que el filtro de rol en `NAV_ITEMS`/`app-shell.tsx`).
+  const tieneAccesoCheques = useTienePermiso(Permisos.VER_CHEQUES);
+  const tieneAccesoCuentaCorriente = useTienePermiso(Permisos.VER_CUENTA_CORRIENTE);
+  const tieneAccesoPorcentajeCobranza = useTienePermiso(Permisos.VER_PORCENTAJE_COBRANZA);
+
   return (
     <div className="space-y-4">
       <div>
@@ -53,19 +62,23 @@ function VentasDashboardPage() {
           titulo="Cobros"
           descripcion="Cargá pagos (efectivo, transferencia, cheque) — se aplican a boletas pendientes solas."
         />
-        <SeccionCard
-          to="/app/ventas/cheques"
-          icon={Banknote}
-          titulo="Cheques"
-          descripcion="Cartera de cheques: seguimiento y destino (depositados, rechazados, etc.)."
-          badge={chequesEnCartera > 0 ? `${chequesEnCartera} en cartera` : undefined}
-        />
-        <SeccionCard
-          to="/app/ventas/cuenta-corriente"
-          icon={Wallet}
-          titulo="Cuenta corriente"
-          descripcion="Resumen de cuenta por cliente: saldo total, saldo vencido y detalle de movimientos."
-        />
+        {tieneAccesoCheques && (
+          <SeccionCard
+            to="/app/ventas/cheques"
+            icon={Banknote}
+            titulo="Cheques"
+            descripcion="Cartera de cheques: seguimiento y destino (depositados, rechazados, etc.)."
+            badge={chequesEnCartera > 0 ? `${chequesEnCartera} en cartera` : undefined}
+          />
+        )}
+        {tieneAccesoCuentaCorriente && (
+          <SeccionCard
+            to="/app/ventas/cuenta-corriente"
+            icon={Wallet}
+            titulo="Cuenta corriente"
+            descripcion="Resumen de cuenta por cliente: saldo total, saldo vencido y detalle de movimientos."
+          />
+        )}
         <SeccionCard
           to="/app/ventas/metas-semanales"
           icon={Target}
@@ -73,12 +86,14 @@ function VentasDashboardPage() {
           descripcion="Progreso de cabezas/semana de los clientes con meta configurada — no se compensa entre semanas."
           badge={metasCumplidas > 0 ? `${metasCumplidas} cumplida${metasCumplidas === 1 ? "" : "s"}` : undefined}
         />
-        <SeccionCard
-          to="/app/ventas/porcentaje-cobranza"
-          icon={Percent}
-          titulo="Porcentaje de cobranza"
-          descripcion="% de la deuda vencida cobrada cada semana, por cliente — sin contar la venta nueva de esa semana."
-        />
+        {tieneAccesoPorcentajeCobranza && (
+          <SeccionCard
+            to="/app/ventas/porcentaje-cobranza"
+            icon={Percent}
+            titulo="Porcentaje de cobranza"
+            descripcion="% de la deuda vencida cobrada cada semana, por cliente — sin contar la venta nueva de esa semana."
+          />
+        )}
         <SeccionCard
           to="/app/ventas/cabezas"
           icon={PiggyBank}

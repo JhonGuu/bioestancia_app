@@ -4,6 +4,7 @@ import { DI_TYPES } from "@/shared/infra/di/types";
 import { ApiError, ApiResponse, Code, FileResponse } from "@/shared/infra/http/api.responses";
 import { ExpressAdapter } from "@/shared/infra/http/http-server";
 import { RoleGroups } from "@/modules/users/domain/role-groups";
+import { Permisos } from "@/modules/permisos/domain/permiso";
 import { MedioPago } from "@/modules/cobros/domain/medio-pago";
 import { InformeCobranzasValidation } from "@/modules/informe-cobranzas/infra/http/validation";
 import { ObtenerInformeCobranzas } from "@/modules/informe-cobranzas/use-cases/obtener-informe-cobranzas.use-case";
@@ -36,6 +37,7 @@ export class InformeCobranzasController {
       url: "/informe-cobranzas",
       auth: "jwt-empresa",
       roles: RoleGroups.AdminAndContable,
+      permisos: [Permisos.VER_INFORME_COBRANZAS],
       validation: this.validation.get,
       handler: async ({ query, auth }) => {
         if (!auth?.empresaId) throw new ApiError("Unauthorized", Code.UNAUTHORIZED);
@@ -50,6 +52,7 @@ export class InformeCobranzasController {
       url: "/informe-cobranzas/pdf",
       auth: "jwt-empresa",
       roles: RoleGroups.AdminAndContable,
+      permisos: [Permisos.VER_INFORME_COBRANZAS],
       validation: this.validation.pdf,
       handler: async ({ query, auth }) => {
         if (!auth?.empresaId) throw new ApiError("Unauthorized", Code.UNAUTHORIZED);
@@ -69,6 +72,7 @@ export class InformeCobranzasController {
       url: "/informe-cobranzas/excel",
       auth: "jwt-empresa",
       roles: RoleGroups.AdminAndContable,
+      permisos: [Permisos.VER_INFORME_COBRANZAS],
       validation: this.validation.excel,
       handler: async ({ query, auth }) => {
         if (!auth?.empresaId) throw new ApiError("Unauthorized", Code.UNAUTHORIZED);

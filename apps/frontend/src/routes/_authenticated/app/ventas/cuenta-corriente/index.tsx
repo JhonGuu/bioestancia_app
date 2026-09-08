@@ -1,6 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, Loader2 } from "lucide-react";
 
+import { Permisos } from "@/modules/auth/domain/auth.types";
+import { useTienePermiso } from "@/modules/auth/hooks/use-tiene-permiso";
+import { SinPermiso } from "@/shared/components/sin-permiso";
 import { useClientes } from "@/modules/clientes/hooks/use-clientes";
 import { ClientesCuentaCorrienteList } from "@/modules/cuenta-corriente/components/clientes-cuenta-corriente-list";
 import { useSaldosClientes } from "@/modules/cuenta-corriente/hooks/use-saldos-clientes";
@@ -14,6 +17,11 @@ export const Route = createFileRoute("/_authenticated/app/ventas/cuenta-corrient
 function CuentaCorrientePage() {
   const clientesQuery = useClientes();
   const saldosQuery = useSaldosClientes();
+  const tieneAcceso = useTienePermiso(Permisos.VER_CUENTA_CORRIENTE);
+
+  if (!tieneAcceso) {
+    return <SinPermiso />;
+  }
 
   return (
     <div className="space-y-4">

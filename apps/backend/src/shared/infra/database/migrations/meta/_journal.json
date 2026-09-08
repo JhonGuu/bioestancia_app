@@ -204,6 +204,20 @@
       "when": 1786717592969,
       "tag": "0028_agregar_comisos_por_categoria",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1788536493724,
+      "tag": "0029_usuario_empresa_permisos",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1788545248956,
+      "tag": "0030_contabilidad",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
 
+import { Permisos } from "@/modules/auth/domain/auth.types";
+import { useTienePermiso } from "@/modules/auth/hooks/use-tiene-permiso";
+import { SinPermiso } from "@/shared/components/sin-permiso";
 import { useCheque } from "@/modules/cheques/hooks/use-cheque";
 import { useClientes } from "@/modules/clientes/hooks/use-clientes";
 import { CambiarEstadoChequeForm } from "@/modules/cheques/components/cambiar-estado-cheque-form";
@@ -21,6 +24,11 @@ function ChequeDetallePage() {
   const { chequeId } = Route.useParams();
   const chequeQuery = useCheque(chequeId);
   const clientesQuery = useClientes();
+  const tieneAcceso = useTienePermiso(Permisos.VER_CHEQUES);
+
+  if (!tieneAcceso) {
+    return <SinPermiso />;
+  }
 
   if (chequeQuery.isPending || clientesQuery.isPending) {
     return (

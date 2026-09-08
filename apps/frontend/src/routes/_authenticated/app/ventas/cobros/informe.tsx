@@ -2,6 +2,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { ArrowLeft, FileDown, FileSpreadsheet, Loader2 } from "lucide-react";
 
+import { Permisos } from "@/modules/auth/domain/auth.types";
+import { useTienePermiso } from "@/modules/auth/hooks/use-tiene-permiso";
+import { SinPermiso } from "@/shared/components/sin-permiso";
 import { useInformeCobranzas } from "@/modules/informe-cobranzas/hooks/use-informe-cobranzas";
 import {
   useDescargarInformeCobranzasExcel,
@@ -34,6 +37,11 @@ function InformeCobranzasPage() {
   const informeQuery = useInformeCobranzas(filtros);
   const descargarPdf = useDescargarInformeCobranzasPdf();
   const descargarExcel = useDescargarInformeCobranzasExcel();
+  const tieneAcceso = useTienePermiso(Permisos.VER_INFORME_COBRANZAS);
+
+  if (!tieneAcceso) {
+    return <SinPermiso />;
+  }
 
   return (
     <div className="space-y-4">

@@ -2,6 +2,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { FileDown, FileSpreadsheet, Loader2 } from "lucide-react";
 
+import { Permisos } from "@/modules/auth/domain/auth.types";
+import { useTienePermiso } from "@/modules/auth/hooks/use-tiene-permiso";
+import { SinPermiso } from "@/shared/components/sin-permiso";
 import { useClientes } from "@/modules/clientes/hooks/use-clientes";
 import { useBoletas } from "@/modules/boletas/hooks/use-boletas";
 import { useSaldoCliente } from "@/modules/cuenta-corriente/hooks/use-saldo-cliente";
@@ -34,6 +37,11 @@ function ResumenCuentaPage() {
   const cargosQuery = useCargosCuentaCorriente(clienteId);
   const descargarPdf = useDescargarResumenCuentaPdf();
   const descargarExcel = useDescargarResumenCuentaExcel();
+  const tieneAcceso = useTienePermiso(Permisos.VER_CUENTA_CORRIENTE);
+
+  if (!tieneAcceso) {
+    return <SinPermiso />;
+  }
 
   const cargando =
     clientesQuery.isPending ||

@@ -3,6 +3,7 @@ import { Link, Outlet, useNavigate } from "@tanstack/react-router";
 import {
   Building2,
   CalendarClock,
+  Calculator,
   Contact,
   LogOut,
   Menu,
@@ -16,7 +17,7 @@ import {
 } from "lucide-react";
 
 import { useAuth } from "@/modules/auth/context/auth-context";
-import { Roles } from "@/modules/auth/domain/auth.types";
+import { Permisos, Roles } from "@/modules/auth/domain/auth.types";
 import { BrandLogo, brandCompanyFromRazonSocial } from "@/components/brand-logo";
 import { ThemeToggle } from "@/shared/theme/theme-toggle";
 import { Button } from "@/components/ui/button";
@@ -66,6 +67,17 @@ const NAV_ITEMS = [
     label: "Personal",
     icon: Contact,
     roles: [Roles.ADMIN, Roles.CONTABLE],
+  },
+  {
+    to: "/app/contabilidad" as const,
+    label: "Contabilidad",
+    icon: Calculator,
+    roles: [Roles.ADMIN, Roles.CONTABLE],
+    // Módulo entero gateado por permiso granular (no solo por rol): a
+    // diferencia de Ventas/Compras, acá NO hay contenido sin permiso, así
+    // que directamente se oculta el ítem del menú en vez de mostrar la
+    // pantalla de "sin acceso" al entrar.
+    permiso: Permisos.VER_CONTABILIDAD,
   },
   {
     to: "/app/empresa" as const,
@@ -120,7 +132,11 @@ export function AppShell() {
                 )}
               </SheetHeader>
               <nav className="p-3">
-                <NavLinks rol={auth.empresaActiva?.rol} onNavigate={() => setMenuAbierto(false)} />
+                <NavLinks
+                  rol={auth.empresaActiva?.rol}
+                  permisos={auth.empresaActiva?.permisos}
+                  onNavigate={() => setMenuAbierto(false)}
+                />
               </nav>
             </SheetContent>
           </Sheet>
@@ -161,7 +177,7 @@ export function AppShell() {
 
       <div className="flex flex-1">
         <nav className="hidden w-56 shrink-0 border-r p-3 md:block">
-          <NavLinks rol={auth.empresaActiva?.rol} />
+          <NavLinks rol={auth.empresaActiva?.rol} permisos={auth.empresaActiva?.permisos} />
         </nav>
 
         {/* `min-w-0`: sin esto, un ítem flex no se achica por debajo del ancho
@@ -177,12 +193,24 @@ export function AppShell() {
   );
 }
 
-function NavLinks({ rol, onNavigate }: { rol?: Roles; onNavigate?: () => void }) {
+function NavLinks({
+  rol,
+  permisos,
+  onNavigate,
+}: {
+  rol?: Roles;
+  permisos?: Permisos[];
+  onNavigate?: () => void;
+}) {
   // `item.roles` inferido por TS como distintas tuplas literales (cada
   // entrada de NAV_ITEMS puede tener una combinación de roles distinta) —
   // el cast a `Roles[]` evita que `.includes()` se tipe contra una sola de
   // esas tuplas en vez de contra `Roles` en general.
-  const items = NAV_ITEMS.filter((item) => !rol || (item.roles as Roles[]).includes(rol));
+  const items = NAV_ITEMS.filter(
+    (item) =>
+      (!rol || (item.roles as Roles[]).includes(rol)) &&
+      (!("permiso" in item) || !item.permiso || (permisos ?? []).includes(item.permiso)),
+  );
 
   return (
     <ul className="space-y-1">

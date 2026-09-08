@@ -1,4 +1,4 @@
-import type { Roles } from "@/modules/auth/domain/auth.types";
+import type { Permisos, Roles } from "@/modules/auth/domain/auth.types";
 
 /**
  * Espejo de `UsuarioConAcceso` en el backend
@@ -42,4 +42,16 @@ export interface CrearUsuarioResult {
   user: UsuarioCreado;
   acceso: AccesoOtorgado;
   temporaryPassword: string;
+}
+
+/**
+ * Metadata de un permiso para pintar el diálogo "Permisos" — espejo de
+ * `PermisoCatalogoItem` en
+ * `apps/backend/src/modules/permisos/domain/permiso-catalogo.ts`.
+ */
+export interface PermisoCatalogoItem {
+  codigo: Permisos;
+  categoria: string;
+  etiqueta: string;
+  descripcion: string;
 }

@@ -2,6 +2,7 @@ import { httpClient, unwrap } from "@/shared/api/http-client";
 import { filenameFromContentDisposition } from "@/shared/lib/download-blob";
 import type { SaldoCliente } from "@/modules/cuenta-corriente/domain/saldo-cliente.types";
 import type { MovimientoCuentaCorriente } from "@/modules/cuenta-corriente/domain/movimiento-cuenta-corriente.types";
+import type { ConciliacionClientes } from "@/modules/cuenta-corriente/domain/conciliacion.types";
 
 export interface ArchivoDescargado {
   blob: Blob;
@@ -43,5 +44,10 @@ export const cuentaCorrienteApi = {
       blob: response.data,
       filename: filenameFromContentDisposition(response.headers, "resumen-cuenta.xlsx"),
     };
+  },
+
+  /** Compara, cliente por cliente, el saldo de cuenta corriente contra el saldo contable de una cuenta de control — fase 2 de contabilidad. */
+  getConciliacion(cuentaId: string): Promise<ConciliacionClientes> {
+    return unwrap(httpClient.get("/cuenta-corriente/conciliacion", { params: { cuentaId } }));
   },
 };

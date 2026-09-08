@@ -2,6 +2,7 @@ import { inject, injectable } from "inversify";
 
 import { DI_TYPES } from "@/shared/infra/di/types";
 import { ApiError, Code } from "@/shared/infra/http/api.responses";
+import { Logger } from "@/shared/infra/logger/logger";
 import { Compra } from "@/modules/compras/domain/compra";
 import { CompraCategoria } from "@/modules/compras/domain/compra-categoria";
 import { CompraRepository } from "@/modules/compras/domain/compra.repository";
@@ -10,6 +11,8 @@ import { EspecieAnimal } from "@/modules/compras/domain/especie-animal";
 import { CategoriaPorcino } from "@/modules/compras/domain/categoria-porcino";
 import { RazaPorcino } from "@/modules/compras/domain/raza-porcino";
 import { ProveedorRepository } from "@/modules/proveedores/domain/proveedor.repository";
+import { GenerarAsientosAutomaticos } from "@/modules/contabilidad/use-cases/generar-asientos-automaticos.use-case";
+import { EventoAsiento } from "@/modules/contabilidad/domain/regla-asiento";
 
 export interface CreateCompraCategoriaUseCaseInput {
   categoria: CategoriaPorcino;
@@ -52,6 +55,8 @@ export class CreateCompra {
     @inject(DI_TYPES.CompraCategoriaRepository)
     private readonly compraCategoriaRepository: CompraCategoriaRepository,
     @inject(DI_TYPES.ProveedorRepository) private readonly proveedorRepository: ProveedorRepository,
+    @inject(DI_TYPES.GenerarAsientosAutomaticos) private readonly generarAsientosAutomaticos: GenerarAsientosAutomaticos,
+    @inject(DI_TYPES.Logger) private readonly logger: Logger,
   ) {}
 
   async execute(input: CreateCompraUseCaseInput): Promise<CompraConCategorias> {
@@ -83,6 +88,23 @@ export class CreateCompra {
         cabezas: linea.cabezas,
       })),
     );
+
+    // Asiento automático (fase 2) — solo si hay precio de referencia cargado;
+    // si no, `montoReferencia` queda `undefined` y el motor no genera nada
+    // (ver `evaluar-regla-asiento.ts`).
+    const montoReferencia =
+      compra.precioCompraKg !== null && compra.precioCompraKg !== undefined
+        ? Math.round(compra.pesoBruto * compra.precioCompraKg * 100) / 100
+        : undefined;
+    const { advertencia } = await this.generarAsientosAutomaticos.execute({
+      empresaId: input.empresaId,
+      evento: EventoAsiento.COMPRA_TROPA,
+      origenId: compra.id,
+      fecha: compra.fecha,
+      descripcion: `Compra Nº ${compra.numero}`,
+      unidades: [{ monto: montoReferencia, proveedorId: compra.proveedorId }],
+    });
+    if (advertencia) this.logger.warn(advertencia);
 
     return { ...compra, categorias };
   }

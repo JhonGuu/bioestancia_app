@@ -4,6 +4,7 @@ import { DI_TYPES } from "@/shared/infra/di/types";
 import { ApiError, ApiResponse, Code } from "@/shared/infra/http/api.responses";
 import { ExpressAdapter } from "@/shared/infra/http/http-server";
 import { RoleGroups } from "@/modules/users/domain/role-groups";
+import { Permisos } from "@/modules/permisos/domain/permiso";
 import { ListaDePreciosValidation } from "@/modules/listas-precios/infra/http/validation";
 import {
   CreateListaDePrecios,
@@ -44,12 +45,16 @@ export class ListaDePreciosController {
       },
     });
 
-    // Lectura: cualquier usuario con acceso a la empresa activa (lo va a necesitar
-    // el módulo de ventas más adelante, no solo admin/contable).
+    // Lectura protegida por permiso granular (VER_LISTAS_PRECIOS) — antes era
+    // visible para cualquier usuario con acceso a la empresa; hoy no hay ningún
+    // flujo del frontend que dependa de leerla sin este permiso (confirmado antes
+    // de aplicar el cambio). Si el módulo de ventas termina necesitándola para un
+    // rol amplio, ver ese caso puntual antes de asumir que hace falta abrirla de nuevo.
     this.httpServer.register({
       method: "get",
       url: "/listas-precios",
       auth: "jwt-empresa",
+      permisos: [Permisos.VER_LISTAS_PRECIOS],
       handler: async ({ auth }) => {
         if (!auth?.empresaId) throw new ApiError("Unauthorized", Code.UNAUTHORIZED);
         const data = await this.listListasDePrecios.execute({ empresaId: auth.empresaId });
@@ -65,6 +70,7 @@ export class ListaDePreciosController {
       method: "get",
       url: "/listas-precios/:id",
       auth: "jwt-empresa",
+      permisos: [Permisos.VER_LISTAS_PRECIOS],
       validation: this.validation.getById,
       handler: async ({ params, auth }) => {
         if (!auth?.empresaId) throw new ApiError("Unauthorized", Code.UNAUTHORIZED);

@@ -15,7 +15,8 @@
     "db:generate": "drizzle-kit generate --config=drizzle.config.ts --name",
     "db:migrate": "drizzle-kit migrate --config=drizzle.config.ts",
     "db:drop": "drizzle-kit drop --config=drizzle.config.ts",
-    "db:seed": "ts-node --transpile-only -r tsconfig-paths/register src/shared/infra/database/seed.ts"
+    "db:seed": "ts-node --transpile-only -r tsconfig-paths/register src/shared/infra/database/seed.ts",
+    "db:seed-permisos": "ts-node --transpile-only -r tsconfig-paths/register src/shared/infra/database/seed-permisos-no-regresion.ts"
   },
   "keywords": [
     "porcino",

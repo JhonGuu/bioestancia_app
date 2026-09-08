@@ -4,6 +4,7 @@ import { DI_TYPES } from "@/shared/infra/di/types";
 import { ApiError, ApiResponse, Code } from "@/shared/infra/http/api.responses";
 import { ExpressAdapter } from "@/shared/infra/http/http-server";
 import { RoleGroups } from "@/modules/users/domain/role-groups";
+import { Permisos } from "@/modules/permisos/domain/permiso";
 import { PorcentajeCobranzaValidation } from "@/modules/porcentaje-cobranza/infra/http/validation";
 import { ObtenerPorcentajeCobranza } from "@/modules/porcentaje-cobranza/use-cases/obtener-porcentaje-cobranza.use-case";
 
@@ -23,6 +24,7 @@ export class PorcentajeCobranzaController {
       url: "/porcentaje-cobranza",
       auth: "jwt-empresa",
       roles: RoleGroups.AdminAndContable,
+      permisos: [Permisos.VER_PORCENTAJE_COBRANZA],
       validation: this.validation.porcentaje,
       handler: async ({ query, auth }) => {
         if (!auth?.empresaId) throw new ApiError("Unauthorized", Code.UNAUTHORIZED);
