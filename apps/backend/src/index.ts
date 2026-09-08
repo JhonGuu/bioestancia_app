@@ -11,6 +11,11 @@ import { Logger } from "@/shared/infra/logger/logger";
 import { generateOpenApiDocument } from "@/shared/infra/openapi/generate-document";
 
 async function bootstrap(): Promise<void> {
+  // Antes que nada: si esto es producción, que falle acá con un mensaje
+  // claro (JWT_SECRET de ejemplo, o falta FRONTEND_URL) en vez de arrancar
+  // "andando" con un agujero de seguridad silencioso.
+  Env.validate();
+
   const container = DI.getInstance().container;
 
   const logger = container.get<Logger>(DI_TYPES.Logger);

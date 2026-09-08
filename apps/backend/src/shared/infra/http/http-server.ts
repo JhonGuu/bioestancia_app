@@ -13,6 +13,7 @@ import swaggerUi from "swagger-ui-express";
 
 import { AuthProvider } from "@/shared/infra/auth/auth-provider";
 import { DI_TYPES } from "@/shared/infra/di/types";
+import { Env } from "@/shared/infra/env/env";
 import { JWTProvider } from "@/shared/infra/jwt/jwt-provider";
 import { Logger } from "@/shared/infra/logger/logger";
 import {
@@ -107,7 +108,12 @@ export class ExpressAdapter {
     @inject(DI_TYPES.AuthProvider) private readonly authProvider: AuthProvider,
   ) {
     this.app = express();
-    this.app.use(cors());
+    // En producción se restringe a FRONTEND_URL (validado al arrancar, ver
+    // Env.validate()) — en local/development/test queda abierto, para no
+    // tener que andar agregando cada puerto/URL que use cada dev.
+    this.app.use(
+      cors(Env.environment === "production" ? { origin: Env.frontendUrl ?? undefined } : undefined),
+    );
     this.app.use(express.json());
     // Protege contra bugs o clientes que disparen ráfagas de peticiones: en un
     // hosting de servidor fijo (Fly.io, etc.) esto no cambia la factura, pero

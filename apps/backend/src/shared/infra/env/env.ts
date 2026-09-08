@@ -36,12 +36,31 @@ export class Env {
     return Number(this.get("PORT"));
   }
 
+  /** Placeholder que trae `.env.example` — si esto llega a producción, alguien se olvidó de generar uno real. */
+  private static readonly JWT_SECRET_PLACEHOLDER = "change-me-to-a-long-random-string";
+
   static get jwtSecret(): string {
-    return this.get("JWT_SECRET");
+    const value = this.get("JWT_SECRET");
+    if (this.environment === "production" && value === this.JWT_SECRET_PLACEHOLDER) {
+      throw new Error(
+        "JWT_SECRET sigue siendo el valor de ejemplo de .env.example. Generá uno real antes de arrancar en " +
+          'producción (ej. `openssl rand -base64 48`) y cargalo como secreto de la plataforma, nunca en el repo.',
+      );
+    }
+    return value;
   }
 
   static get dbUrl(): string {
     return this.get("DB_URL");
+  }
+
+  /**
+   * URL pública del frontend en producción — se usa para restringir CORS a
+   * ese origen (ver `ExpressAdapter`). Opcional en local/development/test
+   * (ahí CORS queda abierto); `validate()` la exige en producción.
+   */
+  static get frontendUrl(): string | null {
+    return this.getOptional("FRONTEND_URL");
   }
 
   static get bcryptSalt(): number {
@@ -153,5 +172,22 @@ export class Env {
   static get afipCodMotivo(): number {
     const value = this.getOptional("AFIP_MOTIVO");
     return value ? Number(value) : 1;
+  }
+
+  /**
+   * Validaciones que solo importan en producción — se llaman UNA vez al
+   * arrancar (`bootstrap()`, antes de levantar nada) para fallar rápido con
+   * un mensaje claro, en vez de arrancar "andando" con un agujero de
+   * seguridad silencioso (CORS abierto a cualquier origen, o un JWT_SECRET
+   * de ejemplo que cualquiera puede leer en el repo público).
+   */
+  static validate(): void {
+    if (this.environment !== "production") return;
+    this.jwtSecret; // el getter ya valida que no sea el placeholder.
+    if (!this.frontendUrl) {
+      throw new Error(
+        "Falta FRONTEND_URL: en producción es obligatoria para restringir CORS al dominio real del frontend.",
+      );
+    }
   }
 }

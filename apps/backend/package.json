@@ -45,6 +45,7 @@
     "postgres": "^3.4.5",
     "reflect-metadata": "^0.2.2",
     "swagger-ui-express": "^5.0.1",
+    "tsconfig-paths": "^4.2.0",
     "xlsx": "^0.18.5",
     "xml2js": "^0.6.2",
     "zod": "^3.24.2"
@@ -62,7 +63,6 @@
     "drizzle-kit": "^0.30.5",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
-    "tsconfig-paths": "^4.2.0",
     "typescript": "^5.8.2",
     "vitest": "^2.1.8"
   }

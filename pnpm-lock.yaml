@@ -61,6 +61,9 @@ importers:
       swagger-ui-express:
         specifier: ^5.0.1
         version: 5.0.1(express@4.22.2)
+      tsconfig-paths:
+        specifier: ^4.2.0
+        version: 4.2.0
       xlsx:
         specifier: ^0.18.5
         version: 0.18.5
@@ -107,9 +110,6 @@ importers:
       ts-node-dev:
         specifier: ^2.0.0
         version: 2.0.0(@types/node@22.20.1)(typescript@5.9.3)
-      tsconfig-paths:
-        specifier: ^4.2.0
-        version: 4.2.0
       typescript:
         specifier: ^5.8.2
         version: 5.9.3
