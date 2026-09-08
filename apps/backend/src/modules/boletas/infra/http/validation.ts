@@ -8,6 +8,30 @@ import { CategoriaReventa, esReventa } from "@/modules/ventas/domain/categoria-v
 
 const categoriaVentaSchema = z.union([z.nativeEnum(CategoriaPorcino), z.nativeEnum(CategoriaReventa)]);
 
+// ─────────────────── Importación de boletas históricas ───────────────────
+// El body de "confirmar" es la lista de grupos que `PrevisualizarImportacionBoletas`
+// ya validó y el usuario ya revisó — se re-tipa acá (sin repetir las reglas de
+// negocio, que las corre el use-case) solo para no dejar pasar un payload con
+// forma inesperada.
+const ventaAImportarBody = z.object({
+  fila: z.number(),
+  formaVenta: z.nativeEnum(FormaVenta),
+  categoria: categoriaVentaSchema.nullable(),
+  kg: z.number(),
+  precioKg: z.number().nullable(),
+  observaciones: z.string().nullable(),
+});
+
+const boletaAImportarBody = z.object({
+  hoja: z.string().min(1),
+  clienteId: z.string().uuid("clienteId inválido").nullable(),
+  clienteEsNuevo: z.boolean(),
+  fecha: z.string(),
+  filas: z.array(z.number()),
+  ventas: z.array(ventaAImportarBody).min(1, "El grupo tiene que tener al menos una venta"),
+  totalImporte: z.number(),
+});
+
 const itemBody = z
   .object({
     compraId: z.string().uuid("compraId inválido").optional(),
@@ -106,4 +130,11 @@ export class BoletaValidation {
   update = { params: idParams, body: updateBody };
 
   delete = { params: idParams };
+
+  /** El archivo llega por `multer` (campo "archivo"), no hay body que validar acá. */
+  previsualizarImportacion = {};
+
+  confirmarImportacion = {
+    body: z.object({ boletas: z.array(boletaAImportarBody) }),
+  };
 }

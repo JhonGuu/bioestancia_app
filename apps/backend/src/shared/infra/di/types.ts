@@ -137,6 +137,8 @@ export const DI_TYPES = {
   UpdateBoleta: Symbol.for("UpdateBoleta"),
   DeleteBoleta: Symbol.for("DeleteBoleta"),
   BoletaController: Symbol.for("BoletaController"),
+  PrevisualizarImportacionBoletas: Symbol.for("PrevisualizarImportacionBoletas"),
+  ConfirmarImportacionBoletas: Symbol.for("ConfirmarImportacionBoletas"),
 
   // ── Module: ventas ───────────────────────────────
   VentaValidation: Symbol.for("VentaValidation"),

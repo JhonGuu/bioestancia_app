@@ -1,4 +1,5 @@
 import { inject, injectable } from "inversify";
+import multer from "multer";
 
 import { DI_TYPES } from "@/shared/infra/di/types";
 import { ApiError, ApiResponse, Code, FileResponse } from "@/shared/infra/http/api.responses";
@@ -13,6 +14,11 @@ import { GenerarReporteDiarioPdf } from "@/modules/boletas/use-cases/generar-rep
 import { GenerarReporteDiarioExcel } from "@/modules/boletas/use-cases/generar-reporte-diario-excel.use-case";
 import { UpdateBoleta, UpdateBoletaInput } from "@/modules/boletas/use-cases/update-boleta.use-case";
 import { DeleteBoleta } from "@/modules/boletas/use-cases/delete-boleta.use-case";
+import { PrevisualizarImportacionBoletas } from "@/modules/boletas/use-cases/importar/previsualizar-importacion-boletas.use-case";
+import { ConfirmarImportacionBoletas } from "@/modules/boletas/use-cases/importar/confirmar-importacion-boletas.use-case";
+import { BoletaAImportar } from "@/modules/boletas/domain/importacion-boletas";
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
 
 @injectable()
 export class BoletaController {
@@ -28,6 +34,9 @@ export class BoletaController {
     private readonly generarReporteDiarioExcel: GenerarReporteDiarioExcel,
     @inject(DI_TYPES.UpdateBoleta) private readonly updateBoleta: UpdateBoleta,
     @inject(DI_TYPES.DeleteBoleta) private readonly deleteBoleta: DeleteBoleta,
+    @inject(DI_TYPES.PrevisualizarImportacionBoletas)
+    private readonly previsualizarImportacionBoletas: PrevisualizarImportacionBoletas,
+    @inject(DI_TYPES.ConfirmarImportacionBoletas) private readonly confirmarImportacionBoletas: ConfirmarImportacionBoletas,
   ) {
     this.registerRoutes();
   }
@@ -184,6 +193,44 @@ export class BoletaController {
           data: null,
           message: "Boleta eliminada correctamente",
           status: Code.OK,
+        });
+      },
+    });
+
+    // ─────────────────── Importación de boletas históricas ───────────────────
+    // Solo admin/contable (carga inicial de datos, no el flujo diario del operario).
+    this.httpServer.register({
+      method: "post",
+      url: "/boletas/importar/preview",
+      auth: "jwt-empresa",
+      roles: RoleGroups.AdminAndContable,
+      middlewares: [upload.single("archivo")],
+      validation: this.validation.previsualizarImportacion,
+      handler: async ({ file, auth }) => {
+        if (!auth?.empresaId) throw new ApiError("Unauthorized", Code.UNAUTHORIZED);
+        if (!file) throw new ApiError("Falta el archivo (campo 'archivo')", Code.BAD_REQUEST);
+        const data = await this.previsualizarImportacionBoletas.execute({
+          empresaId: auth.empresaId,
+          buffer: file.buffer,
+        });
+        return new ApiResponse({ data, message: "Archivo procesado correctamente", status: Code.OK });
+      },
+    });
+
+    this.httpServer.register({
+      method: "post",
+      url: "/boletas/importar/confirmar",
+      auth: "jwt-empresa",
+      roles: RoleGroups.AdminAndContable,
+      validation: this.validation.confirmarImportacion,
+      handler: async ({ body, auth }) => {
+        if (!auth?.empresaId) throw new ApiError("Unauthorized", Code.UNAUTHORIZED);
+        const { boletas } = body as { boletas: BoletaAImportar[] };
+        const data = await this.confirmarImportacionBoletas.execute({ empresaId: auth.empresaId, boletas });
+        return new ApiResponse({
+          data,
+          message: `Se crearon ${data.creadas} boletas${data.fallidas > 0 ? ` (${data.fallidas} con error)` : ""}`,
+          status: Code.CREATED,
         });
       },
     });
