@@ -1,6 +1,7 @@
 import { Venta } from "@/modules/ventas/domain/venta";
 import { FormaVenta } from "@/modules/ventas/domain/forma-venta";
 import { CategoriaVenta } from "@/modules/ventas/domain/categoria-venta";
+import { PaginatedResult, PaginationQuery } from "@/shared/infra/http/pagination";
 
 /**
  * Interface del repositorio de Ventas. Forma parte del DOMINIO.
@@ -15,8 +16,19 @@ import { CategoriaVenta } from "@/modules/ventas/domain/categoria-venta";
 export interface VentaRepository {
   getById(id: string, empresaId: string): Promise<Venta | null>;
 
-  /** Lista las ventas de una empresa puntual. */
+  /**
+   * Lista las ventas de una empresa puntual.
+   *
+   * Dos formas, según el caller:
+   *  - Sin `pagination`: devuelve TODO (comportamiento histórico) — la usan
+   *    reportes que necesitan agregar sobre el total (`porcentaje-cobranza`,
+   *    `informes-compras`, `cuenta-corriente`). No usar para pantallas nuevas.
+   *  - Con `pagination`: devuelve una página (`{items, pagination}`) — la
+   *    forma que tiene que usar cualquier pantalla de listado nueva, para no
+   *    repetir el problema de traer una tabla de alto crecimiento entera.
+   */
   list(empresaId: string): Promise<Venta[]>;
+  list(empresaId: string, pagination: PaginationQuery): Promise<PaginatedResult<Venta>>;
 
   /**
    * Lista las ventas de una compra puntual (todas las formas, incluida
