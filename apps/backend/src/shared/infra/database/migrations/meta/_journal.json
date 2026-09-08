@@ -218,6 +218,13 @@
       "when": 1788545248956,
       "tag": "0030_contabilidad",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1788881399676,
+      "tag": "0031_agrega_reglas_asiento",
+      "breakpoints": true
     }
   ]
 }
