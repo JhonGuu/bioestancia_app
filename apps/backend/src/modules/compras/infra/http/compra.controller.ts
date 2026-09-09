@@ -1,4 +1,5 @@
 import { inject, injectable } from "inversify";
+import multer from "multer";
 
 import { DI_TYPES } from "@/shared/infra/di/types";
 import { ApiError, ApiResponse, Code } from "@/shared/infra/http/api.responses";
@@ -12,6 +13,11 @@ import { UpdateCompra, UpdateCompraUseCaseInput } from "@/modules/compras/use-ca
 import { CerrarCompra } from "@/modules/compras/use-cases/cerrar-compra.use-case";
 import { ReabrirCompra } from "@/modules/compras/use-cases/reabrir-compra.use-case";
 import { ObtenerStockTropas } from "@/modules/compras/use-cases/obtener-stock-tropas.use-case";
+import { PrevisualizarImportacionCompras } from "@/modules/compras/use-cases/importar/previsualizar-importacion-compras.use-case";
+import { ConfirmarImportacionCompras } from "@/modules/compras/use-cases/importar/confirmar-importacion-compras.use-case";
+import { CompraAImportar } from "@/modules/compras/domain/importacion-compras";
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
 
 @injectable()
 export class CompraController {
@@ -25,6 +31,10 @@ export class CompraController {
     @inject(DI_TYPES.CerrarCompra) private readonly cerrarCompra: CerrarCompra,
     @inject(DI_TYPES.ReabrirCompra) private readonly reabrirCompra: ReabrirCompra,
     @inject(DI_TYPES.ObtenerStockTropas) private readonly obtenerStockTropas: ObtenerStockTropas,
+    @inject(DI_TYPES.PrevisualizarImportacionCompras)
+    private readonly previsualizarImportacionCompras: PrevisualizarImportacionCompras,
+    @inject(DI_TYPES.ConfirmarImportacionCompras)
+    private readonly confirmarImportacionCompras: ConfirmarImportacionCompras,
   ) {
     this.registerRoutes();
   }
@@ -84,6 +94,46 @@ export class CompraController {
           data,
           message: "Stock de tropas obtenido correctamente",
           status: Code.OK,
+        });
+      },
+    });
+
+    // ─────────────────── Importación de compras/tropas históricas ───────────────────
+    // Solo admin/contable (carga inicial de datos, no el flujo diario). OJO
+    // con el orden: tiene que registrarse ANTES de `/compras/:id` — si no,
+    // Express matchea "importar" contra el param `:id`.
+    this.httpServer.register({
+      method: "post",
+      url: "/compras/importar/preview",
+      auth: "jwt-empresa",
+      roles: RoleGroups.AdminAndContable,
+      middlewares: [upload.single("archivo")],
+      validation: this.validation.previsualizarImportacion,
+      handler: async ({ file, auth }) => {
+        if (!auth?.empresaId) throw new ApiError("Unauthorized", Code.UNAUTHORIZED);
+        if (!file) throw new ApiError("Falta el archivo (campo 'archivo')", Code.BAD_REQUEST);
+        const data = await this.previsualizarImportacionCompras.execute({
+          empresaId: auth.empresaId,
+          buffer: file.buffer,
+        });
+        return new ApiResponse({ data, message: "Archivo procesado correctamente", status: Code.OK });
+      },
+    });
+
+    this.httpServer.register({
+      method: "post",
+      url: "/compras/importar/confirmar",
+      auth: "jwt-empresa",
+      roles: RoleGroups.AdminAndContable,
+      validation: this.validation.confirmarImportacion,
+      handler: async ({ body, auth }) => {
+        if (!auth?.empresaId) throw new ApiError("Unauthorized", Code.UNAUTHORIZED);
+        const { compras } = body as { compras: CompraAImportar[] };
+        const data = await this.confirmarImportacionCompras.execute({ empresaId: auth.empresaId, compras });
+        return new ApiResponse({
+          data,
+          message: `Se crearon ${data.creadas} tropas${data.fallidas > 0 ? ` (${data.fallidas} con error)` : ""}`,
+          status: Code.CREATED,
         });
       },
     });

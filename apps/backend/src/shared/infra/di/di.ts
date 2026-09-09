@@ -21,7 +21,7 @@ import { registerProveedoresModule } from "@/modules/proveedores/proveedores.mod
 import { registerFrigorificosModule } from "@/modules/frigorificos/frigorificos.module";
 import { registerBoletasModule } from "@/modules/boletas/boletas.module";
 import { registerVentasModule } from "@/modules/ventas/ventas.module";
-import { registerComprasModule } from "@/modules/compras/compras.module";
+import { registerComprasModule, activateComprasController } from "@/modules/compras/compras.module";
 import { registerResultadoFaenaModule } from "@/modules/resultado-faena/resultado-faena.module";
 import { registerLiquidacionCompraModule } from "@/modules/liquidacion-compra/liquidacion-compra.module";
 import { registerLiquidacionFaenaModule } from "@/modules/liquidacion-faena/liquidacion-faena.module";
@@ -129,6 +129,10 @@ export class DI {
     registerResultadoFaenaModule(this.container);
     registerLiquidacionCompraModule(this.container);
     registerLiquidacionFaenaModule(this.container);
+    // Recién ACÁ se instancia `CompraController` (ver comentario en
+    // `compras.module.ts`): su importación histórica inyecta los tres
+    // repositorios de arriba, que hasta este punto no estaban bindeados.
+    activateComprasController(this.container);
     // `boletas` inyecta VentaRepository (bindeado en `ventas`) y
     // CompraRepository (bindeado en `compras`) desde que `CreateBoleta`
     // puede crear las ventas de sus ítems en el mismo request — va después

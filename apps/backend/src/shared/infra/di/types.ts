@@ -96,6 +96,8 @@ export const DI_TYPES = {
   CerrarCompra: Symbol.for("CerrarCompra"),
   ReabrirCompra: Symbol.for("ReabrirCompra"),
   ObtenerStockTropas: Symbol.for("ObtenerStockTropas"),
+  PrevisualizarImportacionCompras: Symbol.for("PrevisualizarImportacionCompras"),
+  ConfirmarImportacionCompras: Symbol.for("ConfirmarImportacionCompras"),
   CompraController: Symbol.for("CompraController"),
 
   // ── Module: resultado-faena ──────────────────────

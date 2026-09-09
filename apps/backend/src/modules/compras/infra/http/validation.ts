@@ -67,9 +67,52 @@ const updateBody = z.object({
   categorias: z.array(updateCategoriaBody).min(1, "Tiene que venir al menos una categoría").optional(),
 });
 
+// ─────────────────── Importación de compras/tropas históricas ───────────────────
+// A diferencia de `categoriaBody`/`createBody` (carga manual, hacia adelante),
+// NO reusa `DTE_REGEX`/`REMITO_REGEX`: los datos históricos reales no
+// respetan ese formato (ej. remitos "026-0293" en vez de "0026-000293") y la
+// prioridad acá es fidelidad a lo que pasó, no formato de carga nueva — ver
+// `previsualizar-importacion-compras.use-case.ts`.
+const categoriaCompraAImportarBody = z.object({
+  categoria: z.nativeEnum(CategoriaPorcino),
+  cabezas: z.number().int().positive(),
+});
+
+const compraAImportarBody = z.object({
+  fila: z.number().int().positive(),
+  numero: z.string().min(1),
+  proveedorNombre: z.string().min(1),
+  proveedorId: z.string().uuid().nullable(),
+  frigorificoNombre: z.string().min(1).nullable(),
+  frigorificoId: z.string().uuid().nullable(),
+  fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "fecha tiene que tener formato AAAA-MM-DD"),
+  fechaFaena: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "fechaFaena tiene que tener formato AAAA-MM-DD"),
+  dte: z.string().min(1),
+  remito: z.string().min(1),
+  precioCompraKg: z.number().positive(),
+  pesoBruto: z.number().positive(),
+  pesoNeto: z.number().positive(),
+  porcentajeDesbaste: z.number().min(0).max(100),
+  categorias: z.array(categoriaCompraAImportarBody).min(1),
+  kgVivoTotalFaena: z.number().positive(),
+  kgCarneTotalFaena: z.number().positive(),
+  numeroComprobanteLiquidacion: z.string().min(1),
+  porcentajeIvaLiquidacion: z.number().min(0).max(100),
+  montoFaenaTotal: z.number().min(0),
+  rentabilidadReferenciaExcel: z.string().nullable(),
+});
+
+const confirmarImportacionComprasBody = z.object({
+  compras: z.array(compraAImportarBody),
+});
+
 @injectable()
 export class CompraValidation {
   create = { body: createBody };
+
+  previsualizarImportacion = {};
+
+  confirmarImportacion = { body: confirmarImportacionComprasBody };
 
   /**
    * `page`/`limit` opcionales a propósito: sin ninguno de los dos, GET
