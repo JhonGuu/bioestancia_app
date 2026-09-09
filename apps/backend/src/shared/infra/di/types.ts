@@ -100,6 +100,16 @@ export const DI_TYPES = {
   ConfirmarImportacionCompras: Symbol.for("ConfirmarImportacionCompras"),
   CompraController: Symbol.for("CompraController"),
 
+  // ── Module: grupos-tropas ────────────────────────
+  GrupoTropasValidation: Symbol.for("GrupoTropasValidation"),
+  GrupoTropasRepository: Symbol.for("GrupoTropasRepository"),
+  CrearGrupoTropas: Symbol.for("CrearGrupoTropas"),
+  ListGruposTropas: Symbol.for("ListGruposTropas"),
+  GetGrupoTropas: Symbol.for("GetGrupoTropas"),
+  CerrarGrupoTropas: Symbol.for("CerrarGrupoTropas"),
+  ReabrirGrupoTropas: Symbol.for("ReabrirGrupoTropas"),
+  GrupoTropasController: Symbol.for("GrupoTropasController"),
+
   // ── Module: resultado-faena ──────────────────────
   ResultadoFaenaValidation: Symbol.for("ResultadoFaenaValidation"),
   ResultadoFaenaRepository: Symbol.for("ResultadoFaenaRepository"),

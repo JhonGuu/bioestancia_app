@@ -22,6 +22,7 @@ import { registerFrigorificosModule } from "@/modules/frigorificos/frigorificos.
 import { registerBoletasModule } from "@/modules/boletas/boletas.module";
 import { registerVentasModule } from "@/modules/ventas/ventas.module";
 import { registerComprasModule, activateComprasController } from "@/modules/compras/compras.module";
+import { registerGruposTropasModule } from "@/modules/grupos-tropas/grupos-tropas.module";
 import { registerResultadoFaenaModule } from "@/modules/resultado-faena/resultado-faena.module";
 import { registerLiquidacionCompraModule } from "@/modules/liquidacion-compra/liquidacion-compra.module";
 import { registerLiquidacionFaenaModule } from "@/modules/liquidacion-faena/liquidacion-faena.module";
@@ -123,6 +124,13 @@ export class DI {
     // "No bindings found for service VentaRepository".
     registerVentasModule(this.container);
     registerComprasModule(this.container);
+    // `grupos-tropas` inyecta CompraRepository/CompraCategoriaRepository/
+    // UpdateCompra (bindeados en `compras`, arriba) y VentaRepository
+    // (bindeado en `ventas`) — va después de ambos. A su vez, `CerrarCompra`/
+    // `ReabrirCompra` (dentro de `compras`) inyectan `GrupoTropasRepository`
+    // (bindeado acá) — tiene que ir ANTES de `activateComprasController()`
+    // más abajo, que es donde recién se instancia esa cadena.
+    registerGruposTropasModule(this.container);
     // `resultado-faena`, `liquidacion-compra` y `liquidacion-faena` inyectan
     // CompraRepository + CompraCategoriaRepository (bindeados en `compras`)
     // — van después. Los tres son independientes entre sí.
