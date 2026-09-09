@@ -12,6 +12,7 @@ import { ResultadoFaenaRepository } from "@/modules/resultado-faena/domain/resul
 import { LiquidacionCompraRepository } from "@/modules/liquidacion-compra/domain/liquidacion-compra.repository";
 import { LiquidacionFaenaRepository } from "@/modules/liquidacion-faena/domain/liquidacion-faena.repository";
 import { CompraAImportar, ResultadoImportacionCompraItem, ResultadoImportacionCompras } from "@/modules/compras/domain/importacion-compras";
+import { repartirProporcional } from "@/modules/compras/domain/repartir-proporcional.util";
 
 export interface ConfirmarImportacionComprasInput {
   empresaId: string;
@@ -26,29 +27,6 @@ function normalizarNombre(valor: string): string {
     .toLowerCase()
     .trim()
     .replace(/\s+/g, " ");
-}
-
-/**
- * Reparte `total` entre `pesos` (paralelo por índice) proporcionalmente,
- * ajustando el ÚLTIMO elemento para que la suma dé EXACTO — evita que el
- * redondeo de cada línea deje un resto sin asignar en ninguna.
- */
-function repartirProporcional(total: number, pesos: number[]): number[] {
-  const sumaPesos = pesos.reduce((acc, p) => acc + p, 0);
-  if (sumaPesos <= 0) return pesos.map(() => 0);
-
-  const resultado: number[] = [];
-  let acumulado = 0;
-  for (let i = 0; i < pesos.length; i++) {
-    if (i === pesos.length - 1) {
-      resultado.push(Math.round((total - acumulado) * 100) / 100);
-    } else {
-      const parte = Math.round(total * (pesos[i]! / sumaPesos) * 100) / 100;
-      resultado.push(parte);
-      acumulado += parte;
-    }
-  }
-  return resultado;
 }
 
 /**
