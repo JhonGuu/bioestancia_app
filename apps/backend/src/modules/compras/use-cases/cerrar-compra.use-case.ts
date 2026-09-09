@@ -7,6 +7,7 @@ import { CompraRepository } from "@/modules/compras/domain/compra.repository";
 import { CompraCategoriaRepository } from "@/modules/compras/domain/compra-categoria.repository";
 import { VentaRepository } from "@/modules/ventas/domain/venta.repository";
 import { FormaVenta } from "@/modules/ventas/domain/forma-venta";
+import { GrupoTropasRepository } from "@/modules/grupos-tropas/domain/grupo-tropas.repository";
 
 export interface CerrarCompraInput {
   id: string;
@@ -14,8 +15,8 @@ export interface CerrarCompraInput {
 }
 
 /**
- * Cierra una compra: reconcilia las cabezas vendidas contra las compradas y,
- * si coinciden, calcula el rinde.
+ * Cierra una compra SIN grupo: reconcilia las cabezas vendidas contra las
+ * compradas y calcula el rinde.
  *
  * "Cabezas compradas" NO es un escalar del header de `Compra` — es la suma
  * de las líneas de `compra_categorias` (el remito/DTE real viene separado
@@ -29,9 +30,15 @@ export interface CerrarCompraInput {
  * filas: cada garrón tiene 2 medias reses, pueden estar en 2 filas separadas).
  * Las filas de `compensacion_kg` no cuentan como cabeza (no tienen garrón).
  *
- * Si las cabezas vendidas no coinciden EXACTO con la suma de cabezas
- * compradas, se bloquea el cierre — no hay forma de cerrar "con diferencia"
- * en esta versión (ver decisión de negocio).
+ * Si las cabezas vendidas son MENOS que las compradas, se bloquea el cierre
+ * (todavía no se despachó del todo). Si son MÁS (superávit — típicamente
+ * falta un DTE por un animal adicional, ver `plan-unificacion-tropas-despacho.md`),
+ * NO se bloquea: se cierra igual con `alertaSuperavit: true` como aviso.
+ *
+ * Si la compra pertenece a un grupo de tropas TODAVÍA ABIERTO, se rechaza el
+ * cierre individual — esa tropa se cierra únicamente cerrando el grupo
+ * completo (`CerrarGrupoTropas`), porque la reconciliación ahí es sobre la
+ * suma de todas las tropas del grupo, no tropa por tropa.
  */
 @injectable()
 export class CerrarCompra {
@@ -40,6 +47,7 @@ export class CerrarCompra {
     @inject(DI_TYPES.CompraCategoriaRepository)
     private readonly compraCategoriaRepository: CompraCategoriaRepository,
     @inject(DI_TYPES.VentaRepository) private readonly ventaRepository: VentaRepository,
+    @inject(DI_TYPES.GrupoTropasRepository) private readonly grupoTropasRepository: GrupoTropasRepository,
   ) {}
 
   async execute(input: CerrarCompraInput): Promise<Compra> {
@@ -49,6 +57,15 @@ export class CerrarCompra {
     }
     if (compra.cerrada) {
       throw new ApiError("La compra ya está cerrada", Code.BAD_REQUEST);
+    }
+    if (compra.grupoTropasId !== null) {
+      const grupo = await this.grupoTropasRepository.getById(compra.grupoTropasId, input.empresaId);
+      if (grupo && !grupo.cerrado) {
+        throw new ApiError(
+          "Esta tropa pertenece a un grupo de tropas abierto — cerrala desde el grupo completo.",
+          Code.BAD_REQUEST,
+        );
+      }
     }
 
     const categorias = await this.compraCategoriaRepository.listByCompra(compra.id);
@@ -63,13 +80,14 @@ export class CerrarCompra {
     );
     const cabezasVendidas = garronesDistintos.size;
 
-    if (cabezasVendidas !== cantidadAnimales) {
+    if (cabezasVendidas < cantidadAnimales) {
       throw new ApiError(
-        `Las cabezas vendidas (${cabezasVendidas}) no coinciden con las cabezas compradas ` +
-          `(${cantidadAnimales}). No se puede cerrar la compra.`,
+        `Las cabezas vendidas (${cabezasVendidas}) son menos que las cabezas compradas ` +
+          `(${cantidadAnimales}). No se puede cerrar la compra todavía.`,
         Code.BAD_REQUEST,
       );
     }
+    const alertaSuperavit = cabezasVendidas > cantidadAnimales;
 
     const pesoFinalVenta = ventasDeLaCompra.reduce((acc, v) => acc + v.kg, 0);
     const rinde = Math.round((pesoFinalVenta / compra.pesoNeto) * 100 * 100) / 100;
@@ -77,6 +95,7 @@ export class CerrarCompra {
     return this.compraRepository.cerrar(compra.id, input.empresaId, {
       pesoFinalVenta: Math.round(pesoFinalVenta * 100) / 100,
       rinde,
+      alertaSuperavit,
       fechaCierre: new Date(),
     });
   }

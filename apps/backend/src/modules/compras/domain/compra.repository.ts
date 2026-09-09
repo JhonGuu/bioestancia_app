@@ -43,10 +43,16 @@ export interface CompraRepository {
 
   /**
    * Deshace el cierre de una compra: vuelve a `cerrada: false` y limpia
-   * `fechaCierre`/`pesoFinalVenta`/`rinde` (se vuelven a calcular la próxima
-   * vez que se cierre).
+   * `fechaCierre`/`pesoFinalVenta`/`rinde`/`alertaSuperavit` (se vuelven a
+   * calcular la próxima vez que se cierre).
    */
   reabrir(id: string, empresaId: string): Promise<Compra>;
+
+  /** Lista las compras (de cualquier estado) que pertenecen a un grupo puntual. */
+  listByGrupo(grupoTropasId: string, empresaId: string): Promise<Compra[]>;
+
+  /** Asigna (o quita, pasando `null`) el grupo de tropas de una compra. */
+  asignarGrupo(id: string, empresaId: string, grupoTropasId: string | null): Promise<Compra>;
 }
 
 export interface CreateCompraInput {
@@ -77,7 +83,13 @@ export interface CreateCompraInput {
 
 export interface CerrarCompraData {
   pesoFinalVenta: number;
-  rinde: number;
+  /**
+   * `null` cuando el cierre viene de `CerrarGrupoTropas`: el rinde de una
+   * tropa agrupada vive una sola vez, en el `GrupoTropas` — ver
+   * `domain/compra.ts`.
+   */
+  rinde: number | null;
+  alertaSuperavit: boolean;
   fechaCierre: Date;
 }
 

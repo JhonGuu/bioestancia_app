@@ -107,6 +107,8 @@ function compra(overrides: Partial<Compra> & Pick<Compra, "id">): Compra {
     fechaCierre: null,
     pesoFinalVenta: null,
     rinde: null,
+    grupoTropasId: null,
+    alertaSuperavit: false,
     comentarios: null,
     activo: true,
     createdAt: new Date(),
@@ -220,6 +222,8 @@ function construirCaso() {
     update: vi.fn(),
     cerrar: vi.fn(),
     reabrir: vi.fn(),
+    listByGrupo: vi.fn(),
+    asignarGrupo: vi.fn(),
   };
   const compraCategoriaRepository: CompraCategoriaRepository = {
     listByCompra: vi.fn(),

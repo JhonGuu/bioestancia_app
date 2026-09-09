@@ -120,6 +120,7 @@ export class CompraRepositoryDrizzle implements CompraRepository {
         fechaCierre: null,
         pesoFinalVenta: null,
         rinde: null,
+        alertaSuperavit: false,
         updatedAt: new Date(),
       })
       .where(and(eq(compras.id, id), eq(compras.empresaId, empresaId), isNull(compras.deletedAt)))
@@ -137,9 +138,36 @@ export class CompraRepositoryDrizzle implements CompraRepository {
         cerrada: true,
         fechaCierre: input.fechaCierre,
         pesoFinalVenta: String(input.pesoFinalVenta),
-        rinde: String(input.rinde),
+        rinde: input.rinde !== null ? String(input.rinde) : null,
+        alertaSuperavit: input.alertaSuperavit,
         updatedAt: new Date(),
       })
+      .where(and(eq(compras.id, id), eq(compras.empresaId, empresaId), isNull(compras.deletedAt)))
+      .returning();
+    if (!row) {
+      throw new ApiError("Compra no encontrada", Code.NOT_FOUND);
+    }
+    return this.toDomain(row);
+  }
+
+  async listByGrupo(grupoTropasId: string, empresaId: string): Promise<Compra[]> {
+    const rows = await this.orm.db
+      .select()
+      .from(compras)
+      .where(
+        and(
+          eq(compras.grupoTropasId, grupoTropasId),
+          eq(compras.empresaId, empresaId),
+          isNull(compras.deletedAt),
+        ),
+      );
+    return rows.map((row) => this.toDomain(row));
+  }
+
+  async asignarGrupo(id: string, empresaId: string, grupoTropasId: string | null): Promise<Compra> {
+    const [row] = await this.orm.db
+      .update(compras)
+      .set({ grupoTropasId, updatedAt: new Date() })
       .where(and(eq(compras.id, id), eq(compras.empresaId, empresaId), isNull(compras.deletedAt)))
       .returning();
     if (!row) {
@@ -167,6 +195,8 @@ export class CompraRepositoryDrizzle implements CompraRepository {
       fechaCierre: row.fechaCierre,
       pesoFinalVenta: row.pesoFinalVenta !== null ? Number(row.pesoFinalVenta) : null,
       rinde: row.rinde !== null ? Number(row.rinde) : null,
+      grupoTropasId: row.grupoTropasId,
+      alertaSuperavit: row.alertaSuperavit,
       comentarios: row.comentarios,
       activo: row.activo,
       createdAt: row.createdAt,

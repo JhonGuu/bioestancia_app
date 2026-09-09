@@ -36,7 +36,15 @@ import { EspecieAnimal } from "@/modules/compras/domain/especie-animal";
  * en `ventas` (garrones DISTINTOS, no filas — cada garrón tiene 2 medias
  * reses) coincidan con la suma de `cabezas` de las categorías, y ahí recién
  * se completan `pesoFinalVenta` (suma de kg vendidos) y `rinde`
- * (`pesoFinalVenta / pesoNeto total * 100`).
+ * (`pesoFinalVenta / pesoNeto total * 100`). Si las vendidas SUPERAN a las
+ * compradas, el cierre igual se permite pero queda `alertaSuperavit: true`.
+ *
+ * `grupoTropasId`: cuando 2+ tropas se agrupan para calcular un rinde de
+ * despacho conjunto (ver `modules/grupos-tropas/domain/grupo-tropas.ts`),
+ * cada tropa miembro queda marcada acá. Mientras el grupo esté abierto, la
+ * tropa no se puede cerrar individualmente — solo cerrando el grupo entero,
+ * que en ese caso completa `pesoFinalVenta` (la parte de ESTA tropa) pero
+ * deja `rinde: null` (el rinde vive una sola vez, en el grupo).
  */
 export interface Compra {
   id: string;
@@ -67,6 +75,10 @@ export interface Compra {
   fechaCierre: Date | null;
   pesoFinalVenta: number | null;
   rinde: number | null;
+  /** FK nullable a `GrupoTropas` — ver comentario de la interface. */
+  grupoTropasId: string | null;
+  /** `true` si al cerrar (tropa suelta, o heredado del cierre del grupo) las cabezas vendidas superaron a las compradas. */
+  alertaSuperavit: boolean;
   comentarios: string | null;
   activo: boolean;
   createdAt: Date;

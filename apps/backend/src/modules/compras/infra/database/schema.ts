@@ -12,6 +12,7 @@ import {
 import { EspecieAnimal } from "@/modules/compras/domain/especie-animal";
 import { empresas } from "@/modules/empresas/infra/database/schema";
 import { proveedores } from "@/modules/proveedores/infra/database/schema";
+import { gruposTropas } from "@/modules/grupos-tropas/infra/database/schema";
 
 export const especieAnimalEnum = pgEnum(
   "especie_animal",
@@ -52,6 +53,17 @@ export const especieAnimalEnum = pgEnum(
  * `cerrada`/`fechaCierre`/`pesoFinalVenta`/`rinde`: se completan recién al
  * cerrar la compra (`use-cases/cerrar-compra.use-case.ts`), por eso son
  * nullable salvo `cerrada` (arranca en `false`).
+ *
+ * `grupoTropasId`: FK nullable a `grupos_tropas` — ver `modules/grupos-tropas/domain/grupo-tropas.ts`.
+ * Una compra pertenece a lo sumo un grupo a la vez; mientras el grupo esté
+ * abierto, esta compra NO se puede cerrar individualmente (se cierra
+ * cerrando el grupo completo). `onDelete: "set null"` porque borrar el
+ * grupo (no hay caso de uso hoy, pero por las dudas) no debería arrastrarse
+ * a borrar la compra.
+ *
+ * `alertaSuperavit`: se completa al cerrar (tropa suelta o, para las
+ * agrupadas, heredada del cierre del grupo) si las cabezas vendidas
+ * superaron a las compradas — no bloquea el cierre, queda como aviso visible.
  */
 export const compras = pgTable("compras", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -76,6 +88,8 @@ export const compras = pgTable("compras", {
   fechaCierre: timestamp("fecha_cierre"),
   pesoFinalVenta: numeric("peso_final_venta", { precision: 10, scale: 2 }),
   rinde: numeric("rinde", { precision: 5, scale: 2 }),
+  grupoTropasId: uuid("grupo_tropas_id").references(() => gruposTropas.id, { onDelete: "set null" }),
+  alertaSuperavit: boolean("alerta_superavit").notNull().default(false),
   comentarios: varchar("comentarios", { length: 255 }),
   activo: boolean("activo").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
