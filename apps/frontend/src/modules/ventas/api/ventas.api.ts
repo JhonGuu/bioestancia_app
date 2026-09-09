@@ -1,7 +1,7 @@
 import { httpClient, unwrap } from "@/shared/api/http-client";
 import type { PaginatedResult } from "@/shared/api/pagination.types";
 import type { CategoriaVenta } from "@/modules/ventas/domain/categoria-venta";
-import type { Venta } from "@/modules/ventas/domain/venta.types";
+import type { FormaVenta, Venta } from "@/modules/ventas/domain/venta.types";
 
 export interface UpdateVentaItemInput {
   garron?: number | null;
@@ -10,7 +10,31 @@ export interface UpdateVentaItemInput {
   comentarios?: string | null;
 }
 
+/**
+ * Espejo de `CreateVentaUseCaseInput` (backend) sin `empresaId` — lo agrega
+ * el controller a partir del JWT. `boletaId`/`clienteFinalId` no están acá:
+ * esta carga manual (`modules/ventas/components/nueva-venta-form.tsx`) es
+ * para probar/testear sin pasar por el flujo de boletas, no reemplaza a
+ * `boletas.api.ts`.
+ */
+export interface CreateVentaInput {
+  clienteId: string;
+  compraId?: string;
+  garron?: number;
+  formaVenta: FormaVenta;
+  categoria?: CategoriaVenta;
+  kg: number;
+  precioKg?: number;
+  fecha: string;
+  comentarios?: string;
+}
+
 export const ventasApi = {
+  /** Carga manual de una venta (sin pasar por el importador ni el flujo de boletas) — ver `nueva-venta-form.tsx`. */
+  create(input: CreateVentaInput): Promise<Venta> {
+    return unwrap(httpClient.post("/ventas", input));
+  },
+
   /** Trae TODAS las ventas de la empresa activa, sin paginar — mismo comportamiento de siempre. Para una pantalla nueva de listado, usar `listPaginado`. */
   list(): Promise<Venta[]> {
     return unwrap(httpClient.get("/ventas"));

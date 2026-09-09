@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Banknote, DollarSign, HandCoins, PiggyBank, Percent, Target, Wallet } from "lucide-react";
+import { Banknote, DollarSign, HandCoins, PiggyBank, Percent, PlusCircle, Target, Wallet } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import { Permisos } from "@/modules/auth/domain/auth.types";
@@ -49,6 +49,12 @@ function VentasDashboardPage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <SeccionCard
+          to="/app/ventas/nuevo"
+          icon={PlusCircle}
+          titulo="Cargar venta manual"
+          descripcion="Cargá una venta directo, sin importador ni boleta — para probar un caso puntual."
+        />
         <SeccionCard
           to="/app/ventas/precios"
           icon={DollarSign}
@@ -110,6 +116,7 @@ interface SeccionCardProps {
   titulo: string;
   descripcion: string;
   to?:
+    | "/app/ventas/nuevo"
     | "/app/ventas/precios"
     | "/app/ventas/cobros"
     | "/app/ventas/cheques"

@@ -15,3 +15,8 @@ export type CategoriaVenta = CategoriaPorcino | CategoriaReventa;
 export function esReventa(categoria: CategoriaVenta | null | undefined): boolean {
   return categoria === CategoriaReventa.NOVILLO;
 }
+
+/** "Porcina Capón" → "Capón" — más corto y legible en una lista o tarjeta chica. */
+export function categoriaCorta(categoria: string): string {
+  return categoria.replace(/^Porcina\s+/, "");
+}
