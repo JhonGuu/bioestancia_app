@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Loader2, Plus } from "lucide-react";
+import { ArrowLeft, Loader2, Plus, Upload } from "lucide-react";
 
 import { useAuth } from "@/modules/auth/context/auth-context";
 import { Roles } from "@/modules/auth/domain/auth.types";
@@ -39,12 +39,20 @@ function TropasPage() {
             Tropas compradas a proveedores de la empresa activa.
           </p>
         </div>
-        <Button asChild>
-          <Link to="/app/compras/nuevo">
-            <Plus />
-            Nueva compra
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <Link to="/app/compras/importar">
+              <Upload />
+              <span className="hidden sm:inline">Importar Excel</span>
+            </Link>
+          </Button>
+          <Button asChild>
+            <Link to="/app/compras/nuevo">
+              <Plus />
+              Nueva compra
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <Card>
