@@ -44,8 +44,14 @@ describe("mapearConceptoPago", () => {
     });
   });
 
-  it('"Saldo inicial" se marca para omitir (fuera de alcance de este importador)', () => {
-    expect(mapearConceptoPago("Saldo inicial")).toEqual({ tipo: "omitir" });
+  it('"Saldo inicial" se mapea a un cargo OTRO, con cualquier signo y permitiendo $0 (decisión de Juan Jose, Etapa 4)', () => {
+    expect(mapearConceptoPago("Saldo inicial")).toEqual({
+      tipo: "cargo",
+      tipoCargo: TipoCargo.OTRO,
+      signoEsperado: "cualquiera",
+      permiteCero: true,
+      esSaldoInicial: true,
+    });
   });
 
   it("es tolerante a mayúsculas/tildes/espacios", () => {

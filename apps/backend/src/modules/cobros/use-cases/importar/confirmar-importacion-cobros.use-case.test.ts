@@ -70,6 +70,7 @@ function cargoBase(overrides: Partial<CargoAImportar> = {}): CargoAImportar {
     tipo: TipoCargo.OTRO,
     monto: 500,
     motivo: "Gasoil",
+    esSaldoInicial: false,
     ...overrides,
   };
 }

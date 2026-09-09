@@ -51,12 +51,13 @@ function placeholderCheque(hoja: string, fila: number): { numeroCheque: string; 
  *   sola línea — la planilla no agrupa varios pagos del mismo día como sí
  *   hace con las ventas.
  * - **Cargos** (Recargo por cheque, Cheque Rechazado, Comisión Rechazo,
- *   Gasoil, Empleados, Ajuste por diferencia): una fila = un
+ *   Gasoil, Empleados, Ajuste por diferencia, y también "Saldo inicial" —
+ *   decisión de Juan Jose, ver Etapa 4 del plan): una fila = un
  *   `CargoCuentaCorriente`.
  *
- * Las filas `Concepto: "Saldo inicial"` quedan fuera de alcance (se cuentan
- * aparte, no son error) — ver "Pregunta abierta pendiente" del plan. No
- * escribe nada en la base.
+ * Las filas `Concepto: "Saldo inicial"` con importe $0 no generan cargo (un
+ * `CargoCuentaCorriente` nunca puede valer cero) — se cuentan aparte, no son
+ * error. No escribe nada en la base.
  */
 @injectable()
 export class PrevisualizarImportacionCobros {
@@ -73,7 +74,7 @@ export class PrevisualizarImportacionCobros {
     const conError: FilaImportarCobroConError[] = [];
     const clientesNuevos = new Set<string>();
     let totalFilasPago = 0;
-    let saldosInicialesOmitidos = 0;
+    let saldosInicialesEnCero = 0;
 
     for (const hoja of hojas) {
       let filas: FilaPlanillaCliente[];
@@ -97,11 +98,6 @@ export class PrevisualizarImportacionCobros {
           conError.push({ hoja, fila: fila.numero, errores: [`Fila ${fila.numero}: concepto no reconocido "${conceptoTexto}"`] });
           continue;
         }
-        if (mapeado.tipo === "omitir") {
-          saldosInicialesOmitidos++;
-          continue;
-        }
-
         const fecha = parsearFechaExcel(fila.fecha);
         if (!fecha) {
           conError.push({ hoja, fila: fila.numero, errores: [`Fila ${fila.numero}: no se pudo interpretar la fecha "${celdaATexto(fila.fecha)}"`] });
@@ -135,6 +131,10 @@ export class PrevisualizarImportacionCobros {
           });
         } else {
           if (importe === 0) {
+            if (mapeado.permiteCero) {
+              saldosInicialesEnCero++;
+              continue;
+            }
             conError.push({ hoja, fila: fila.numero, errores: [`Fila ${fila.numero}: el importe no puede ser cero`] });
             continue;
           }
@@ -155,6 +155,7 @@ export class PrevisualizarImportacionCobros {
             tipo: mapeado.tipoCargo,
             monto: redondear(importe),
             motivo: celdaATexto(fila.observaciones) || conceptoTexto,
+            esSaldoInicial: mapeado.esSaldoInicial ?? false,
           });
         }
       }
@@ -167,7 +168,7 @@ export class PrevisualizarImportacionCobros {
       hojasProcesadas: hojas,
       hojasOmitidas: [...HOJAS_NO_CLIENTE],
       totalFilasPago,
-      saldosInicialesOmitidos,
+      saldosInicialesEnCero,
       clientesNuevos: [...clientesNuevos].sort(),
       cobrosACrear: cobrosACrear.sort(porFechaYFila),
       cargosACrear: cargosACrear.sort(porFechaYFila),

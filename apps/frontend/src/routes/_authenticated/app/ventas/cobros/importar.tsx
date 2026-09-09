@@ -134,8 +134,8 @@ function ImportarCobrosPage() {
               <Badge variant="secondary">{preview.totalFilasPago} filas de pago leídas</Badge>
               <Badge>{preview.cobrosACrear.length} cobros listos</Badge>
               <Badge>{preview.cargosACrear.length} cargos listos</Badge>
-              {preview.saldosInicialesOmitidos > 0 && (
-                <Badge variant="outline">{preview.saldosInicialesOmitidos} "Saldo inicial" omitidos (fuera de alcance)</Badge>
+              {preview.saldosInicialesEnCero > 0 && (
+                <Badge variant="outline">{preview.saldosInicialesEnCero} "Saldo inicial" en $0 (no generan cargo)</Badge>
               )}
               {preview.clientesNuevos.length > 0 && (
                 <Badge variant="outline">{preview.clientesNuevos.length} clientes nuevos (se crean automáticamente)</Badge>
@@ -196,8 +196,14 @@ function ImportarCobrosPage() {
                 {preview.cargosACrear.map((cargo, i) => (
                   <div key={i} className="flex flex-wrap items-center justify-between gap-2 border-b pb-1 text-sm last:border-0">
                     <span>
-                      <span className="font-medium">{cargo.hoja}</span> · {cargo.fecha} · {TIPO_CARGO_LABELS[cargo.tipo]}
-                      {cargo.motivo ? ` — ${cargo.motivo}` : ""}
+                      <span className="font-medium">{cargo.hoja}</span> · {cargo.fecha} ·{" "}
+                      {cargo.esSaldoInicial ? "Saldo inicial" : TIPO_CARGO_LABELS[cargo.tipo]}
+                      {cargo.esSaldoInicial && (
+                        <Badge variant="outline" className="ml-2 text-xs">
+                          apertura 2025-12-28
+                        </Badge>
+                      )}
+                      {cargo.motivo && !cargo.esSaldoInicial ? ` — ${cargo.motivo}` : ""}
                     </span>
                     <span className="font-mono text-xs">{cargo.monto.toFixed(2)}</span>
                   </div>

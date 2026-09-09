@@ -34,6 +34,8 @@ export interface CargoAImportar {
   tipo: TipoCargo;
   monto: number;
   motivo: string | null;
+  /** `true` para las filas `Concepto: "Saldo inicial"` (corte 2025-12-28) — ver plan de carga inicial, Etapa 4. */
+  esSaldoInicial: boolean;
 }
 
 export interface FilaImportarCobroConError {
@@ -46,8 +48,8 @@ export interface PreviewImportacionCobros {
   hojasProcesadas: string[];
   hojasOmitidas: string[];
   totalFilasPago: number;
-  /** Filas `Concepto: "Saldo inicial"` — fuera de alcance de este importador, ver "Pregunta abierta pendiente" del plan. */
-  saldosInicialesOmitidos: number;
+  /** Filas `Concepto: "Saldo inicial"` con importe $0 — no son error, simplemente no generan cargo (`CargoCuentaCorriente.monto` nunca puede ser cero). */
+  saldosInicialesEnCero: number;
   clientesNuevos: string[];
   cobrosACrear: CobroAImportar[];
   cargosACrear: CargoAImportar[];

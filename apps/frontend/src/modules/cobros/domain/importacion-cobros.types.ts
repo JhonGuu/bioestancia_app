@@ -29,6 +29,8 @@ export interface CargoAImportar {
   tipo: TipoCargo;
   monto: number;
   motivo: string | null;
+  /** `true` para las filas "Saldo inicial" (corte 2025-12-28). */
+  esSaldoInicial: boolean;
 }
 
 export interface FilaImportarCobroConError {
@@ -41,7 +43,8 @@ export interface PreviewImportacionCobros {
   hojasProcesadas: string[];
   hojasOmitidas: string[];
   totalFilasPago: number;
-  saldosInicialesOmitidos: number;
+  /** Filas "Saldo inicial" con importe $0 — no generan cargo, no son error. */
+  saldosInicialesEnCero: number;
   clientesNuevos: string[];
   cobrosACrear: CobroAImportar[];
   cargosACrear: CargoAImportar[];

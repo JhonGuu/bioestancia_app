@@ -101,7 +101,7 @@ describe("PrevisualizarImportacionCobros", () => {
     expect(preview.cobrosACrear[0]?.medioPago).toBe(MedioPago.EFECTIVO);
   });
 
-  it('"Saldo inicial" se cuenta aparte, no es error ni entra a cobros/cargos', async () => {
+  it('"Saldo inicial" se carga como un cargo OTRO fechado 2025-12-28, marcado esSaldoInicial (decisión de Juan Jose, Etapa 4)', async () => {
     const buffer = construirWorkbook({
       "Test Cliente": [
         ENCABEZADO_REAL,
@@ -112,10 +112,44 @@ describe("PrevisualizarImportacionCobros", () => {
     const { useCase } = construirCaso([cliente({ id: "c1", razonSocial: "Test Cliente" })]);
     const preview = await useCase.execute({ empresaId: "empresa-1", buffer });
 
-    expect(preview.saldosInicialesOmitidos).toBe(1);
+    expect(preview.saldosInicialesEnCero).toBe(0);
     expect(preview.cobrosACrear).toHaveLength(0);
+    expect(preview.cargosACrear).toHaveLength(1);
+    expect(preview.cargosACrear[0]).toMatchObject({
+      tipo: TipoCargo.OTRO,
+      monto: 2970150.32,
+      fecha: "2025-12-28",
+      esSaldoInicial: true,
+    });
+    expect(preview.conError).toHaveLength(0);
+  });
+
+  it('"Saldo inicial" en $0 no genera cargo (un CargoCuentaCorriente nunca puede valer cero) — se cuenta aparte, no es error', async () => {
+    const buffer = construirWorkbook({
+      "Test Cliente": [
+        ENCABEZADO_REAL,
+        filaCliente([1, new Date(Date.UTC(2025, 11, 28)), null, null, null, "Saldo inicial", 0, "Pago"]),
+      ],
+    });
+
+    const { useCase } = construirCaso([cliente({ id: "c1", razonSocial: "Test Cliente" })]);
+    const preview = await useCase.execute({ empresaId: "empresa-1", buffer });
+
+    expect(preview.saldosInicialesEnCero).toBe(1);
     expect(preview.cargosACrear).toHaveLength(0);
     expect(preview.conError).toHaveLength(0);
+  });
+
+  it('un cargo con signo fijo (ej. Gasoil) en $0 SÍ es error — "permiteCero" es exclusivo de Saldo inicial', async () => {
+    const buffer = construirWorkbook({
+      "Test Cliente": [ENCABEZADO_REAL, filaCliente([1, new Date(Date.UTC(2026, 0, 5)), null, null, null, "Gasoil", 0, "Pago"])],
+    });
+
+    const { useCase } = construirCaso([cliente({ id: "c1", razonSocial: "Test Cliente" })]);
+    const preview = await useCase.execute({ empresaId: "empresa-1", buffer });
+
+    expect(preview.cargosACrear).toHaveLength(0);
+    expect(preview.conError[0]?.errores[0]).toMatch(/no puede ser cero/);
   });
 
   it("reporta como error un Concepto fuera del catálogo cerrado, sin adivinar", async () => {

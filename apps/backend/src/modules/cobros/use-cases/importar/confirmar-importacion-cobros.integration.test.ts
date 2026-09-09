@@ -162,6 +162,7 @@ describe("ConfirmarImportacionCobros — integración de punta a punta contra Po
       tipo: TipoCargo.OTRO,
       monto: 5000,
       motivo: "Gasoil",
+      esSaldoInicial: false,
     };
 
     const resultado = await confirmarImportacionCobros.execute({ empresaId, cobros: [], cargos: [cargo] });

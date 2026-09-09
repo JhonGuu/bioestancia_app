@@ -4,8 +4,15 @@ import { CeldaCruda, normalizarEncabezado } from "@/modules/contabilidad/infra/i
 
 export type ConceptoPagoMapeado =
   | { tipo: "cobro"; medioPago: MedioPago }
-  | { tipo: "cargo"; tipoCargo: TipoCargo; signoEsperado: "positivo" | "cualquiera" }
-  | { tipo: "omitir" };
+  | {
+      tipo: "cargo";
+      tipoCargo: TipoCargo;
+      signoEsperado: "positivo" | "cualquiera";
+      /** Un importe en cero no es error para este concepto — se salta en silencio (ver "Saldo inicial" más abajo). */
+      permiteCero?: boolean;
+      /** Marca las filas "Saldo inicial" (corte 2025-12-28) para que el use-case y el frontend las distingan del resto de los cargos. */
+      esSaldoInicial?: boolean;
+    };
 
 /**
  * Catálogo cerrado de "Concepto" (filas `Tipo: Pago` de la hoja de cada
@@ -49,8 +56,14 @@ const CONCEPTOS_PAGO: Array<{ concepto: string; mapeado: ConceptoPagoMapeado }> 
     concepto: "Ajuste por diferencia",
     mapeado: { tipo: "cargo", tipoCargo: TipoCargo.OTRO, signoEsperado: "cualquiera" },
   },
-  // Fila de corte 2025-12-28 — fuera de alcance de este importador (ver "Pregunta abierta pendiente" del plan).
-  { concepto: "Saldo inicial", mapeado: { tipo: "omitir" } },
+  // Fila de corte 2025-12-28 — decisión de Juan Jose: se carga como un cargo
+  // sintético más (tipo OTRO) fechado 2025-12-28, igual que "Ajuste por
+  // diferencia" (puede ir para cualquier lado, y un saldo en $0 no es error,
+  // simplemente no genera cargo — ver plan de carga inicial, Etapa 4).
+  {
+    concepto: "Saldo inicial",
+    mapeado: { tipo: "cargo", tipoCargo: TipoCargo.OTRO, signoEsperado: "cualquiera", permiteCero: true, esSaldoInicial: true },
+  },
 ];
 
 const CONCEPTO_PAGO_MAP: Record<string, ConceptoPagoMapeado> = Object.fromEntries(
