@@ -121,6 +121,10 @@ export interface Compra {
   fechaCierre: string | null;
   pesoFinalVenta: number | null;
   rinde: number | null;
+  /** Grupo de tropas al que pertenece (ver `modules/grupos-tropas`) — `null` si es una tropa suelta. */
+  grupoTropasId: string | null;
+  /** `true` si al cerrar (tropa suelta, o heredado del grupo) las cabezas vendidas superaron a las compradas — aviso visible, no bloquea. */
+  alertaSuperavit: boolean;
   comentarios: string | null;
   activo: boolean;
   createdAt: string;

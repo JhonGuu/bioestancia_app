@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { AlertTriangle, Layers } from "lucide-react";
 
 import {
   Table,
@@ -70,11 +71,33 @@ export function ComprasTable({ compras, proveedores, puedeEditar }: ComprasTable
             <TableCell>{new Date(compra.fecha).toLocaleDateString("es-AR", { timeZone: "UTC" })}</TableCell>
             <TableCell>{ESPECIE_ANIMAL_LABELS[compra.especie]}</TableCell>
             <TableCell>
-              <Badge variant={compra.cerrada ? "default" : "secondary"}>
-                {compra.cerrada ? "Cerrada" : "Abierta"}
-              </Badge>
+              <div className="flex flex-wrap items-center gap-1">
+                <Badge variant={compra.cerrada ? "default" : "secondary"}>
+                  {compra.cerrada ? "Cerrada" : "Abierta"}
+                </Badge>
+                {compra.grupoTropasId && (
+                  <Link to="/app/compras/grupos-tropas/$grupoId" params={{ grupoId: compra.grupoTropasId }}>
+                    <Badge variant="outline" className="gap-1">
+                      <Layers className="size-3" />
+                      Agrupada
+                    </Badge>
+                  </Link>
+                )}
+                {compra.alertaSuperavit && (
+                  <Badge variant="destructive" className="gap-1">
+                    <AlertTriangle className="size-3" />
+                    Superávit
+                  </Badge>
+                )}
+              </div>
             </TableCell>
-            <TableCell>{compra.rinde !== null ? `${compra.rinde}%` : "—"}</TableCell>
+            <TableCell>
+              {compra.grupoTropasId
+                ? "ver grupo"
+                : compra.rinde !== null
+                  ? `${compra.rinde}%`
+                  : "—"}
+            </TableCell>
             {puedeEditar && (
               <TableCell className="text-right">
                 {compra.cerrada ? (
