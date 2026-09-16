@@ -1,15 +1,16 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Layers, Loader2, Plus, Upload } from "lucide-react";
+import { ArrowLeft, Layers, Loader2, Plus, Upload, X } from "lucide-react";
 
 import { useAuth } from "@/modules/auth/context/auth-context";
 import { Roles } from "@/modules/auth/domain/auth.types";
 import { useCompras } from "@/modules/compras/hooks/use-compras";
 import { useProveedores } from "@/modules/proveedores/hooks/use-proveedores";
 import { ComprasTable } from "@/modules/compras/components/compras-table";
-import { GrupoComprasCard } from "@/modules/compras/components/grupo-compras-card";
+import { NodoGrupoComprasCard } from "@/modules/compras/components/nodo-grupo-compras-card";
 import {
-  agruparCompras,
+  agruparComprasAnidado,
+  ordenarCriterios,
   CriterioAgrupacion,
   CRITERIO_AGRUPACION_LABELS,
 } from "@/modules/compras/domain/agrupar-compras";
@@ -19,12 +20,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PaginacionBar } from "@/shared/components/paginacion-bar";
 import { PAGE_SIZES } from "@/shared/api/pagination.types";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/app/compras/tropas")({
   component: TropasPage,
 });
 
 const TODOS_LOS_PROVEEDORES = "__todos__";
+const TODOS_LOS_CRITERIOS = Object.values(CriterioAgrupacion);
 
 function TropasPage() {
   const { empresaActiva } = useAuth();
@@ -32,7 +35,10 @@ function TropasPage() {
   const proveedoresQuery = useProveedores();
 
   const [proveedorId, setProveedorId] = useState(TODOS_LOS_PROVEEDORES);
-  const [criterio, setCriterio] = useState<CriterioAgrupacion>(CriterioAgrupacion.NINGUNO);
+  // Se pueden combinar varios criterios a la vez (ej. Mes + Proveedor) — el
+  // orden en que se anidan es siempre el mismo (ver `ordenarCriterios`), no
+  // importa en qué orden se hayan tildado.
+  const [criterios, setCriterios] = useState<CriterioAgrupacion[]>([]);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState<number>(PAGE_SIZES[1]); // 50 por defecto
 
@@ -54,18 +60,26 @@ function TropasPage() {
   // página 5).
   useEffect(() => {
     setPage(1);
-  }, [proveedorId, criterio, limit]);
+  }, [proveedorId, criterios, limit]);
 
-  // Agrupar (por fecha o proveedor) es una vista de PANORAMA: se arma sobre
-  // todas las tropas que pasan el filtro, sin paginar — paginar tendría que
-  // ser "página de grupos" o "página de filas salteando headers", y ninguna
-  // de las dos es lo que alguien espera al pedir "agrupar por mes". Sin
-  // agrupar, sí es una lista plana normal y ahí aplica la paginación.
-  const sinAgrupar = criterio === CriterioAgrupacion.NINGUNO;
+  function toggleCriterio(criterio: CriterioAgrupacion) {
+    setCriterios((prev) =>
+      prev.includes(criterio) ? prev.filter((c) => c !== criterio) : [...prev, criterio],
+    );
+  }
+
+  // Agrupar (por fecha y/o proveedor, combinados o no) es una vista de
+  // PANORAMA: se arma sobre todas las tropas que pasan el filtro, sin
+  // paginar — paginar ahí tendría que ser "página de grupos" o "cortar filas
+  // salteando headers", y ninguna de las dos es lo que alguien espera al
+  // pedir "agrupar por mes". Sin ningún criterio elegido sí es una lista
+  // plana normal, y ahí aplica la paginación.
+  const sinAgrupar = criterios.length === 0;
   const comprasPaginaActual = sinAgrupar
     ? comprasFiltradas.slice((page - 1) * limit, page * limit)
     : comprasFiltradas;
-  const grupos = agruparCompras(comprasPaginaActual, criterio, proveedores);
+  const nodos = sinAgrupar ? [] : agruparComprasAnidado(comprasPaginaActual, criterios, proveedores);
+  const criteriosOrdenados = ordenarCriterios(criterios);
 
   return (
     <div className="space-y-4">
@@ -106,19 +120,28 @@ function TropasPage() {
 
       <div className="flex flex-wrap items-end gap-3">
         <div className="space-y-1">
-          <label className="text-muted-foreground text-xs font-medium">Agrupar por</label>
-          <Select value={criterio} onValueChange={(v) => setCriterio(v as CriterioAgrupacion)}>
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.values(CriterioAgrupacion).map((c) => (
-                <SelectItem key={c} value={c}>
-                  {CRITERIO_AGRUPACION_LABELS[c]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <label className="text-muted-foreground text-xs font-medium">
+            Agrupar por (elegí uno o varios)
+          </label>
+          <div className="flex flex-wrap items-center gap-1">
+            {TODOS_LOS_CRITERIOS.map((c) => (
+              <Button
+                key={c}
+                type="button"
+                size="sm"
+                variant={criterios.includes(c) ? "default" : "outline"}
+                onClick={() => toggleCriterio(c)}
+              >
+                {CRITERIO_AGRUPACION_LABELS[c]}
+              </Button>
+            ))}
+            {criterios.length > 0 && (
+              <Button type="button" size="sm" variant="ghost" onClick={() => setCriterios([])}>
+                <X className="size-3.5" />
+                Limpiar
+              </Button>
+            )}
+          </div>
         </div>
         <div className="space-y-1">
           <label className="text-muted-foreground text-xs font-medium">Proveedor</label>
@@ -137,6 +160,12 @@ function TropasPage() {
           </Select>
         </div>
       </div>
+
+      {!sinAgrupar && (
+        <p className={cn("text-muted-foreground text-xs")}>
+          Anidado: {criteriosOrdenados.map((c) => CRITERIO_AGRUPACION_LABELS[c]).join(" → ")}
+        </p>
+      )}
 
       {cargando ? (
         <Card>
@@ -169,7 +198,7 @@ function TropasPage() {
             etiqueta="tropas"
           />
         </div>
-      ) : grupos.length === 0 ? (
+      ) : nodos.length === 0 ? (
         <Card>
           <CardContent>
             <p className="text-muted-foreground py-8 text-center text-sm">
@@ -179,8 +208,8 @@ function TropasPage() {
         </Card>
       ) : (
         <div className="space-y-3">
-          {grupos.map((grupo) => (
-            <GrupoComprasCard key={grupo.clave} grupo={grupo} proveedores={proveedores} puedeEditar={puedeEditar} />
+          {nodos.map((nodo) => (
+            <NodoGrupoComprasCard key={nodo.clave} nodo={nodo} proveedores={proveedores} puedeEditar={puedeEditar} />
           ))}
         </div>
       )}
