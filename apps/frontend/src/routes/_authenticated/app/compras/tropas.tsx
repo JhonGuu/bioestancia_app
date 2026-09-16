@@ -20,7 +20,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PaginacionBar } from "@/shared/components/paginacion-bar";
 import { PAGE_SIZES } from "@/shared/api/pagination.types";
-import { cn } from "@/lib/utils";
+import { FiltroPeriodoBar } from "@/shared/components/filtro-periodo-bar";
+import { PeriodoFiltro, filtrarPorPeriodo, hoyISO } from "@/shared/lib/filtro-periodo";
 
 export const Route = createFileRoute("/_authenticated/app/compras/tropas")({
   component: TropasPage,
@@ -39,6 +40,11 @@ function TropasPage() {
   // orden en que se anidan es siempre el mismo (ver `ordenarCriterios`), no
   // importa en qué orden se hayan tildado.
   const [criterios, setCriterios] = useState<CriterioAgrupacion[]>([]);
+  // Distinto de "agrupar por": esto es para buscar un período PUNTUAL (ej.
+  // "solo agosto de 2026", "solo la semana pasada") en vez de organizar todo
+  // en secciones — ver `FiltroPeriodoBar`.
+  const [periodo, setPeriodo] = useState<PeriodoFiltro>(PeriodoFiltro.TODAS);
+  const [fechaReferencia, setFechaReferencia] = useState(hoyISO());
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState<number>(PAGE_SIZES[1]); // 50 por defecto
 
@@ -51,16 +57,17 @@ function TropasPage() {
   const compras = comprasQuery.data ?? [];
   const proveedores = proveedoresQuery.data ?? [];
 
-  const comprasFiltradas =
+  const comprasDelProveedor =
     proveedorId === TODOS_LOS_PROVEEDORES ? compras : compras.filter((c) => c.proveedorId === proveedorId);
+  const comprasFiltradas = filtrarPorPeriodo(comprasDelProveedor, periodo, fechaReferencia);
 
-  // Volver a la página 1 cada vez que cambia el filtro o el tamaño de página
-  // — si no, se podría quedar en una página que ya no existe para el nuevo
-  // resultado (ej. filtrás por un proveedor con pocas tropas estando en la
-  // página 5).
+  // Volver a la página 1 cada vez que cambia algún filtro o el tamaño de
+  // página — si no, se podría quedar en una página que ya no existe para el
+  // nuevo resultado (ej. filtrás por un proveedor con pocas tropas estando
+  // en la página 5).
   useEffect(() => {
     setPage(1);
-  }, [proveedorId, criterios, limit]);
+  }, [proveedorId, criterios, periodo, fechaReferencia, limit]);
 
   function toggleCriterio(criterio: CriterioAgrupacion) {
     setCriterios((prev) =>
@@ -161,8 +168,17 @@ function TropasPage() {
         </div>
       </div>
 
+      <FiltroPeriodoBar
+        periodo={periodo}
+        fechaReferencia={fechaReferencia}
+        onChangePeriodo={setPeriodo}
+        onChangeFecha={setFechaReferencia}
+        cantidadResultados={comprasFiltradas.length}
+        etiquetaResultados="tropas"
+      />
+
       {!sinAgrupar && (
-        <p className={cn("text-muted-foreground text-xs")}>
+        <p className="text-muted-foreground text-xs">
           Anidado: {criteriosOrdenados.map((c) => CRITERIO_AGRUPACION_LABELS[c]).join(" → ")}
         </p>
       )}
