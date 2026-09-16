@@ -206,6 +206,56 @@ describe("PrevisualizarImportacionCobros", () => {
     expect(preview.cargosACrear.map((c) => c.monto).sort()).toEqual([-500, 500]);
   });
 
+  it('"Compensación" negativa entra como cobro (igual que siempre)', async () => {
+    const buffer = construirWorkbook({
+      "Test Cliente": [
+        ENCABEZADO_REAL,
+        filaCliente([1, new Date(Date.UTC(2026, 0, 5)), null, null, null, "Compensación", -53900, "Pago"]),
+      ],
+    });
+
+    const { useCase } = construirCaso([cliente({ id: "c1", razonSocial: "Test Cliente" })]);
+    const preview = await useCase.execute({ empresaId: "empresa-1", buffer });
+
+    expect(preview.conError).toHaveLength(0);
+    expect(preview.cargosACrear).toHaveLength(0);
+    expect(preview.cobrosACrear).toHaveLength(1);
+    expect(preview.cobrosACrear[0]).toMatchObject({ medioPago: MedioPago.COMPENSACION, monto: 53900 });
+  });
+
+  it('"Compensación" positiva entra como cargo OTRO en vez de error (confirmado con Juan Jose — ej. fila 130 Tienda de Carnes)', async () => {
+    const buffer = construirWorkbook({
+      "Test Cliente": [
+        ENCABEZADO_REAL,
+        filaCliente([1, new Date(Date.UTC(2026, 0, 5)), null, null, null, "Compensación", 6621220, "Pago"]),
+      ],
+    });
+
+    const { useCase } = construirCaso([cliente({ id: "c1", razonSocial: "Test Cliente" })]);
+    const preview = await useCase.execute({ empresaId: "empresa-1", buffer });
+
+    expect(preview.conError).toHaveLength(0);
+    expect(preview.cobrosACrear).toHaveLength(0);
+    expect(preview.cargosACrear).toHaveLength(1);
+    expect(preview.cargosACrear[0]).toMatchObject({ tipo: TipoCargo.OTRO, monto: 6621220 });
+  });
+
+  it('"Compensación" en $0 es error, igual que cualquier cargo que no sea Saldo inicial', async () => {
+    const buffer = construirWorkbook({
+      "Test Cliente": [
+        ENCABEZADO_REAL,
+        filaCliente([1, new Date(Date.UTC(2026, 0, 5)), null, null, null, "Compensación", 0, "Pago"]),
+      ],
+    });
+
+    const { useCase } = construirCaso([cliente({ id: "c1", razonSocial: "Test Cliente" })]);
+    const preview = await useCase.execute({ empresaId: "empresa-1", buffer });
+
+    expect(preview.cobrosACrear).toHaveLength(0);
+    expect(preview.cargosACrear).toHaveLength(0);
+    expect(preview.conError[0]?.errores[0]).toMatch(/no puede ser cero/);
+  });
+
   it("completa datos mínimos de cheque (numeroCheque/bancoCheque) para Cheque/Cheque electrónico", async () => {
     const buffer = construirWorkbook({
       "Test Cliente": [

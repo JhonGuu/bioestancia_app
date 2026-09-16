@@ -12,6 +12,24 @@ export type ConceptoPagoMapeado =
       permiteCero?: boolean;
       /** Marca las filas "Saldo inicial" (corte 2025-12-28) para que el use-case y el frontend las distingan del resto de los cargos. */
       esSaldoInicial?: boolean;
+    }
+  | {
+      /**
+       * "Compensación" puede representar tanto un pago (reduce lo que debe
+       * el cliente) como un cargo (aumenta lo que debe) — a diferencia del
+       * resto de los conceptos "cobro", acá el signo real del importe SÍ
+       * decide qué documento se crea, fila por fila (ver el confirmado con
+       * Juan Jose: varios casos reales — ej. Czybuk Ivan — traen
+       * Compensación en positivo, no son errores de tipeo aislados).
+       * Negativo → `Cobro` con `medioPago` (igual que siempre). Positivo →
+       * `CargoCuentaCorriente` con `tipoCargoSiPositivo` (mismo criterio que
+       * "Ajuste por diferencia": `TipoCargo.OTRO`, el único que admite
+       * cualquier signo). Cero sigue siendo error, como cualquier cargo que
+       * no sea "Saldo inicial".
+       */
+      tipo: "cobro-o-cargo";
+      medioPago: MedioPago;
+      tipoCargoSiPositivo: TipoCargo;
     };
 
 /**
@@ -26,14 +44,21 @@ export type ConceptoPagoMapeado =
  * ir para cualquier lado (decisión #6 — `CargoCuentaCorriente.monto` admite
  * negativos solo para `TipoCargo.OTRO`). Los conceptos que mapean a "cobro"
  * siempre esperan el importe en negativo (reduce la deuda) — se valida en el
- * use-case, no acá.
+ * use-case, no acá. La excepción es "Compensación" (`tipo: "cobro-o-cargo"`,
+ * ver el comentario del tipo arriba): confirmado con Juan Jose que en la
+ * práctica puede ir para cualquier lado, así que el propio signo decide qué
+ * documento se crea.
  */
 const CONCEPTOS_PAGO: Array<{ concepto: string; mapeado: ConceptoPagoMapeado }> = [
   { concepto: "Efectivo", mapeado: { tipo: "cobro", medioPago: MedioPago.EFECTIVO } },
   { concepto: "Transferencia", mapeado: { tipo: "cobro", medioPago: MedioPago.TRANSFERENCIA_BANCO } },
   { concepto: "Cheque", mapeado: { tipo: "cobro", medioPago: MedioPago.CHEQUE } },
   { concepto: "Cheque electrónico", mapeado: { tipo: "cobro", medioPago: MedioPago.ECHEQ } },
-  { concepto: "Compensación", mapeado: { tipo: "cobro", medioPago: MedioPago.COMPENSACION } },
+  // Puede ir para cualquier lado — ver el comentario de "cobro-o-cargo" en el tipo de arriba.
+  {
+    concepto: "Compensación",
+    mapeado: { tipo: "cobro-o-cargo", medioPago: MedioPago.COMPENSACION, tipoCargoSiPositivo: TipoCargo.OTRO },
+  },
   { concepto: "Retenciones", mapeado: { tipo: "cobro", medioPago: MedioPago.RETENCION } },
   // "Pago" genérico (sin medio especificado en la fila) — decisión #10: entra como Efectivo.
   { concepto: "Pago", mapeado: { tipo: "cobro", medioPago: MedioPago.EFECTIVO } },

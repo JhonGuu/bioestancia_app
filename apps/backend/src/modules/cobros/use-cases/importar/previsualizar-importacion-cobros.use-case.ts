@@ -5,6 +5,7 @@ import { ApiError } from "@/shared/infra/http/api.responses";
 import { ClienteRepository } from "@/modules/clientes/domain/cliente.repository";
 import { nombreCliente } from "@/modules/clientes/domain/cliente";
 import { MedioPago, esMedioPagoCheque } from "@/modules/cobros/domain/medio-pago";
+import { TipoCargo } from "@/modules/cargos-cuenta-corriente/domain/tipo-cargo";
 import { CargoAImportar, CobroAImportar, FilaImportarCobroConError, PreviewImportacionCobros } from "@/modules/cobros/domain/importacion-cobros";
 import { mapearConceptoPago } from "@/modules/cobros/infra/import/mapeo-concepto-pago.util";
 import { FilaPlanillaCliente, HOJAS_NO_CLIENTE, PlanillaHistorica } from "@/modules/boletas/infra/import/planilla-historica-cliente.util";
@@ -106,6 +107,36 @@ export class PrevisualizarImportacionCobros {
         const claveFecha = fecha.toISOString().slice(0, 10);
         const importe = numeroDeCelda(fila.importe);
 
+        const agregarCobro = (medioPago: MedioPago, montoNegativoOriginal: number) => {
+          const monto = redondear(-montoNegativoOriginal);
+          const datosCheque = esMedioPagoCheque(medioPago) ? placeholderCheque(hoja, fila.numero) : null;
+          cobrosACrear.push({
+            hoja,
+            clienteId,
+            clienteEsNuevo: clienteId === null,
+            fila: fila.numero,
+            fecha: claveFecha,
+            medioPago,
+            monto,
+            numeroCheque: datosCheque?.numeroCheque ?? null,
+            bancoCheque: datosCheque?.bancoCheque ?? null,
+            observaciones: celdaATexto(fila.observaciones) || null,
+          });
+        };
+        const agregarCargo = (tipoCargo: TipoCargo, montoPositivoOriginal: number, esSaldoInicial: boolean) => {
+          cargosACrear.push({
+            hoja,
+            clienteId,
+            clienteEsNuevo: clienteId === null,
+            fila: fila.numero,
+            fecha: claveFecha,
+            tipo: tipoCargo,
+            monto: redondear(montoPositivoOriginal),
+            motivo: celdaATexto(fila.observaciones) || conceptoTexto,
+            esSaldoInicial,
+          });
+        };
+
         if (mapeado.tipo === "cobro") {
           if (importe >= 0) {
             conError.push({
@@ -115,20 +146,20 @@ export class PrevisualizarImportacionCobros {
             });
             continue;
           }
-          const monto = redondear(-importe);
-          const datosCheque = esMedioPagoCheque(mapeado.medioPago as MedioPago) ? placeholderCheque(hoja, fila.numero) : null;
-          cobrosACrear.push({
-            hoja,
-            clienteId,
-            clienteEsNuevo: clienteId === null,
-            fila: fila.numero,
-            fecha: claveFecha,
-            medioPago: mapeado.medioPago,
-            monto,
-            numeroCheque: datosCheque?.numeroCheque ?? null,
-            bancoCheque: datosCheque?.bancoCheque ?? null,
-            observaciones: celdaATexto(fila.observaciones) || null,
-          });
+          agregarCobro(mapeado.medioPago, importe);
+        } else if (mapeado.tipo === "cobro-o-cargo") {
+          // "Compensación": el signo real decide qué documento se crea (ver
+          // el comentario del tipo en `mapeo-concepto-pago.util.ts`) — a
+          // diferencia de "cobro", acá NO es error que venga en positivo.
+          if (importe === 0) {
+            conError.push({ hoja, fila: fila.numero, errores: [`Fila ${fila.numero}: el importe no puede ser cero`] });
+            continue;
+          }
+          if (importe < 0) {
+            agregarCobro(mapeado.medioPago, importe);
+          } else {
+            agregarCargo(mapeado.tipoCargoSiPositivo, importe, false);
+          }
         } else {
           if (importe === 0) {
             if (mapeado.permiteCero) {
@@ -146,17 +177,7 @@ export class PrevisualizarImportacionCobros {
             });
             continue;
           }
-          cargosACrear.push({
-            hoja,
-            clienteId,
-            clienteEsNuevo: clienteId === null,
-            fila: fila.numero,
-            fecha: claveFecha,
-            tipo: mapeado.tipoCargo,
-            monto: redondear(importe),
-            motivo: celdaATexto(fila.observaciones) || conceptoTexto,
-            esSaldoInicial: mapeado.esSaldoInicial ?? false,
-          });
+          agregarCargo(mapeado.tipoCargo, importe, mapeado.esSaldoInicial ?? false);
         }
       }
     }
