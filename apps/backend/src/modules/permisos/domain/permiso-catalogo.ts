@@ -84,4 +84,10 @@ export const PERMISO_CATALOGO: PermisoCatalogoItem[] = [
     etiqueta: "Configurar asientos automáticos",
     descripcion: "Crear y modificar las reglas que generan asientos automáticos a partir de boletas, cobros, cheques y compras.",
   },
+  {
+    codigo: Permisos.VER_DATOS_CHOFERES,
+    categoria: "Transporte",
+    etiqueta: "Datos personales de choferes",
+    descripcion: "DNI y vencimiento de licencia de los choferes. Sin este permiso se ven el nombre y el CUIT, no esos datos.",
+  },
 ];

@@ -18,6 +18,7 @@ import { registerUsersModule } from "@/modules/users/users.module";
 import { registerListasPreciosModule } from "@/modules/listas-precios/listas-precios.module";
 import { registerClientesModule } from "@/modules/clientes/clientes.module";
 import { registerProveedoresModule } from "@/modules/proveedores/proveedores.module";
+import { registerTransportesModule } from "@/modules/transportes/transportes.module";
 import { registerFrigorificosModule } from "@/modules/frigorificos/frigorificos.module";
 import { registerBoletasModule } from "@/modules/boletas/boletas.module";
 import { registerVentasModule } from "@/modules/ventas/ventas.module";
@@ -95,6 +96,10 @@ export class DI {
     registerListasPreciosModule(this.container);
     registerClientesModule(this.container);
     registerProveedoresModule(this.container);
+    // `transportes` (transportistas, choferes, vehículos y autorizados por
+    // cliente) inyecta ClienteRepository (bindeado en `clientes`, arriba) —
+    // va después. No depende de ningún otro módulo.
+    registerTransportesModule(this.container);
     // `frigorificos` no depende de otros módulos (solo DBConnection) — se
     // podría registrar en cualquier punto, va acá junto a los otros catálogos
     // porque `resultado-faena` (más abajo) referencia `frigorificoId`.

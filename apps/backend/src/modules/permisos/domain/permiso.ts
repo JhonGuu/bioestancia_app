@@ -49,4 +49,6 @@ export enum Permisos {
   CERRAR_PERIODOS = "cerrar_periodos",
   /** Configurar qué asientos se generan solos a partir de boletas, cobros, cheques, compras y liquidaciones. */
   ADMINISTRAR_REGLAS_ASIENTO = "administrar_reglas_asiento",
+  /** DNI y vencimiento de licencia de los choferes (transporte). El CUIT lo ve cualquiera. */
+  VER_DATOS_CHOFERES = "ver_datos_choferes",
 }

@@ -6,6 +6,7 @@ import { registerEmpresasOpenApi } from "@/modules/empresas/infra/http/empresa.o
 import { registerListasDePreciosOpenApi } from "@/modules/listas-precios/infra/http/lista-de-precios.openapi";
 import { registerClientesOpenApi } from "@/modules/clientes/infra/http/cliente.openapi";
 import { registerProveedoresOpenApi } from "@/modules/proveedores/infra/http/proveedor.openapi";
+import { registerTransporteOpenApi } from "@/modules/transportes/infra/http/transporte.openapi";
 import { registerFrigorificosOpenApi } from "@/modules/frigorificos/infra/http/frigorifico.openapi";
 import { registerBoletasOpenApi } from "@/modules/boletas/infra/http/boleta.openapi";
 import { registerVentasOpenApi } from "@/modules/ventas/infra/http/venta.openapi";
@@ -41,6 +42,7 @@ export function generateOpenApiDocument() {
     registerListasDePreciosOpenApi();
     registerClientesOpenApi();
     registerProveedoresOpenApi();
+    registerTransporteOpenApi();
     registerFrigorificosOpenApi();
     registerBoletasOpenApi();
     registerVentasOpenApi();

@@ -26,3 +26,4 @@ export * from "@/modules/cobros/infra/database/schema";
 export * from "@/modules/personal/infra/database/schema";
 export * from "@/modules/permisos/infra/database/schema";
 export * from "@/modules/contabilidad/infra/database/schema";
+export * from "@/modules/transportes/infra/database/schema";
