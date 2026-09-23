@@ -4,6 +4,7 @@ import {
   CalendarClock,
   Calculator,
   Contact,
+  Container,
   Receipt,
   Settings,
   ShoppingCart,
@@ -59,6 +60,12 @@ const NAV_ITEMS = [
     to: "/app/proveedores" as const,
     label: "Proveedores",
     icon: Truck,
+    roles: [Roles.ADMIN, Roles.CONTABLE],
+  },
+  {
+    to: "/app/transporte" as const,
+    label: "Transporte",
+    icon: Container,
     roles: [Roles.ADMIN, Roles.CONTABLE],
   },
   {

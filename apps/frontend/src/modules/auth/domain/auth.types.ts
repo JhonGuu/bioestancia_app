@@ -58,6 +58,8 @@ export const Permisos = {
   CERRAR_PERIODOS: "cerrar_periodos",
   /** Crear/editar/borrar reglas de asiento automático (fase 2). */
   ADMINISTRAR_REGLAS_ASIENTO: "administrar_reglas_asiento",
+  /** DNI y vencimiento de licencia de los choferes (transporte). */
+  VER_DATOS_CHOFERES: "ver_datos_choferes",
 } as const;
 export type Permisos = (typeof Permisos)[keyof typeof Permisos];
 

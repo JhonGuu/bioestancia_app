@@ -5,6 +5,9 @@ import { toast } from "sonner";
 import { useCliente } from "@/modules/clientes/hooks/use-cliente";
 import { useUpdateCliente } from "@/modules/clientes/hooks/use-update-cliente";
 import { ClienteForm } from "@/modules/clientes/components/cliente-form";
+import { TransporteClienteCard } from "@/modules/transportes/components/transporte-cliente-card";
+import { useAuth } from "@/modules/auth/context/auth-context";
+import { Roles } from "@/modules/auth/domain/auth.types";
 import type { CreateClienteFormValues } from "@/modules/clientes/domain/cliente.schemas";
 import { ApiError } from "@/shared/api/api-response";
 import { Button } from "@/components/ui/button";
@@ -17,6 +20,8 @@ export const Route = createFileRoute("/_authenticated/app/clientes/$clienteId/ed
 function EditarClientePage() {
   const { clienteId } = Route.useParams();
   const navigate = useNavigate();
+  const { empresaActiva } = useAuth();
+  const puedeEditarTransporte = empresaActiva?.rol === Roles.ADMIN || empresaActiva?.rol === Roles.CONTABLE;
   const clienteQuery = useCliente(clienteId);
   const updateCliente = useUpdateCliente(clienteId);
 
@@ -67,6 +72,8 @@ function EditarClientePage() {
           />
         </CardContent>
       </Card>
+
+      <TransporteClienteCard clienteId={clienteId} puedeEditar={puedeEditarTransporte} />
     </div>
   );
 }
