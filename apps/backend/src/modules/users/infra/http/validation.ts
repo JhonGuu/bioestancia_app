@@ -68,6 +68,16 @@ export class UserValidation {
     body: z.object({ isActive: z.boolean() }),
   };
 
+  /** Edición de los datos personales del usuario autenticado (no email/username: ver `UpdateMyAccount`). */
+  updateMyAccount = {
+    body: z.object({
+      firstName: z.string().trim().min(1, "El nombre es obligatorio").max(100),
+      lastName: z.string().trim().min(1, "El apellido es obligatorio").max(100),
+      // Vacío, null u omitido borra el teléfono (ver `UpdateMyAccount`).
+      phoneNumber: z.string().trim().regex(/^[0-9]*$/, "Solo números").max(20).nullable().optional(),
+    }),
+  };
+
   /** Cambio de contraseña del usuario autenticado (voluntario o forzado por `mustChangePassword`). */
   changePassword = {
     body: z.object({

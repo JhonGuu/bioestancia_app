@@ -6,6 +6,7 @@ import { DrizzleAdapter } from "@/shared/infra/database/db-connection";
 import { ApiError, Code } from "@/shared/infra/http/api.responses";
 import {
   CreateUserInput,
+  UpdateUserProfileInput,
   UserRepository,
 } from "@/modules/users/domain/user.repository";
 import { UserWithCredentials } from "@/modules/users/domain/user";
@@ -93,6 +94,23 @@ export class UserRepositoryDrizzle implements UserRepository {
       .update(users)
       .set({ passwordHash, mustChangePassword: false, updatedAt: new Date() })
       .where(eq(users.id, userId));
+  }
+
+  async updateProfile(userId: string, input: UpdateUserProfileInput): Promise<UserWithCredentials> {
+    const [row] = await this.orm.db
+      .update(users)
+      .set({
+        firstName: input.firstName,
+        lastName: input.lastName,
+        phoneNumber: input.phoneNumber,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(users.id, userId), isNull(users.deletedAt)))
+      .returning();
+    if (!row) {
+      throw new ApiError("Usuario no encontrado", Code.NOT_FOUND);
+    }
+    return this.toDomain(row);
   }
 
   /**

@@ -27,3 +27,15 @@ export const changePasswordSchema = z
   });
 
 export type ChangePasswordFormValues = z.infer<typeof changePasswordSchema>;
+
+/**
+ * Espejo de `UserValidation.updateMyAccount` en el backend. El teléfono es
+ * opcional: vacío lo borra.
+ */
+export const updateMyAccountSchema = z.object({
+  firstName: z.string().trim().min(1, "El nombre es obligatorio").max(100),
+  lastName: z.string().trim().min(1, "El apellido es obligatorio").max(100),
+  phoneNumber: z.string().trim().regex(/^[0-9]*$/, "Solo números, sin espacios ni guiones").max(20),
+});
+
+export type UpdateMyAccountFormValues = z.infer<typeof updateMyAccountSchema>;

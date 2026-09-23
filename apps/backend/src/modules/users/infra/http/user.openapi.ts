@@ -109,6 +109,26 @@ export function registerUsersOpenApi(): void {
   });
 
   registry.registerPath({
+    method: "patch",
+    path: "/account/me",
+    tags: ["Auth"],
+    summary:
+      "El usuario autenticado edita sus datos personales (nombre, apellido, teléfono; vacío o null " +
+      "borra el teléfono). No permite cambiar email ni username. No depende de empresa activa.",
+    security: [{ bearerAuth: [] }],
+    request: {
+      body: { content: { "application/json": { schema: validation.updateMyAccount.body } } },
+    },
+    responses: {
+      200: {
+        description: "Datos actualizados",
+        content: { "application/json": { schema: apiResponseSchema(userSchema) } },
+      },
+      401: { description: "No autenticado" },
+    },
+  });
+
+  registry.registerPath({
     method: "get",
     path: "/account/empresas",
     tags: ["Auth"],

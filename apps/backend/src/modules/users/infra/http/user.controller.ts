@@ -17,6 +17,7 @@ import {
 import { ListEmpresaUsers } from "@/modules/users/use-cases/list-empresa-users.use-case";
 import { SetUserActive } from "@/modules/users/use-cases/set-user-active.use-case";
 import { ChangePassword, ChangePasswordInput } from "@/modules/users/use-cases/change-password.use-case";
+import { UpdateMyAccount, UpdateMyAccountInput } from "@/modules/users/use-cases/update-my-account.use-case";
 import { Roles } from "@/modules/users/domain/roles";
 
 @injectable()
@@ -32,6 +33,7 @@ export class UserController {
     @inject(DI_TYPES.ListEmpresaUsers) private readonly listEmpresaUsers: ListEmpresaUsers,
     @inject(DI_TYPES.SetUserActive) private readonly setUserActive: SetUserActive,
     @inject(DI_TYPES.ChangePassword) private readonly changePassword: ChangePassword,
+    @inject(DI_TYPES.UpdateMyAccount) private readonly updateMyAccount: UpdateMyAccount,
   ) {
     this.registerRoutes();
   }
@@ -179,6 +181,25 @@ export class UserController {
         return new ApiResponse({
           data,
           message: "Usuario obtenido correctamente",
+          status: Code.OK,
+        });
+      },
+    });
+
+    // El usuario autenticado edita sus propios datos personales (nombre,
+    // apellido, teléfono). Sin empresa activa, igual que GET /account/me.
+    this.httpServer.register({
+      method: "patch",
+      url: "/account/me",
+      auth: "jwt",
+      validation: this.validation.updateMyAccount,
+      handler: async ({ body, auth }) => {
+        if (!auth) throw new ApiError("Unauthorized", Code.UNAUTHORIZED);
+        const input = body as Omit<UpdateMyAccountInput, "userId">;
+        const data = await this.updateMyAccount.execute({ ...input, userId: auth.userId });
+        return new ApiResponse({
+          data,
+          message: "Datos actualizados correctamente",
           status: Code.OK,
         });
       },

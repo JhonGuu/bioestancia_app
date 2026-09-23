@@ -12,6 +12,7 @@ import { GrantEmpresaAccess } from "@/modules/users/use-cases/grant-empresa-acce
 import { ListEmpresaUsers } from "@/modules/users/use-cases/list-empresa-users.use-case";
 import { SetUserActive } from "@/modules/users/use-cases/set-user-active.use-case";
 import { ChangePassword } from "@/modules/users/use-cases/change-password.use-case";
+import { UpdateMyAccount } from "@/modules/users/use-cases/update-my-account.use-case";
 import { SignIn } from "@/modules/users/use-cases/sign-in.use-case";
 import { SignUp } from "@/modules/users/use-cases/sign-up.use-case";
 
@@ -47,6 +48,7 @@ export function registerUsersModule(container: Container): void {
   container.bind(DI_TYPES.ListEmpresaUsers).to(ListEmpresaUsers);
   container.bind(DI_TYPES.SetUserActive).to(SetUserActive);
   container.bind(DI_TYPES.ChangePassword).to(ChangePassword);
+  container.bind(DI_TYPES.UpdateMyAccount).to(UpdateMyAccount);
 
   // Controller (instanciado eagerly para que registre rutas en el HttpServer)
   container.bind(DI_TYPES.UserController).to(UserController);

@@ -1,6 +1,7 @@
 import { httpClient, unwrap } from "@/shared/api/http-client";
 import type {
   ChangePasswordInput,
+  UpdateMyAccountInput,
   EmpresaAcceso,
   SignInInput,
   SignInOutput,
@@ -23,6 +24,10 @@ export const authApi = {
 
   getMyEmpresas(): Promise<EmpresaAcceso[]> {
     return unwrap(httpClient.get("/account/empresas"));
+  },
+
+  updateMyAccount(input: UpdateMyAccountInput): Promise<User> {
+    return unwrap(httpClient.patch("/account/me", input));
   },
 
   changePassword(input: ChangePasswordInput): Promise<void> {

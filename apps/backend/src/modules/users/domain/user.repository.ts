@@ -35,6 +35,15 @@ export interface UserRepository {
    * cambio forzado (primer login) o voluntario.
    */
   updatePassword(userId: string, passwordHash: string): Promise<void>;
+
+  /** Actualiza los datos personales editables por el propio usuario (no email/username). Devuelve el usuario actualizado. */
+  updateProfile(userId: string, input: UpdateUserProfileInput): Promise<UserWithCredentials>;
+}
+
+export interface UpdateUserProfileInput {
+  firstName: string;
+  lastName: string;
+  phoneNumber: string | null;
 }
 
 /**

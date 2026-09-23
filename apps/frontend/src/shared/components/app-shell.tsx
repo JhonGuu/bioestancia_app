@@ -1,12 +1,9 @@
-import { useState } from "react";
-import { Link, Outlet, useNavigate } from "@tanstack/react-router";
+import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import {
   Building2,
   CalendarClock,
   Calculator,
   Contact,
-  LogOut,
-  Menu,
   Receipt,
   Settings,
   ShoppingCart,
@@ -19,10 +16,24 @@ import {
 import { useAuth } from "@/modules/auth/context/auth-context";
 import { Permisos, Roles } from "@/modules/auth/domain/auth.types";
 import { BrandLogo, brandCompanyFromRazonSocial } from "@/components/brand-logo";
-import { ThemeToggle } from "@/shared/theme/theme-toggle";
-import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { cn } from "@/lib/utils";
+import { UserMenu } from "@/shared/components/user-menu";
+import { Separator } from "@/components/ui/separator";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarRail,
+  SidebarTrigger,
+  useSidebar,
+} from "@/components/ui/sidebar";
 
 /**
  * `roles` opcional: si no se especifica, el item es visible para cualquier
@@ -94,114 +105,99 @@ const NAV_ITEMS = [
 ];
 
 /**
- * Shell de la app autenticada: topbar (empresa activa + usuario + logout) +
- * navegación + <Outlet/> para la página de cada módulo.
+ * Shell de la app autenticada, armado con el `Sidebar` de shadcn/ui:
  *
- * La navegación es un sidebar fijo desde `md` en adelante; por debajo de eso
- * queda oculta (no entra cómoda ni deja lugar al contenido) y se accede vía
- * un botón de menú en el header que abre un `Sheet` deslizable — mismo set
- * de links, sin duplicar el layout completo para mobile.
+ * - Escritorio (`md`+): sidebar fijo a la izquierda que se colapsa a una
+ *   barra de íconos (con tooltip) desde el botón del header o con Ctrl/Cmd+B.
+ *   shadcn recuerda el estado abierto/cerrado en una cookie.
+ * - Celular: el mismo sidebar se abre como panel deslizable (lo resuelve
+ *   `Sidebar` solo, no hace falta un `Sheet` aparte) desde el botón del header.
+ * - Header: solo el botón para abrir/cerrar el sidebar (más el logo en
+ *   celular, donde el sidebar está cerrado). Usuario, cuenta, tema y cerrar
+ *   sesión viven en el menú del usuario, en el pie del sidebar (`UserMenu`).
+ * - `<Outlet/>` dentro de `SidebarInset` renderiza la página de cada módulo.
  */
 export function AppShell() {
   const auth = useAuth();
-  const navigate = useNavigate();
-  const [menuAbierto, setMenuAbierto] = useState(false);
-
-  async function handleLogout() {
-    auth.logout();
-    await navigate({ to: "/login" });
-  }
-
   const brandCompany = brandCompanyFromRazonSocial(auth.empresaActiva?.razonSocial);
+  const nombreEmpresa = auth.empresaActiva?.razonSocial ?? "Bioestancia";
 
   return (
-    <div className="flex min-h-svh flex-col">
-      <header className="flex h-14 items-center justify-between gap-2 border-b px-3 sm:px-4">
-        <div className="flex min-w-0 items-center gap-1">
-          <Sheet open={menuAbierto} onOpenChange={setMenuAbierto}>
-            <SheetContent side="left" className="w-64 p-0">
-              <SheetHeader>
-                <SheetTitle className="sr-only">Navegación</SheetTitle>
-                {brandCompany ? (
-                  <BrandLogo company={brandCompany} className="h-10" />
-                ) : (
-                  <div className="flex items-center gap-2 font-semibold">
-                    <Building2 className="size-5" />
-                    {auth.empresaActiva?.razonSocial ?? "Bioestancia"}
-                  </div>
-                )}
-              </SheetHeader>
-              <nav className="p-3">
-                <NavLinks
-                  rol={auth.empresaActiva?.rol}
-                  permisos={auth.empresaActiva?.permisos}
-                  onNavigate={() => setMenuAbierto(false)}
-                />
-              </nav>
-            </SheetContent>
-          </Sheet>
+    <SidebarProvider>
+      <AppSidebar />
 
-          <Button
-            variant="ghost"
-            size="icon"
-            className="shrink-0 md:hidden"
-            onClick={() => setMenuAbierto(true)}
-            aria-label="Abrir menú"
-          >
-            <Menu className="size-5" />
-          </Button>
-
-          <div className="flex min-w-0 items-center gap-2 font-semibold">
+      {/* `min-w-0`: sin esto, un ítem flex no se achica por debajo del ancho
+          intrínseco de su contenido (default `min-width: auto`) — una tabla
+          ancha adentro (ej. porcentaje-cobranza) empujaba TODO el layout
+          (sidebar incluido) en vez de scrollear dentro de su propio
+          contenedor `overflow-auto`. */}
+      <SidebarInset className="min-w-0">
+        <header className="flex h-14 shrink-0 items-center gap-2 border-b px-3 sm:px-4">
+          <SidebarTrigger className="-ml-1" />
+          <Separator orientation="vertical" className="data-[orientation=vertical]:h-5 md:hidden" />
+          <div className="flex min-w-0 items-center gap-2 font-semibold md:hidden">
             {brandCompany ? (
               <BrandLogo company={brandCompany} className="shrink-0" />
             ) : (
               <>
                 <Building2 className="size-5 shrink-0" />
-                <span className="truncate">{auth.empresaActiva?.razonSocial ?? "Bioestancia"}</span>
+                <span className="truncate">{nombreEmpresa}</span>
               </>
             )}
           </div>
-        </div>
+        </header>
 
-        <div className="flex shrink-0 items-center gap-1 sm:gap-3">
-          <span className="text-muted-foreground hidden text-sm sm:inline">
-            {auth.user?.firstName} {auth.user?.lastName} ·{" "}
-            <span className="capitalize">{auth.empresaActiva?.rol}</span>
-          </span>
-          <ThemeToggle />
-          <Button variant="ghost" size="icon" onClick={handleLogout} title="Cerrar sesión">
-            <LogOut className="size-4" />
-          </Button>
-        </div>
-      </header>
-
-      <div className="flex flex-1">
-        <nav className="hidden w-56 shrink-0 border-r p-3 md:block">
-          <NavLinks rol={auth.empresaActiva?.rol} permisos={auth.empresaActiva?.permisos} />
-        </nav>
-
-        {/* `min-w-0`: sin esto, un ítem flex no se achica por debajo del ancho
-            intrínseco de su contenido (default `min-width: auto`) — una tabla
-            ancha adentro (ej. porcentaje-cobranza) empujaba TODO el layout
-            (sidebar incluido) en vez de scrollear dentro de su propio
-            contenedor `overflow-auto`. */}
-        <main className="min-w-0 flex-1 p-4 md:p-6">
+        <div className="min-w-0 flex-1 p-4 md:p-6">
           <Outlet />
-        </main>
-      </div>
-    </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
 
-function NavLinks({
-  rol,
-  permisos,
-  onNavigate,
-}: {
-  rol?: Roles;
-  permisos?: Permisos[];
-  onNavigate?: () => void;
-}) {
+function AppSidebar() {
+  const auth = useAuth();
+
+  const brandCompany = brandCompanyFromRazonSocial(auth.empresaActiva?.razonSocial);
+  const nombreEmpresa = auth.empresaActiva?.razonSocial ?? "Bioestancia";
+
+  return (
+    <Sidebar collapsible="icon">
+      <SidebarHeader>
+        {/* Colapsado no entra el logo completo: se cambia por un ícono. */}
+        <div className="flex h-12 items-center px-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
+          {brandCompany ? (
+            <BrandLogo company={brandCompany} className="h-10 group-data-[collapsible=icon]:hidden" />
+          ) : (
+            <span className="truncate font-semibold group-data-[collapsible=icon]:hidden">
+              {nombreEmpresa}
+            </span>
+          )}
+          <Building2 className="hidden size-5 group-data-[collapsible=icon]:block" />
+        </div>
+      </SidebarHeader>
+
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <NavMenu rol={auth.empresaActiva?.rol} permisos={auth.empresaActiva?.permisos} />
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+
+      <SidebarFooter>
+        <UserMenu />
+      </SidebarFooter>
+
+      <SidebarRail />
+    </Sidebar>
+  );
+}
+
+function NavMenu({ rol, permisos }: { rol?: Roles; permisos?: Permisos[] }) {
+  const { isMobile, setOpenMobile } = useSidebar();
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+
   // `item.roles` inferido por TS como distintas tuplas literales (cada
   // entrada de NAV_ITEMS puede tener una combinación de roles distinta) —
   // el cast a `Roles[]` evita que `.includes()` se tipe contra una sola de
@@ -213,23 +209,21 @@ function NavLinks({
   );
 
   return (
-    <ul className="space-y-1">
+    <SidebarMenu>
       {items.map((item) => (
-        <li key={item.to}>
-          <Link
-            to={item.to}
-            onClick={onNavigate}
-            className={cn(
-              "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-              "[&.active]:bg-accent [&.active]:text-accent-foreground",
-            )}
-            activeProps={{ className: "active" }}
+        <SidebarMenuItem key={item.to}>
+          <SidebarMenuButton
+            asChild
+            tooltip={item.label}
+            isActive={pathname === item.to || pathname.startsWith(`${item.to}/`)}
           >
-            <item.icon className="size-4" />
-            {item.label}
-          </Link>
-        </li>
+            <Link to={item.to} onClick={() => isMobile && setOpenMobile(false)}>
+              <item.icon />
+              <span>{item.label}</span>
+            </Link>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
       ))}
-    </ul>
+    </SidebarMenu>
   );
 }

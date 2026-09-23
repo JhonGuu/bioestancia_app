@@ -95,6 +95,14 @@ export interface SignInOutput {
   empresas: EmpresaAcceso[];
 }
 
+/** Datos personales que el usuario puede editar de su propia cuenta (no email/username). */
+export interface UpdateMyAccountInput {
+  firstName: string;
+  lastName: string;
+  /** `null` borra el teléfono. */
+  phoneNumber: string | null;
+}
+
 export interface ChangePasswordInput {
   currentPassword: string;
   newPassword: string;

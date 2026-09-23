@@ -40,6 +40,7 @@ export const DI_TYPES = {
   ListEmpresaUsers: Symbol.for("ListEmpresaUsers"),
   SetUserActive: Symbol.for("SetUserActive"),
   ChangePassword: Symbol.for("ChangePassword"),
+  UpdateMyAccount: Symbol.for("UpdateMyAccount"),
   UserController: Symbol.for("UserController"),
 
   // ── Module: listas-precios ─────────────────────
