@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
 import { useAuth } from "@/modules/auth/context/auth-context";
@@ -20,10 +21,26 @@ function EmpresasPage() {
   const auth = useAuth();
   const navigate = useNavigate();
 
+  const [empresaElegidaId, setEmpresaElegidaId] = useState<string | null>(null);
+
+  /**
+   * No navegamos acá mismo: `selectEmpresa` solo encola un cambio de estado
+   * de React, y el guard de `/app` (`beforeLoad`) lee `empresaActiva` del
+   * contexto del router, que todavía tiene el valor VIEJO (null) hasta el
+   * próximo render. Navegar en el mismo tick hacía que `/app` te rebotara a
+   * `/empresas` y recién el segundo click (ya con la empresa guardada)
+   * entraba. Por eso esperamos a que el contexto refleje la empresa elegida.
+   */
   function elegir(empresaId: string) {
+    setEmpresaElegidaId(empresaId);
     auth.selectEmpresa(empresaId);
-    void navigate({ to: "/app" });
   }
+
+  useEffect(() => {
+    if (empresaElegidaId && auth.empresaActiva?.empresaId === empresaElegidaId) {
+      void navigate({ to: "/app", replace: true });
+    }
+  }, [empresaElegidaId, auth.empresaActiva, navigate]);
 
   return (
     <div className="flex min-h-svh items-center justify-center bg-muted/30 p-4">

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileDown, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { useAuth } from "@/modules/auth/context/auth-context";
@@ -10,6 +10,7 @@ import { nombreCliente } from "@/modules/clientes/domain/cliente.types";
 import { resumirPeriodoAnterior } from "@/modules/planificacion-cabezas/domain/planificacion-cabezas.types";
 import { usePlanificacionCabezas } from "@/modules/planificacion-cabezas/hooks/use-planificacion-cabezas";
 import { useUpsertPlanificacionCabezas } from "@/modules/planificacion-cabezas/hooks/use-upsert-planificacion-cabezas";
+import { useDescargarRepartoPdf } from "@/modules/planificacion-cabezas/hooks/use-descargar-reparto-pdf";
 import { PlanificacionCabezasTable } from "@/modules/planificacion-cabezas/components/planificacion-cabezas-table";
 import { PlanificacionCabezasResumenMensual } from "@/modules/planificacion-cabezas/components/planificacion-cabezas-resumen-mensual";
 import { useStockTropas } from "@/modules/compras/hooks/use-stock-tropas";
@@ -52,6 +53,8 @@ function PlanificacionCabezasPage() {
   const [cursor, setCursor] = useState(() => new Date());
   const [busqueda, setBusqueda] = useState("");
   const [orden, setOrden] = useState<Orden>("alfabetico");
+  // El reparto se manda el día anterior, así que arranca en "mañana".
+  const [fechaReparto, setFechaReparto] = useState(() => formatoISO(navegar(new Date(), "dia", 1)));
 
   const puedeEditar =
     empresaActiva?.rol === Roles.ADMIN || empresaActiva?.rol === Roles.CONTABLE;
@@ -83,6 +86,7 @@ function PlanificacionCabezasPage() {
     { enabled: orden === "entregas" },
   );
   const upsertMutation = useUpsertPlanificacionCabezas();
+  const descargarReparto = useDescargarRepartoPdf();
 
   const periodoAnterior = useMemo(
     () =>
@@ -154,6 +158,39 @@ function PlanificacionCabezasPage() {
     );
   }
 
+  function handleCommitComentario(clienteId: string, fecha: string, comentarios: string) {
+    const cliente = clientesQuery.data?.find((c) => c.id === clienteId);
+    const nombre = cliente ? nombreCliente(cliente) : "cliente";
+    // El upsert pide las cabezas junto con la nota: se reenvían las ya cargadas.
+    const cabezasPlanificadas =
+      filasQuery.data?.find((f) => f.clienteId === clienteId && f.fecha.slice(0, 10) === fecha)
+        ?.cabezasPlanificadas ?? 0;
+
+    upsertMutation.mutate(
+      { clienteId, dias: [{ fecha, cabezasPlanificadas, comentarios }] },
+      {
+        onSuccess: () => {
+          toast.success(`Nota guardada: ${nombre}`);
+        },
+        onError: (error) => {
+          const message =
+            error instanceof ApiError ? error.message : "No se pudo guardar la nota";
+          toast.error(message);
+        },
+      },
+    );
+  }
+
+  function handleDescargarReparto() {
+    descargarReparto.mutate(fechaReparto, {
+      onError: (error) => {
+        const message =
+          error instanceof ApiError ? error.message : "No se pudo generar el PDF del reparto";
+        toast.error(message);
+      },
+    });
+  }
+
   const cargando =
     clientesQuery.isPending ||
     filasQuery.isPending ||
@@ -178,6 +215,29 @@ function PlanificacionCabezasPage() {
 
       <Card>
         <CardContent className="space-y-4">
+          <div className="flex flex-wrap items-center gap-3 rounded-md border bg-muted/30 p-3">
+            <div className="mr-auto">
+              <p className="text-sm font-medium">Reparto del día (PDF para WhatsApp)</p>
+              <p className="text-muted-foreground text-xs">
+                Toma lo planificado para ese día. Las aclaraciones se cargan en la vista "Día",
+                columna Nota.
+              </p>
+            </div>
+            <Input
+              type="date"
+              value={fechaReparto}
+              onChange={(e) => setFechaReparto(e.target.value)}
+              className="w-40"
+            />
+            <Button
+              onClick={handleDescargarReparto}
+              disabled={!fechaReparto || descargarReparto.isPending}
+            >
+              {descargarReparto.isPending ? <Loader2 className="animate-spin" /> : <FileDown />}
+              Generar PDF
+            </Button>
+          </div>
+
           <div className="flex flex-wrap items-center gap-3">
             <Select
               value={granularidad}
@@ -279,6 +339,7 @@ function PlanificacionCabezasPage() {
               etiquetaActual={etiquetaPeriodoActual(granularidad)}
               puedeEditar={puedeEditar}
               onCommitDia={handleCommitDia}
+              onCommitComentario={handleCommitComentario}
               onEditarAnterior={handleEditarAnterior}
             />
           )}

@@ -43,13 +43,16 @@ export class PlanificacionCabezasRepositoryDrizzle implements PlanificacionCabez
           clienteId: linea.clienteId,
           fecha: linea.fecha,
           cabezasPlanificadas: linea.cabezasPlanificadas,
-          comentarios: linea.comentarios ?? null,
+          comentarios: linea.comentarios?.trim() || null,
         })
         .onConflictDoUpdate({
           target: [planificacionCabezas.clienteId, planificacionCabezas.fecha],
           set: {
             cabezasPlanificadas: linea.cabezasPlanificadas,
-            comentarios: linea.comentarios ?? null,
+            // Solo se toca el comentario si el request lo trae: cargar las
+            // cabezas de un día (que no manda comentario) no debe borrar la
+            // aclaración ya guardada. Un string vacío sí lo limpia.
+            ...(linea.comentarios !== undefined ? { comentarios: linea.comentarios.trim() || null } : {}),
             updatedAt: new Date(),
           },
         })

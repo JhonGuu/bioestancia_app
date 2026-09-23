@@ -84,4 +84,24 @@ export function registerPlanificacionCabezasOpenApi(): void {
       },
     },
   });
+
+  registry.registerPath({
+    method: "get",
+    path: "/planificacion-cabezas/reparto/pdf",
+    tags: ["Planificación de cabezas"],
+    summary:
+      "PDF del reparto de UN día (cabezas por cliente con su aclaración, total y clientes " +
+      "habituales que ese día no llevan), en formato angosto para mandar por WhatsApp.",
+    security: [{ bearerAuth: [] }],
+    request: {
+      headers: empresaIdHeaderSchema,
+      query: validation.repartoPdf.query,
+    },
+    responses: {
+      200: {
+        description: "PDF del reparto",
+        content: { "application/pdf": { schema: z.string().openapi({ format: "binary" }) } },
+      },
+    },
+  });
 }

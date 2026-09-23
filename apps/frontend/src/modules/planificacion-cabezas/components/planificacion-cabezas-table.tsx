@@ -7,6 +7,7 @@ import type {
   ResumenPeriodoAnterior,
 } from "@/modules/planificacion-cabezas/domain/planificacion-cabezas.types";
 import { EditableCabezasCell } from "@/modules/planificacion-cabezas/components/editable-cabezas-cell";
+import { EditableNotaCell } from "@/modules/planificacion-cabezas/components/editable-nota-cell";
 import {
   formatoCorto,
   formatoISO,
@@ -32,6 +33,12 @@ interface PlanificacionCabezasTableProps {
   etiquetaActual: string;
   puedeEditar: boolean;
   onCommitDia: (clienteId: string, fecha: string, cabezasPlanificadas: number) => void;
+  /**
+   * Guarda la aclaración de un cliente+día. Solo se muestra la columna "Nota"
+   * en la vista de UN día (con 7 días no hay lugar), que es la que sirve para
+   * armar el reparto.
+   */
+  onCommitComentario: (clienteId: string, fecha: string, comentarios: string) => void;
   /** Mueve el cursor al período de referencia (el anterior al que se ve ahora) para poder editarlo. */
   onEditarAnterior: () => void;
 }
@@ -51,8 +58,10 @@ export function PlanificacionCabezasTable({
   etiquetaActual,
   puedeEditar,
   onCommitDia,
+  onCommitComentario,
   onEditarAnterior,
 }: PlanificacionCabezasTableProps) {
+  const mostrarNota = dias.length === 1;
   const filaPorClienteYDia = useMemo(() => {
     const mapa = new Map<string, PlanificacionCabezasFila>();
     for (const fila of filas) {
@@ -152,6 +161,11 @@ export function PlanificacionCabezasTable({
                 {nombreDiaSemana(dia)} {formatoCorto(dia)}
               </TableHead>
             ))}
+            {mostrarNota && (
+              <TableHead rowSpan={2} className="align-bottom whitespace-nowrap">
+                Nota (sale en el PDF del reparto)
+              </TableHead>
+            )}
           </TableRow>
           <TableRow>
             <TableHead className="text-muted-foreground border-l text-center text-xs font-normal">
@@ -194,6 +208,17 @@ export function PlanificacionCabezasTable({
                   </TableCell>
                 );
               })}
+              {mostrarNota && (
+                <TableCell className="p-1">
+                  <EditableNotaCell
+                    value={
+                      filaPorClienteYDia.get(`${cliente.id}|${formatoISO(dias[0])}`)?.comentarios ?? ""
+                    }
+                    disabled={!puedeEditar}
+                    onCommit={(nota) => onCommitComentario(cliente.id, formatoISO(dias[0]), nota)}
+                  />
+                </TableCell>
+              )}
             </TableRow>
           ))}
         </TableBody>
@@ -210,6 +235,7 @@ export function PlanificacionCabezasTable({
                 {totalesPorDia.get(formatoISO(dia)) ?? 0}
               </TableCell>
             ))}
+            {mostrarNota && <TableCell />}
           </TableRow>
         </TableFooter>
       </Table>

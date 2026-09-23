@@ -169,6 +169,9 @@ export const DI_TYPES = {
   PlanificacionCabezasRepository: Symbol.for("PlanificacionCabezasRepository"),
   UpsertPlanificacionCabezas: Symbol.for("UpsertPlanificacionCabezas"),
   ListPlanificacionCabezas: Symbol.for("ListPlanificacionCabezas"),
+  ObtenerRepartoDiario: Symbol.for("ObtenerRepartoDiario"),
+  GenerarRepartoDiarioPdf: Symbol.for("GenerarRepartoDiarioPdf"),
+  RepartoDiarioPdfGenerator: Symbol.for("RepartoDiarioPdfGenerator"),
   PlanificacionCabezasController: Symbol.for("PlanificacionCabezasController"),
 
   // ── Module: cheques ───────────────────────────────

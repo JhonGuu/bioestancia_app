@@ -18,9 +18,15 @@ const listQuery = z.object({
   clienteId: z.string().uuid("clienteId inválido").optional(),
 });
 
+const repartoPdfQuery = z.object({
+  fecha: z.coerce.date(),
+});
+
 @injectable()
 export class PlanificacionCabezasValidation {
   upsert = { body: upsertBody };
 
   list = { query: listQuery };
+
+  repartoPdf = { query: repartoPdfQuery };
 }
